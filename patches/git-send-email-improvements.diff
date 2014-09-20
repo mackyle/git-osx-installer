@@ -1,0 +1,40 @@
+diff --git a/git-send-email.orig b/git-send-email.new
+index f3d75e8..d0b4bff 100755
+--- a/git-send-email.orig
++++ b/git-send-email.new
+@@ -27,6 +27,7 @@ use Data::Dumper;
+ use Term::ANSIColor;
+ use File::Temp qw/ tempdir tempfile /;
+ use File::Spec::Functions qw(catfile);
++use Digest::MD5 qw(md5_hex);
+ use Error qw(:try);
+ use Git;
+ 
+@@ -300,6 +301,7 @@ my $rc = GetOptions("h" => \$help,
+ 		    "smtp-server-option=s" => \@smtp_server_options,
+ 		    "smtp-server-port=s" => \$smtp_server_port,
+ 		    "smtp-user=s" => \$smtp_authuser,
++		    "no-smtp-user" => sub {delete $config_settings{'smtpuser'}},
+ 		    "smtp-pass:s" => \$smtp_authpass,
+ 		    "smtp-ssl" => sub { $smtp_encryption = 'ssl' },
+ 		    "smtp-encryption=s" => \$smtp_encryption,
+@@ -901,8 +903,10 @@ sub make_message_id {
+ 		require Sys::Hostname;
+ 		$du_part = 'user@' . Sys::Hostname::hostname();
+ 	}
+-	my $message_id_template = "<%s-git-send-email-%s>";
++	my $message_id_template = "%s-git-send-email-%s";
+ 	$message_id = sprintf($message_id_template, $uniq, $du_part);
++	@_ = split /@/, $message_id;
++	$message_id = '<'.substr(md5_hex($_[0]),0,31).'@'.substr(md5_hex($_[1]),1,31).'>';
+ 	#print "new message id = $message_id\n"; # Was useful for debugging
+ }
+ 
+@@ -1122,7 +1126,6 @@ To: $to${ccline}
+ Subject: $subject
+ Date: $date
+ Message-Id: $message_id
+-X-Mailer: git-send-email $gitversion
+ ";
+ 	if ($reply_to) {
+ 

@@ -52,6 +52,8 @@ static int icok;
 static iconv_t ic;
 static CFBundleRef bndl;
 static CFStringRef localestr;
+static CFURLRef localestringsurl;
+static int gettext_inited;
 static CFDictionaryRef localedict;
 static CFMutableDictionaryRef localeiconvdict;
 
@@ -133,25 +135,29 @@ void git_setup_gettext(void)
 		}
 		CFRelease(bl);
 	}
-	if (localestr) {
-		CFURLRef lsu = CFBundleCopyResourceURLForLocalization(bndl,
+	if (localestr)
+		localestringsurl = CFBundleCopyResourceURLForLocalization(bndl,
 			CFSTR("Localizable"), CFSTR("strings"), NULL, localestr);
-		if (lsu) {
-			CFDataRef xml;
-			SInt32 err;
-			if (CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
-			    lsu, &xml, NULL, NULL, &err)) {
-				CFPropertyListRef pl = CFPropertyListCreateFromXMLData(
-					kCFAllocatorDefault, xml, kCFPropertyListImmutable, NULL);
-				CFRelease(xml);
-				if (pl) {
-					if (CFGetTypeID(pl) == CFDictionaryGetTypeID())
-						localedict = pl;
-					else
-						CFRelease(pl);
-				}
+}
+
+static void git_init_gettext(void)
+{
+	if (gettext_inited) return;
+	gettext_inited = 1;
+	if (localestringsurl) {
+		CFDataRef xml;
+		SInt32 err;
+		if (CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
+		    localestringsurl, &xml, NULL, NULL, &err)) {
+			CFPropertyListRef pl = CFPropertyListCreateFromXMLData(
+				kCFAllocatorDefault, xml, kCFPropertyListImmutable, NULL);
+			CFRelease(xml);
+			if (pl) {
+				if (CFGetTypeID(pl) == CFDictionaryGetTypeID())
+					localedict = pl;
+				else
+					CFRelease(pl);
 			}
-			CFRelease(lsu);
 		}
 	}
 	if (localedict) {
@@ -181,6 +187,9 @@ char *gettext(const char *msgid)
 	char *val, *newval;
 	size_t s;
 	int newvalalloc = 0;
+
+	if (!gettext_inited)
+		git_init_gettext();
 
 	if (!msgid || !*msgid || !localeiconvdict || (!is_utf8_codeset && !icok))
 		return (char *)msgid;

@@ -186,7 +186,7 @@ char *gettext(const char *msgid)
 		return (char *)msgid;
 
 	key = CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, msgid,
-		kCFStringEncodingUTF8, NULL);
+		kCFStringEncodingUTF8, kCFAllocatorNull);
 	if (!key)
 		return (char *)msgid;
 	val = (char *)CFDictionaryGetValue(localeiconvdict, key);

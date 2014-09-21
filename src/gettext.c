@@ -19,6 +19,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 */
 
+/* If GIT_TEXTDOMAINDIR then a bundle named git-messages.bundle should be
+ * located there containing a Contents/Resources/*.lproj/Localizable.strings
+ * file for each supported messages localization.
+ * If GIT_TEXTDOMAINDIR is not set then it typically defaults to something
+ * like $prefix/share/locale from the build settings.
+ * If GIT_USE_PREFERENCES_LOCALE is set (at all) then LANG, LC_ALL, LC_MESSAGES
+ * will be ignored and the user's international language preferences will be
+ * used to select the messages locale.
+ */
+
 #include <CoreFoundation/CoreFoundation.h>
 #include "git-compat-util.h"
 #include "gettext.h"
@@ -71,6 +81,7 @@ void git_setup_gettext(void)
 	char bundlepath[PATH_MAX];
 	CFURLRef burl;
 	CFArrayRef bl;
+	int use_pref_locale = !!getenv("GIT_USE_PREFERENCES_LOCALE");
 
 	setlocale(LC_ALL, "");
 	strlcpyuc(charset, nl_langinfo(CODESET), sizeof(charset));
@@ -97,17 +108,18 @@ void git_setup_gettext(void)
 	if (bl) {
 		CFArrayRef al = NULL;
 		CFArrayRef pa = NULL;
-		CFBundleRef pl = NULL;
-		CFStringRef l = CFStringCreateWithCString(kCFAllocatorDefault,
-			localename, kCFStringEncodingUTF8);
-		if (l) {
-			pa = CFArrayCreate(kCFAllocatorDefault,
-				(const void **)&l, 1, &kCFTypeArrayCallBacks);
-			CFRelease(l);
+		if (!use_pref_locale) {
+			CFStringRef l = CFStringCreateWithCString(kCFAllocatorDefault,
+				localename, kCFStringEncodingUTF8);
+			if (l) {
+				pa = CFArrayCreate(kCFAllocatorDefault,
+					(const void **)&l, 1, &kCFTypeArrayCallBacks);
+				CFRelease(l);
+			}
 		}
-		if (pa) {
+		if (pa || use_pref_locale) {
 			al = CFBundleCopyLocalizationsForPreferences(bl, pa);
-			CFRelease(pa);
+			if (pa) CFRelease(pa);
 		}
 		if (al) {
 			if (CFArrayGetCount(al)) {

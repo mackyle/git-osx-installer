@@ -88,7 +88,7 @@ void git_setup_gettext(void)
 	is_utf8_codeset = !strcmp(charset, "UTF-8");
 	strlcpy(localename, querylocale(LC_MESSAGES_MASK, NULL), sizeof(localename));
 	ic = iconv_open(
-		strcmp(charset, "US-ASCII") ? charset : "US-ASCII/TRANSLIT",
+		strcmp(charset, "US-ASCII") ? charset : "US-ASCII//TRANSLIT",
 		"UTF-8");
 	if (ic != (iconv_t)-1)
 		icok = 1;
@@ -237,7 +237,7 @@ char *gettext(const char *msgid)
 		optr = newival;
 		ilen = iclen;
 		olen = iclen + 7;
-		if (iconv(ic, (iconv_p2)&newval, &ilen, &newival, &olen) != (size_t)-1) {
+		if (iconv(ic, (iconv_p2)&iptr, &ilen, &optr, &olen) != (size_t)-1) {
 			*optr = '\0';
 			CFDictionarySetValue(localeiconvdict, key, newival);
 			if (newvalalloc) free(newval);

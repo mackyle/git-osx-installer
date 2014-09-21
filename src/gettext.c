@@ -19,24 +19,31 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 */
 
+#include <CoreFoundation/CoreFoundation.h>
 #include "git-compat-util.h"
 #include "gettext.h"
+#include "strbuf.h"
 #include "utf8.h"
 #include <locale.h>
 #include <langinfo.h>
 #include <xlocale.h>
 #include <iconv.h>
-#include <CoreFoundation/CoreFoundation.h>
+
+#if defined(OLD_ICONV) || (defined(__sun__) && !defined(_XPG6))
+	typedef const char **iconv_p2;
+#else
+	typedef char **iconv_p2;
+#endif
 
 static char charset[32];
 static char localename[32];
-static int is_utf8;
+static int is_utf8_codeset;
 static int icok;
 static iconv_t ic;
 static CFBundleRef bndl;
 static CFStringRef localestr;
 static CFDictionaryRef localedict;
-static CFDictionaryRef localeiconvdict;
+static CFMutableDictionaryRef localeiconvdict;
 
 static char *strlcpyuc(char *dst, const char *src, size_t cnt)
 {
@@ -48,7 +55,7 @@ static char *strlcpyuc(char *dst, const char *src, size_t cnt)
 	ptr = dst;
 	if (src) {
 		while (*src && --cnt) {
-			ch = *src++;
+			char ch = *src++;
 			if ('a' <= ch && ch <= 'z')
 				ch -= 'a' + 'A';
 			*ptr++ = ch;
@@ -67,7 +74,7 @@ void git_setup_gettext(void)
 
 	setlocale(LC_ALL, "");
 	strlcpyuc(charset, nl_langinfo(CODESET), sizeof(charset));
-	is_utf8 = !strcmp(charset, "UTF-8");
+	is_utf8_codeset = !strcmp(charset, "UTF-8");
 	strlcpy(localename, querylocale(LC_MESSAGES_MASK, NULL), sizeof(localename));
 	ic = iconv_open(
 		strcmp(charset, "US-ASCII") ? charset : "US-ASCII/TRANSLIT",
@@ -89,17 +96,18 @@ void git_setup_gettext(void)
 		bl = CFBundleCopyBundleLocalizations(bndl);
 	if (bl) {
 		CFArrayRef al = NULL;
+		CFArrayRef pa = NULL;
 		CFBundleRef pl = NULL;
 		CFStringRef l = CFStringCreateWithCString(kCFAllocatorDefault,
 			localename, kCFStringEncodingUTF8);
 		if (l) {
-			pl = CFArrayCreate(kCFAllocatorDefault,
+			pa = CFArrayCreate(kCFAllocatorDefault,
 				(const void **)&l, 1, &kCFTypeArrayCallBacks);
 			CFRelease(l);
 		}
-		if (pl) {
-			al = CFBundleCopyLocalizationsForPreferences(bl, pl);
-			CFRelease(pl);
+		if (pa) {
+			al = CFBundleCopyLocalizationsForPreferences(bl, pa);
+			CFRelease(pa);
 		}
 		if (al) {
 			if (CFArrayGetCount(al)) {
@@ -142,7 +150,7 @@ void git_setup_gettext(void)
 
 int gettext_width(const char *s)
 {
-	return is_utf8 ? utf8_strwidth(s) : strlen(s);
+	return is_utf8_codeset ? utf8_strwidth(s) : strlen(s);
 }
 
 static CFStringRef get_dict_str(CFDictionaryRef d, CFStringRef k)
@@ -157,18 +165,18 @@ static CFStringRef get_dict_str(CFDictionaryRef d, CFStringRef k)
 char *gettext(const char *msgid)
 {
 	CFStringRef key;
-	CFStringRef strval;
+	CFStringRef valstr;
 	char *val, *newval;
 	size_t s;
 	int newvalalloc = 0;
 
-	if (!msgid || !*msgid || !localeiconvdict || (!is_utf8 && !icok))
-		return msgid;
+	if (!msgid || !*msgid || !localeiconvdict || (!is_utf8_codeset && !icok))
+		return (char *)msgid;
 
 	key = CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, msgid,
 		kCFStringEncodingUTF8, NULL);
 	if (!key)
-		return msgid;
+		return (char *)msgid;
 	val = (char *)CFDictionaryGetValue(localeiconvdict, key);
 	if (val) {
 		CFRelease(key);
@@ -177,25 +185,25 @@ char *gettext(const char *msgid)
 	valstr = get_dict_str(localedict, key);
 	if (!valstr) {
 		CFRelease(key);
-		return msgid;
+		return (char *)msgid;
 	}
-	newval = CFStringGetCStringPtr(valstr, kCFStringEncodingUTF8);
+	newval = (char *)CFStringGetCStringPtr(valstr, kCFStringEncodingUTF8);
 	if (!newval) {
 		s = (size_t)CFStringGetMaximumSizeForEncoding(CFStringGetLength(valstr),
 			kCFStringEncodingUTF8) + 1;
 		newval = (char *)malloc(s);
 		if (!newval) {
 			CFRelease(key);
-			return msgid;
+			return (char *)msgid;
 		}
 		if (!CFStringGetCString(valstr, newval, (CFIndex)s, kCFStringEncodingUTF8)) {
 			free(newval);
 			CFRelease(key);
-			return msgid;
+			return (char *)msgid;
 		}
 		newvalalloc = 1;
 	}
-	if (is_utf8) {
+	if (is_utf8_codeset) {
 		/* no iconv needed */
 		CFDictionarySetValue(localeiconvdict, key, newval);
 		CFRelease(key);
@@ -210,14 +218,14 @@ char *gettext(const char *msgid)
 		if (!newival) {
 			if (newvalalloc) free(newval);
 			CFRelease(key);
-			return msgid;
+			return (char *)msgid;
 		}
 		iconv(ic, NULL, NULL, NULL, NULL);
 		iptr = newval;
 		optr = newival;
 		ilen = iclen;
 		olen = iclen + 7;
-		if (iconv(ic, (const char **)&newval, &ilen, &newival, &olen) != (size_t)-1) {
+		if (iconv(ic, (iconv_p2)&newval, &ilen, &newival, &olen) != (size_t)-1) {
 			*optr = '\0';
 			CFDictionarySetValue(localeiconvdict, key, newival);
 			if (newvalalloc) free(newval);
@@ -228,5 +236,5 @@ char *gettext(const char *msgid)
 		if (newvalalloc) free(newval);
 		CFRelease(key);
 	}
-	return msgid;
+	return (char *)msgid;
 }

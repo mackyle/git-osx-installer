@@ -24,15 +24,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  * file for each supported messages localization.
  * If GIT_TEXTDOMAINDIR is not set then it typically defaults to something
  * like $prefix/share/locale from the build settings.
- * If GIT_USE_PREFERENCES_LOCALE is set (at all) then LANG, LC_ALL, LC_MESSAGES
+ * If GIT_USE_PREFERENCES_LOCALE is true then LANG, LC_ALL, LC_MESSAGES
  * will be ignored and the user's international language preferences will be
  * used to select the messages locale.
  */
 
 #include <CoreFoundation/CoreFoundation.h>
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "strbuf.h"
+#include "cache.h"
 #include "utf8.h"
 #include <locale.h>
 #include <langinfo.h>
@@ -83,7 +81,7 @@ void git_setup_gettext(void)
 	char bundlepath[PATH_MAX];
 	CFURLRef burl;
 	CFArrayRef bl;
-	int use_pref_locale = !!getenv("GIT_USE_PREFERENCES_LOCALE");
+	int use_pref_locale = git_env_bool("GIT_USE_PREFERENCES_LOCALE", 0);
 
 	setlocale(LC_ALL, "");
 	strlcpyuc(charset, nl_langinfo(CODESET), sizeof(charset));

@@ -1,0 +1,22 @@
+--- a/git-sh-i18n.sh
++++ b/git-sh-i18n.sh
+@@ -45,6 +45,19 @@ gnu)
+ 	# Use libintl's gettext.sh, or fall back to English if we can't.
+ 	. gettext.sh
+ 	;;
++git_gettext)
++	# Use git-gettext and git-sh-i18n--envsubst
++	gettext () {
++		git gettext "$1"
++	}
++
++	eval_gettext () {
++		git gettext "$1" | (
++			export PATH $(git sh-i18n--envsubst --variables "$1");
++			git sh-i18n--envsubst "$1"
++		)
++	}
++	;;
+ gettext_without_eval_gettext)
+ 	# Solaris has a gettext(1) but no eval_gettext(1)
+ 	eval_gettext () {

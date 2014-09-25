@@ -1,8 +1,6 @@
-diff --git a/git-send-email.orig b/git-send-email.new
-index f3d75e8..d0b4bff 100755
---- a/git-send-email.orig
-+++ b/git-send-email.new
-@@ -27,6 +27,7 @@ use Data::Dumper;
+--- a/git-send-email.perl
++++ b/git-send-email.perl
+@@ -26,6 +26,7 @@ use Data::Dumper;
  use Term::ANSIColor;
  use File::Temp qw/ tempdir tempfile /;
  use File::Spec::Functions qw(catfile);
@@ -10,7 +8,7 @@ index f3d75e8..d0b4bff 100755
  use Error qw(:try);
  use Git;
  
-@@ -300,6 +301,7 @@ my $rc = GetOptions("h" => \$help,
+@@ -293,6 +294,7 @@ my $rc = GetOptions("h" => \$help,
  		    "smtp-server-option=s" => \@smtp_server_options,
  		    "smtp-server-port=s" => \$smtp_server_port,
  		    "smtp-user=s" => \$smtp_authuser,
@@ -18,7 +16,7 @@ index f3d75e8..d0b4bff 100755
  		    "smtp-pass:s" => \$smtp_authpass,
  		    "smtp-ssl" => sub { $smtp_encryption = 'ssl' },
  		    "smtp-encryption=s" => \$smtp_encryption,
-@@ -901,8 +903,10 @@ sub make_message_id {
+@@ -902,8 +904,10 @@ sub make_message_id {
  		require Sys::Hostname;
  		$du_part = 'user@' . Sys::Hostname::hostname();
  	}
@@ -30,7 +28,7 @@ index f3d75e8..d0b4bff 100755
  	#print "new message id = $message_id\n"; # Was useful for debugging
  }
  
-@@ -1122,7 +1126,6 @@ To: $to${ccline}
+@@ -1163,7 +1167,6 @@ To: $to${ccline}
  Subject: $subject
  Date: $date
  Message-Id: $message_id

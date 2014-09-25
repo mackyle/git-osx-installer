@@ -20,13 +20,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /* If GIT_TEXTDOMAINDIR then a bundle named git-messages.bundle should be
- * located there containing a Contents/Resources/*.lproj/Localizable.strings
+ * located there containing a Contents/Resources/<lang>.lproj/Localizable.strings
  * file for each supported messages localization.
  * If GIT_TEXTDOMAINDIR is not set then it typically defaults to something
  * like $prefix/share/locale from the build settings.
  * If GIT_USE_PREFERENCES_LOCALE is true then LANG, LC_ALL, LC_MESSAGES
  * will be ignored and the user's international language preferences will be
  * used to select the messages locale.
+ * If GIT_USE_PREFERENCES_LOCALE is not set but the preference
+ * org.git-scm.use_preferences_locale is set to a boolean true (in either the
+ * user's or all users' globalDomain) then also behave as though
+ * GIT_USE_PREFERENCES_LOCALE is set to true.
  */
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -77,12 +81,32 @@ static char *strlcpyuc(char *dst, const char *src, size_t cnt)
 
 void git_setup_gettext(void)
 {
-	const char *ln, *localedir;
+	const char *localedir;
 	char bundlepath[PATH_MAX];
 	CFURLRef burl;
 	CFArrayRef bl;
-	int use_pref_locale = git_env_bool("GIT_USE_PREFERENCES_LOCALE", 0);
+	int use_pref_locale = git_env_bool("GIT_USE_PREFERENCES_LOCALE", -1);
 
+	if (use_pref_locale < 0) {
+		CFBooleanRef b = CFPreferencesCopyValue(
+			CFSTR("org.git-scm.use_preferences_locale"),
+			kCFPreferencesAnyApplication,
+			kCFPreferencesCurrentUser,
+			kCFPreferencesAnyHost);
+		if (!b) b = CFPreferencesCopyValue(
+			CFSTR("org.git-scm.use_preferences_locale"),
+			kCFPreferencesAnyApplication,
+			kCFPreferencesAnyUser,
+			kCFPreferencesCurrentHost);
+		if (b) {
+			if (CFGetTypeID(b) == CFBooleanGetTypeID()) {
+				use_pref_locale = CFBooleanGetValue(b) ? 1 : 0;
+			}
+			CFRelease(b);
+		}
+		if (use_pref_locale < 0)
+			use_pref_locale = 0;
+	}
 	setlocale(LC_ALL, "");
 	strlcpyuc(charset, nl_langinfo(CODESET), sizeof(charset));
 	is_utf8_codeset = !strcmp(charset, "UTF-8");

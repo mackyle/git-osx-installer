@@ -1,0 +1,24 @@
+diff --git a/Makefile b/Makefile
+index 4f0a8822..131d2bbc 100644
+--- a/Makefile
++++ b/Makefile
+@@ -42,7 +42,11 @@ $(help_out): README create-help.sh
+ 	./create-help.sh $$CMD
+ 
+ precheck:: tg
++ifeq ($(DESTDIR),)
+ 	./$+ precheck
++else
++	@echo skipping precheck because DESTDIR is set
++endif
+ 
+ install:: all
+ 	install -d -m 755 "$(DESTDIR)$(bindir)"
+@@ -53,6 +57,7 @@ install:: all
+ 	install $(hooks_out) "$(DESTDIR)$(hooksdir)"
+ 	install -d -m 755 "$(DESTDIR)$(sharedir)"
+ 	install -m 644 $(help_out) "$(DESTDIR)$(sharedir)"
++	install -m 644 README "$(DESTDIR)$(sharedir)/tg-tg.txt"
+ 	install -m 644 leaves.awk "$(DESTDIR)$(sharedir)"
+ 
+ clean::

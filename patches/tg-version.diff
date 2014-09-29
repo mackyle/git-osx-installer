@@ -1,0 +1,25 @@
+diff --git a/tg.sh b/tg.sh
+index 471e9a83..45464647 100644
+--- a/tg.sh
++++ b/tg.sh
+@@ -3,7 +3,7 @@
+ # (c) Petr Baudis <pasky@suse.cz>  2008
+ # GPLv2
+ 
+-TG_VERSION=0.10
++TG_VERSION=0.11
+ 
+ # Update if you add any code that requires a newer version of git
+ GIT_MINIMUM_VERSION=1.7.7.2
+@@ -37,6 +37,11 @@ precheck() {
+ 	    || die "git version >= ${GIT_MINIMUM_VERSION} required"
+ }
+ 
++case "$1" in version|--version|-V)
++	echo "TopGit version $TG_VERSION"
++	exit 0
++esac
++
+ precheck
+ [ "$1" = "precheck" ] && exit 0
+ 

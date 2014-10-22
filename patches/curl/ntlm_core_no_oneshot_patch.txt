@@ -1,0 +1,16 @@
+diff --git a/lib/curl_ntlm_core.c b/lib/curl_ntlm_core.c
+index b0116262..8cea3db9 100644
+--- a/lib/curl_ntlm_core.c
++++ b/lib/curl_ntlm_core.c
+@@ -456,7 +456,10 @@ CURLcode Curl_ntlm_core_mk_nt_hash(struct SessionHandle *data,
+ #elif defined(USE_NSS)
+     Curl_md4it(ntbuffer, pw, 2 * len);
+ #elif defined(USE_DARWINSSL)
+-    (void)CC_MD4(pw, (CC_LONG)(2 * len), ntbuffer);
++    CC_MD4_CTX ctx;
++    (void)CC_MD4_Init(&ctx);
++    (void)CC_MD4_Update(&ctx, pw, (CC_LONG)(2 * len));
++    (void)CC_MD4_Final(ntbuffer, &ctx);
+ #endif
+ 
+     memset(ntbuffer + 16, 0, 21 - 16);

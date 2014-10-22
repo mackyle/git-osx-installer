@@ -1,0 +1,404 @@
+From 881db2f0a5c88da4fa6c3a2997753a25274ff60a Mon Sep 17 00:00:00 2001
+From: Bernhard Reiter <ockham@raz.or.at>
+Date: Wed, 27 Aug 2014 00:40:17 +0200
+Subject: [PATCH] git-imap-send: use libcurl for implementation
+
+Use libcurl's high-level API functions to implement git-imap-send
+instead of the previous low-level OpenSSL-based functions.
+
+Since version 7.30.0, libcurl's API has been able to communicate with
+IMAP servers. Using those high-level functions instead of the current
+ones would reduce imap-send.c by some 1200 lines of code. For now,
+the old ones are wrapped in #ifdefs, and the new functions are enabled
+by make if curl's version is >= 7.35.0, from which version on curl's
+CURLOPT_LOGIN_OPTIONS (enabling IMAP authentication) parameter has been
+available.
+
+As I don't have access to that many IMAP servers, I haven't been able to
+test the new code with a wide variety of parameter combinations. I did
+test both secure and insecure (imaps:// and imap://) connections and
+values of "PLAIN" and "LOGIN" for the authMethod.
+
+Helped-by: Kyle J. McKay <mackyle@gmail.com>
+Backport-by: Kyle J. McKay <mackyle@gmail.com>
+Signed-off-by: Bernhard Reiter <ockham@raz.or.at>
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ Documentation/git-imap-send.txt |   4 +-
+ INSTALL                         |  17 ++--
+ Makefile                        |  16 +++-
+ imap-send.c                     | 187 ++++++++++++++++++++++++++++++++--------
+ 4 files changed, 178 insertions(+), 46 deletions(-)
+
+diff --git a/Documentation/git-imap-send.txt b/Documentation/git-imap-send.txt
+index 875d2831..13f8184c 100644
+--- a/Documentation/git-imap-send.txt
++++ b/Documentation/git-imap-send.txt
+@@ -76,7 +76,9 @@ imap.preformattedHTML::
+ 
+ imap.authMethod::
+ 	Specify authenticate method for authentication with IMAP server.
+-	Current supported method is 'CRAM-MD5' only.
++	If you compiled git with the NO_CURL option or if your curl version is
++	< 7.34.0, the only supported method is 'CRAM-MD5'. If this is not set
++	then 'git imap-send' uses the basic IMAP plaintext LOGIN command.
+ 
+ Examples
+ ~~~~~~~~
+diff --git a/INSTALL b/INSTALL
+index 6ec7a24e..8148ec74 100644
+--- a/INSTALL
++++ b/INSTALL
+@@ -108,18 +108,21 @@ Issues of note:
+ 	  so you might need to install additional packages other than Perl
+ 	  itself, e.g. Time::HiRes.
+ 
+-	- "openssl" library is used by git-imap-send to use IMAP over SSL.
+-	  If you don't need it, use NO_OPENSSL.
++	- git-imap-send needs the OpenSSL library to talk IMAP over SSL if
++	  you are using libcurl older than 7.34.0.  Otherwise you can use
++	  NO_OPENSSL without losing git-imap-send.
+ 
+-	  By default, git uses OpenSSL for SHA1 but it will use its own
++	- By default, git uses OpenSSL for SHA1 but it will use its own
+ 	  library (inspired by Mozilla's) with either NO_OPENSSL or
+ 	  BLK_SHA1.  Also included is a version optimized for PowerPC
+ 	  (PPC_SHA1).
+ 
+-	- "libcurl" library is used by git-http-fetch and git-fetch.  You
+-	  might also want the "curl" executable for debugging purposes.
+-	  If you do not use http:// or https:// repositories, you do not
+-	  have to have them (use NO_CURL).
++	- "libcurl" library is used by git-http-fetch, git-fetch, and, if
++	  the curl version >= 7.34.0, for git-imap-send.  You might also
++	  want the "curl" executable for debugging purposes. If you do not
++	  use http:// or https:// repositories, and do not want to put
++	  patches into an IMAP mailbox, you do not have to have them
++	  (use NO_CURL).
+ 
+ 	- "expat" library; git-http-push uses it for remote lock
+ 	  management over DAV.  Similar to "curl" above, this is optional
+diff --git a/Makefile b/Makefile
+index 9f984a9e..7e6677c0 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1120,6 +1120,9 @@ ifdef HAVE_ALLOCA_H
+ 	BASIC_CFLAGS += -DHAVE_ALLOCA_H
+ endif
+ 
++IMAP_SEND_BUILDDEPS =
++IMAP_SEND_LDFLAGS = $(OPENSSL_LINK) $(OPENSSL_LIBSSL) $(LIB_4_CRYPTO)
++
+ ifdef NO_CURL
+ 	BASIC_CFLAGS += -DNO_CURL
+ 	REMOTE_CURL_PRIMARY =
+@@ -1154,6 +1157,15 @@ else
+ 			PROGRAM_OBJS += http-push.o
+ 		endif
+ 	endif
++	curl_check := $(shell (echo 072200; curl-config --vernum) 2>/dev/null | sort -r | sed -ne 2p)
++	ifeq "$(curl_check)" "072200"
++		USE_CURL_FOR_IMAP_SEND = YesPlease
++	endif
++	ifdef USE_CURL_FOR_IMAP_SEND
++		BASIC_CFLAGS += -DUSE_CURL_FOR_IMAP_SEND
++		IMAP_SEND_BUILDDEPS = http.o
++		IMAP_SEND_LDFLAGS += $(CURL_LIBCURL)
++	endif
+ 	ifndef NO_EXPAT
+ 		ifdef EXPATDIR
+ 			BASIC_CFLAGS += -I$(EXPATDIR)/include
+@@ -2071,9 +2083,9 @@ endif
+ git-%$X: %.o GIT-LDFLAGS $(GITLIBS)
+ 	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) $(LIBS)
+ 
+-git-imap-send$X: imap-send.o GIT-LDFLAGS $(GITLIBS)
++git-imap-send$X: imap-send.o $(IMAP_SEND_BUILDDEPS) GIT-LDFLAGS $(GITLIBS)
+ 	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) \
+-		$(LIBS) $(OPENSSL_LINK) $(OPENSSL_LIBSSL) $(LIB_4_CRYPTO)
++		$(LIBS) $(IMAP_SEND_LDFLAGS)
+ 
+ git-http-fetch$X: http.o http-walker.o http-fetch.o GIT-LDFLAGS $(GITLIBS)
+ 	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) \
+diff --git a/imap-send.c b/imap-send.c
+index 524fbabc..8fd470e8 100644
+--- a/imap-send.c
++++ b/imap-send.c
+@@ -29,6 +29,9 @@
+ #ifdef NO_OPENSSL
+ typedef void *SSL;
+ #endif
++#ifdef USE_CURL_FOR_IMAP_SEND
++#include "http.h"
++#endif
+ 
+ static const char imap_send_usage[] = "git imap-send < <mbox>";
+ 
+@@ -165,7 +168,7 @@ static const char *cap_list[] = {
+ static int get_cmd_result(struct imap_store *ctx, struct imap_cmd *tcmd);
+ 
+ 
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ static void ssl_socket_perror(const char *func)
+ {
+ 	fprintf(stderr, "%s: %s\n", func, ERR_error_string(ERR_get_error(), NULL));
+@@ -174,7 +177,7 @@ static void ssl_socket_perror(const char *func)
+ 
+ static void socket_perror(const char *func, struct imap_socket *sock, int ret)
+ {
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl) {
+ 		int sslerr = SSL_get_error(sock->ssl, ret);
+ 		switch (sslerr) {
+@@ -197,7 +200,7 @@ static void socket_perror(const char *func, struct imap_socket *sock, int ret)
+ 	}
+ }
+ 
+-#ifdef NO_OPENSSL
++#if defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP)
+ static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int verify)
+ {
+ 	fprintf(stderr, "SSL requested but SSL support not compiled in\n");
+@@ -333,7 +336,7 @@ static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int ve
+ static int socket_read(struct imap_socket *sock, char *buf, int len)
+ {
+ 	ssize_t n;
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl)
+ 		n = SSL_read(sock->ssl, buf, len);
+ 	else
+@@ -351,7 +354,7 @@ static int socket_read(struct imap_socket *sock, char *buf, int len)
+ static int socket_write(struct imap_socket *sock, const char *buf, int len)
+ {
+ 	int n;
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl)
+ 		n = SSL_write(sock->ssl, buf, len);
+ 	else
+@@ -368,7 +371,7 @@ static int socket_write(struct imap_socket *sock, const char *buf, int len)
+ 
+ static void socket_shutdown(struct imap_socket *sock)
+ {
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl) {
+ 		SSL_shutdown(sock->ssl);
+ 		SSL_free(sock->ssl);
+@@ -863,7 +866,7 @@ static void imap_close_store(struct imap_store *ctx)
+ 	free(ctx);
+ }
+ 
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || (defined(NO_OPENSSL_IMAP) && !defined(APPLE_COMMON_CRYPTO)))
+ 
+ /*
+  * hexchar() and cram() functions are based on the code from the isync
+@@ -1084,7 +1087,7 @@ static struct imap_store *imap_open_store(struct imap_server_conf *srvc)
+ 		goto bail;
+ 
+ 	if (!preauth) {
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 		if (!srvc->use_ssl && CAP(STARTTLS)) {
+ 			if (imap_exec(ctx, NULL, "STARTTLS") != RESP_OK)
+ 				goto bail;
+@@ -1365,14 +1368,138 @@ static int git_imap_config(const char *key, const char *val, void *cb)
+ 	return 0;
+ }
+ 
+-int main(int argc, char **argv)
+-{
+-	struct strbuf all_msgs = STRBUF_INIT;
++static int append_msgs_to_imap(struct imap_server_conf *server, struct strbuf* all_msgs, int total) {
+ 	struct strbuf msg = STRBUF_INIT;
+ 	struct imap_store *ctx = NULL;
+ 	int ofs = 0;
+ 	int r;
+-	int total, n = 0;
++	int n = 0;
++
++	ctx = imap_open_store(server);
++	if (!ctx) {
++		fprintf(stderr, "failed to open store\n");
++		return 1;
++	}
++
++	fprintf(stderr, "sending %d message%s\n", total, (total != 1) ? "s" : "");
++	ctx->name = imap_folder;
++	while (1) {
++		unsigned percent = n * 100 / total;
++
++		fprintf(stderr, "%4u%% (%d/%d) done\r", percent, n, total);
++		if (!split_msg(all_msgs, &msg, &ofs))
++			break;
++		if (server->use_html)
++			wrap_in_html(&msg);
++		r = imap_store_msg(ctx, &msg);
++		if (r != DRV_OK)
++			break;
++		n++;
++	}
++	fprintf(stderr, "\n");
++
++	imap_close_store(ctx);
++
++	return 0;
++}
++
++#ifdef USE_CURL_FOR_IMAP_SEND
++static CURL *setup_curl(struct imap_server_conf *srvc)
++{
++	CURL *curl;
++	struct strbuf path = STRBUF_INIT;
++	struct strbuf auth = STRBUF_INIT;
++
++	if (curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK)
++		die("curl_global_init failed");
++
++	curl = curl_easy_init();
++
++	if (!curl)
++		die("curl_easy_init failed");
++
++	curl_easy_setopt(curl, CURLOPT_USERNAME, server.user);
++	curl_easy_setopt(curl, CURLOPT_PASSWORD, server.pass);
++
++	strbuf_addstr(&path, server.host);
++	if (!path.len || path.buf[path.len - 1] != '/')
++		strbuf_addch(&path, '/');
++	strbuf_addstr(&path, imap_folder);
++
++	curl_easy_setopt(curl, CURLOPT_URL, path.buf);
++	curl_easy_setopt(curl, CURLOPT_PORT, server.port);
++
++	if (server.auth_method) {
++		strbuf_addstr(&auth, "AUTH=");
++		strbuf_addstr(&auth, server.auth_method);
++		curl_easy_setopt(curl, CURLOPT_LOGIN_OPTIONS, auth.buf);
++	}
++
++	if (server.use_ssl)
++		curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
++
++	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, server.ssl_verify);
++	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, server.ssl_verify);
++
++	curl_easy_setopt(curl, CURLOPT_READFUNCTION, fread_buffer);
++
++	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
++
++	if (Verbose)
++		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
++
++	return curl;
++}
++
++static int curl_append_msgs_to_imap(struct imap_server_conf *server, struct strbuf* all_msgs, int total) {
++	int ofs = 0;
++	int n = 0;
++	struct buffer msgbuf = { STRBUF_INIT, 0 };
++	CURL *curl;
++	CURLcode res = CURLE_OK;
++
++	curl = setup_curl(server);
++	curl_easy_setopt(curl, CURLOPT_READDATA, &msgbuf);
++
++	fprintf(stderr, "sending %d message%s\n", total, (total != 1) ? "s" : "");
++	while (1) {
++		int prev_len;
++		unsigned percent = n * 100 / total;
++
++		fprintf(stderr, "%4u%% (%d/%d) done\r", percent, n, total);
++
++		prev_len = msgbuf.buf.len;
++		if (!split_msg(all_msgs, &msgbuf.buf, &ofs))
++			break;
++		if (server->use_html)
++			wrap_in_html(&msgbuf.buf);
++		lf_to_crlf(&msgbuf.buf);
++
++		curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)(msgbuf.buf.len-prev_len));
++
++		res = curl_easy_perform(curl);
++
++		if(res != CURLE_OK) {
++			fprintf(stderr, "curl_easy_perform() failed: %s\n",
++					curl_easy_strerror(res));
++			break;
++		}
++
++		n++;
++	}
++	fprintf(stderr, "\n");
++
++	curl_easy_cleanup(curl);
++	curl_global_cleanup();
++
++	return 0;
++}
++#endif
++
++int main(int argc, char **argv)
++{
++	struct strbuf all_msgs = STRBUF_INIT;
++	int total;
+ 	int nongit_ok;
+ 
+ 	git_extract_argv0_path(argv[0]);
+@@ -1385,6 +1512,11 @@ int main(int argc, char **argv)
+ 	setup_git_directory_gently(&nongit_ok);
+ 	git_config(git_imap_config, NULL);
+ 
++#if defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP)
++	if (server.tunnel)
++		server.use_ssl = 0;
++#endif
++
+ 	if (!server.port)
+ 		server.port = server.use_ssl ? 993 : 143;
+ 
+@@ -1418,30 +1550,13 @@ int main(int argc, char **argv)
+ 	}
+ 
+ 	/* write it to the imap server */
+-	ctx = imap_open_store(&server);
+-	if (!ctx) {
+-		fprintf(stderr, "failed to open store\n");
+-		return 1;
+-	}
+ 
+-	fprintf(stderr, "sending %d message%s\n", total, (total != 1) ? "s" : "");
+-	ctx->name = imap_folder;
+-	while (1) {
+-		unsigned percent = n * 100 / total;
++	if (server.tunnel)
++		return append_msgs_to_imap(&server, &all_msgs, total);
+ 
+-		fprintf(stderr, "%4u%% (%d/%d) done\r", percent, n, total);
+-		if (!split_msg(&all_msgs, &msg, &ofs))
+-			break;
+-		if (server.use_html)
+-			wrap_in_html(&msg);
+-		r = imap_store_msg(ctx, &msg);
+-		if (r != DRV_OK)
+-			break;
+-		n++;
+-	}
+-	fprintf(stderr, "\n");
+-
+-	imap_close_store(ctx);
+-
+-	return 0;
++#ifndef USE_CURL_FOR_IMAP_SEND
++	return append_msgs_to_imap(&server, &all_msgs, total);
++#else
++	return curl_append_msgs_to_imap(&server, &all_msgs, total);
++#endif
+ }
+-- 
+2.1.1
+

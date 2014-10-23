@@ -408,7 +408,7 @@ static void del_temp_keych(char *keych)
     DIR *d;
     unlink(keych);
     keych[l - 14] = '\0';
-    /* the keychain code leaves dot turds we have to remove */
+    /* the keychain code leaves dot turds (and possibly comma turds) we have to remove */
     d = opendir(keych);
     if (d) {
       struct dirent *ent;
@@ -417,7 +417,7 @@ static void del_temp_keych(char *keych)
         if (ent->d_name[0] == '.' &&
             (ent->d_name[1] == '\0'
              || (ent->d_name[1] == '.' && ent->d_name[2] == '\0'))) continue;
-        if (ent->d_name[0] != '.') continue;
+        if (ent->d_name[0] != '.' && ent->d_name[0] != ',') continue;
         snprintf(turd, sizeof(turd), "%s/%s", keych, ent->d_name);
         unlink(turd);
       }

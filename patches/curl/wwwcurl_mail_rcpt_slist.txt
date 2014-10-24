@@ -1,0 +1,30 @@
+diff --git a/Curl.xs b/Curl.xs
+index ea9f8701..07cf5558 100644
+--- a/Curl.xs
++++ b/Curl.xs
+@@ -41,6 +41,7 @@ typedef enum {
+ #ifdef CURLOPT_RESOLVE
+     SLIST_RESOLVE,
+ #endif
++    SLIST_MAIL_RCPT,
+     SLIST_LAST
+ } perl_curl_easy_slist_code;
+ 
+@@ -134,6 +135,9 @@ slist_index(int option)
+             return SLIST_RESOLVE;
+             break;
+ #endif
++        case CURLOPT_MAIL_RCPT:
++            return SLIST_MAIL_RCPT;
++            break;
+     }
+     croak("Bad slist index requested\n");
+     return SLIST_LAST;
+@@ -757,6 +761,7 @@ curl_easy_setopt(self, option, value, push=0)
+ #ifdef CURLOPT_RESOLVE
+             case CURLOPT_RESOLVE:
+ #endif
++            case CURLOPT_MAIL_RCPT:
+             {
+                 /* This is an option specifying a list, which we put in a curl_slist struct */
+                 AV *array = (AV *)SvRV(value);

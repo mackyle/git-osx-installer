@@ -1,0 +1,148 @@
+diff --git a/lib/mk-ca-bundle.pl b/lib/mk-ca-bundle.pl
+index 0485bafd..7ee7b0e1 100755
+--- a/lib/mk-ca-bundle.pl
++++ b/lib/mk-ca-bundle.pl
+@@ -32,11 +32,17 @@
+ #
+ use Getopt::Std;
+ use MIME::Base64;
+-use LWP::UserAgent;
+ use strict;
+-use vars qw($opt_b $opt_d $opt_f $opt_h $opt_i $opt_l $opt_n $opt_p $opt_q $opt_s $opt_t $opt_u $opt_v $opt_w);
++use vars qw($opt_b $opt_d $opt_f $opt_h $opt_i $opt_l $opt_n $opt_p $opt_q $opt_s $opt_t $opt_u $opt_v $opt_w $have_lwp);
+ use List::Util;
+ use Text::Wrap;
++BEGIN {
++  eval {
++    require LWP::UserAgent;
++    LWP::UserAgent->import;
++    $have_lwp = 1;
++  };
++}
+ 
+ my %urls = (
+   'nss' =>
+@@ -56,7 +62,7 @@ $opt_d = 'release';
+ # If the OpenSSL commandline is not in search path you can configure it here!
+ my $openssl = 'openssl';
+ 
+-my $version = '1.22';
++my $version = '1.22_1';
+ 
+ $opt_w = 76; # default base64 encoded lines length
+ 
+@@ -119,8 +125,8 @@ if ($opt_i) {
+   print "Operating System Name     : $^O\n";
+   print "Getopt::Std.pm Version    : ${Getopt::Std::VERSION}\n";
+   print "MIME::Base64.pm Version   : ${MIME::Base64::VERSION}\n";
+-  print "LWP::UserAgent.pm Version : ${LWP::UserAgent::VERSION}\n";
+-  print "LWP.pm Version            : ${LWP::VERSION}\n";
++  print "LWP::UserAgent.pm Version : @{[$have_lwp ? ${LWP::UserAgent::VERSION} : 'n/a']}\n";
++  print "LWP.pm Version            : @{[$have_lwp ? ${LWP::VERSION} : 'n/a']}\n";
+   print ("=" x 78 . "\n");
+ }
+ 
+@@ -137,7 +143,7 @@ sub WARNING_MESSAGE() {
+ 	print "     swear at you.  ;)\n";
+     exit;
+   } else { # Short Form Warning
+-    print "Warning: Use of this script may pose some risk, -d risk for more details.\n";
++    print STDERR "Warning: Use of this script may pose some risk, -d risk for more details.\n";
+   }
+ }
+ 
+@@ -147,10 +153,11 @@ sub HELP_MESSAGE() {
+   print "\t-d\tspecify Mozilla tree to pull certdata.txt or custom URL\n";
+   print "\t\t  Valid names are:\n";
+   print "\t\t    ", join( ", ", map { ( $_ =~ m/$opt_d/ ) ? "$_ (default)" : "$_" } sort keys %urls ), "\n";
++  print "\t\t    ", join( "\n\t\t    ", map { sprintf "%-8s %s", "$_:", $urls{$_} } sort keys %urls ), "\n" if $opt_v;
+   print "\t-f\tforce rebuild even if certdata.txt is current\n";
+   print "\t-i\tprint version info about used modules\n";
+   print "\t-l\tprint license info about certdata.txt\n";
+-  print "\t-n\tno download of certdata.txt (to use existing)\n";
++  print wrap("\t","\t\t", "-n\tno download of certdata.txt (to use existing)@{[$have_lwp?'':' -- required on this OS as LWP::UserAgent is not present']}"), "\n";
+   print wrap("\t","\t\t", "-p\tlist of Mozilla trust purposes and levels for certificates to include in output. Takes the form of a comma separated list of purposes, a colon, and a comma separated list of levels. (default: $default_mozilla_trust_purposes:$default_mozilla_trust_levels)"), "\n";
+   print "\t\t  Valid purposes are:\n";
+   print wrap("\t\t    ","\t\t    ", join( ", ", "ALL", @valid_mozilla_trust_purposes ) ), "\n";
+@@ -162,7 +169,7 @@ sub HELP_MESSAGE() {
+   print wrap("\t\t    ","\t\t    ", join( ", ", "ALL", @valid_signature_algorithms ) ), "\n";
+   print "\t-t\tinclude plain text listing of certificates\n";
+   print "\t-u\tunlink (remove) certdata.txt after processing\n";
+-  print "\t-v\tbe verbose and print out processed CAs\n";
++  print "\t-v\tbe verbose and print out processed CAs and include URLs in help output\n";
+   print "\t-w <l>\twrap base64 output lines after <l> chars (default: ${opt_w})\n";
+   exit;
+ }
+@@ -216,16 +223,17 @@ sub sha1 {
+ 
+ sub oldsha1 {
+     my ($crt)=@_;
+-    my $sha1="";
+-    open(C, "<$crt");
+-    while(<C>) {
+-        chomp;
+-        if($_ =~ /^\#\# SHA1: (.*)/) {
+-            $sha1 = $1;
+-            last;
+-        }
++    my $sha1="<no file present>";
++    if (open(C, "<$crt")) {
++      while(<C>) {
++          chomp;
++          if($_ =~ /^\#\# SHA1: (.*)/) {
++              $sha1 = $1;
++              last;
++          }
++      }
++      close(C);
+     }
+-    close(C);
+     return $sha1;
+ }
+ 
+@@ -258,11 +266,19 @@ my $stdout = $crt eq '-';
+ my $resp;
+ my $fetched;
+ 
+-my $oldsha1= oldsha1($crt);
++my $oldsha1= $stdout ? '' : oldsha1($crt);
+ 
+-print STDERR "SHA1 of old file: $oldsha1\n";
++print STDERR "SHA1 of old data file: $oldsha1\n" unless $stdout;
+ 
+ unless ($opt_n and -e $txt) {
++  if (!$have_lwp) {
++    print STDERR
++      "The -n option is required on this OS as no LWP::UserAgent is not present.\n",
++      "Use the -v and -h options together to see the source URLs, download\n",
++      "a suitable certdata.txt file via other means and run this script again\n",
++      "using the -n option to process the certdata.txt file.\n";
++    exit 1;
++  }
+   print STDERR "Downloading '$txt' ...\n" if (!$opt_q);
+   my $ua  = new LWP::UserAgent(agent => "$0/$version");
+   $ua->env_proxy();
+@@ -292,12 +308,12 @@ if(!$filedate) {
+ # get the hash from the download file
+ my $newsha1= sha1($txt); 
+ 
+-if($oldsha1 eq $newsha1) {
++if($oldsha1 eq $newsha1 && !$opt_f) {
+     print STDERR "Downloaded file identical to previous run\'s source file. Exiting\n";
+     exit;
+ }
+ 
+-print STDERR "SHA1 of new file: $newsha1\n";
++print STDERR "SHA1 of new data file: $newsha1\n";
+ 
+ my $currentdate = scalar gmtime($filedate);
+ 
+@@ -323,7 +339,7 @@ print CRT <<EOT;
+ ## an Apache+mod_ssl webserver for SSL client authentication.
+ ## Just configure this file as the SSLCACertificateFile.
+ ##
+-## Conversion done with mk-ca-bundle.pl verison $version.
++## Conversion done with mk-ca-bundle.pl version $version.
+ ## SHA1: $newsha1
+ ##
+ 

@@ -441,6 +441,10 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   size_t ssl_sessionid_len;
   OSStatus err = noErr;
 
+  if(connssl->kh) {
+    DisposeIdentityKeychainHandle(connssl->kh);
+    connssl->kh = NULL;
+  }
   if(connssl->ssl_ctx)
     cSSLDisposeContext(connssl->ssl_ctx);
   connssl->ssl_ctx = cSSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
@@ -546,8 +550,12 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
         keypw = CFDataCreate(NULL, (UInt8 *)data->set.str[STRING_KEY_PASSWD],
           strlen(data->set.str[STRING_KEY_PASSWD]));
       }
+      if(connssl->kh) {
+        DisposeIdentityKeychainHandle(connssl->kh);
+        connssl->kh = NULL;
+      }
       clientauth = CreateClientAuthWithCertificatesAndKeyData(certs, certdata,
-                                                              keypw);
+                                                          keypw, &connssl->kh);
       CFRelease(certdata);
       CFRelease(certs);
       if(keypw)
@@ -1003,7 +1011,7 @@ darwinssl_connect_step3(struct connectdata *conn,
   struct SessionHandle *data = conn->data;
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
   CFStringRef server_cert_summary;
-  char server_cert_summary_c[128];
+  char server_cert_summary_c[256];
   CFArrayRef server_certs = NULL;
   SecCertificateRef server_cert;
   OSStatus err;
@@ -1016,19 +1024,25 @@ darwinssl_connect_step3(struct connectdata *conn,
   /* Just in case SSLCopyPeerCertificates() returns null too... */
   if(err == noErr && server_certs) {
     count = CFArrayGetCount(server_certs);
+    if(count) {
+      infof(data, "----\n");
+      infof(data, "Certificate chain\n");
+    }
     for(i = 0L ; i < count ; i++) {
       server_cert = (SecCertificateRef)CFArrayGetValueAtIndex(server_certs, i);
       server_cert_summary = CopyCertSubject(server_cert);
-      memset(server_cert_summary_c, 0, 128);
+      memset(server_cert_summary_c, 0, sizeof(server_cert_summary_c));
       if(CFStringGetCString(server_cert_summary,
                             server_cert_summary_c,
-                            128,
+                            sizeof(server_cert_summary_c),
                             kCFStringEncodingUTF8)) {
-        infof(data, "Server certificate: %s\n", server_cert_summary_c);
+        infof(data, " %u s:%s\n", (unsigned)i, server_cert_summary_c);
       }
       CFRelease(server_cert_summary);
     }
     CFRelease(server_certs);
+    if(count)
+      infof(data, "----\n");
   }
 
   connssl->connecting_state = ssl_connect_done;
@@ -1185,6 +1199,10 @@ void Curl_darwinssl_close(struct connectdata *conn, int sockindex)
     connssl->ssl_ctx = NULL;
   }
   connssl->ssl_sockfd = 0;
+  if(connssl->kh) {
+    DisposeIdentityKeychainHandle(connssl->kh);
+    connssl->kh = NULL;
+  }
 }
 
 void Curl_darwinssl_close_all(struct SessionHandle *data)

@@ -1,0 +1,12 @@
+diff --git a/lib/urldata.h b/lib/urldata.h
+index 8594c2f7..b7c03fca 100644
+--- a/lib/urldata.h
++++ b/lib/urldata.h
+@@ -357,6 +357,7 @@ struct ssl_connect_data {
+   ssl_connect_state connecting_state;
+   bool ssl_direction; /* true if writing, false if reading */
+   size_t ssl_write_buffered_length;
++  void *kh;
+ #endif /* USE_DARWINSSL */
+ };
+ 

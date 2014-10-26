@@ -380,9 +380,37 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
   return a;
 }
 
-static char *new_temp_keych(void)
+typedef struct {
+  SecKeychainRef ref;
+  char pw[16]; /* random 15-character (0x20-0x7e), NULL terminated password */
+  char loc[1]; /* Always will have at least a NULL byte */
+} tempch_t;
+
+static void gen_rand_pw(void *_out, size_t len)
 {
-  char *ans;
+  unsigned char *out = (unsigned char *)_out;
+  int fd;
+  if (!out || !len) return;
+  fd = open("/dev/random", O_RDONLY);
+  if (fd) {
+    do {
+      ssize_t cnt, i;
+      do {
+        cnt = read(fd, out, len);
+      } while (cnt == -1 && errno == EINTR);
+      if (cnt <= 0) return;
+      for (i = 0; i < cnt; ++i) {
+        out[i] = (unsigned char)((((unsigned)out[i] * 95) >> 8) + 32);
+      }
+      len -= (size_t)cnt;
+    } while (len);
+    close(fd);
+  }
+}
+
+static tempch_t *new_temp_keych(void)
+{
+  tempch_t *ans;
   char newdir[PATH_MAX];
   Boolean okay;
   CFStringRef tempdir = CFCopyTemporaryDirectory();
@@ -391,25 +419,35 @@ static char *new_temp_keych(void)
   CFRelease(tempdir);
   if (!okay) return NULL;
   strcat(newdir, "/tch.XXXXXX");
-  ans = (char *)malloc(strlen(newdir) + 1 + 14 /* "/temp.keychain" */);
+  ans = (tempch_t *)malloc(sizeof(tempch_t) + strlen(newdir) + 14 /* "/temp.keychain" */);
   if (!ans) return NULL;
-  strcpy(ans, newdir);
-  if (!mkdtemp(ans)) return NULL;
-  strcat(ans, "/temp.keychain");
+  ans->ref = NULL;
+  strcpy(ans->loc, newdir);
+  strlcpy(ans->pw, "(:vCZ\"t{UA-zl3g", sizeof(ans->pw)); /* fallback if random fails */
+  gen_rand_pw(ans->pw, sizeof(ans->pw)-1);
+  ans->pw[sizeof(ans->pw)-1] = '\0';
+  if (!mkdtemp(ans->loc)) return NULL;
+  strcat(ans->loc, "/temp.keychain");
   return ans;
 }
 
-static void del_temp_keych(char *keych)
+static void del_temp_keych(tempch_t *keych)
 {
   size_t l;
   if (!keych) return;
-  l = strlen(keych);
-  if (l > 14 && !strcmp(keych + (l - 14), "/temp.keychain")) {
+  l = strlen(keych->loc);
+  if (l > 14 && !strcmp(keych->loc + (l - 14), "/temp.keychain")) {
     DIR *d;
-    unlink(keych);
-    keych[l - 14] = '\0';
-    /* the keychain code leaves dot turds (and possibly comma turds) we have to remove */
-    d = opendir(keych);
+    if (keych->ref) {
+      (void)SecKeychainDelete(keych->ref);
+      CFRelease(keych->ref);
+      keych->ref = NULL;
+    }
+    unlink(keych->loc);
+    keych->loc[l - 14] = '\0';
+    /* the keychain code may leave dot, possibly comma and yet other turds
+     * we may have to remove */
+    d = opendir(keych->loc);
     if (d) {
       struct dirent *ent;
       while ((ent=readdir(d)) != NULL) {
@@ -417,13 +455,12 @@ static void del_temp_keych(char *keych)
         if (ent->d_name[0] == '.' &&
             (ent->d_name[1] == '\0'
              || (ent->d_name[1] == '.' && ent->d_name[2] == '\0'))) continue;
-        if (ent->d_name[0] != '.' && ent->d_name[0] != ',') continue;
-        snprintf(turd, sizeof(turd), "%s/%s", keych, ent->d_name);
+        snprintf(turd, sizeof(turd), "%s/%s", keych->loc, ent->d_name);
         unlink(turd);
       }
       closedir(d);
     }
-    rmdir(keych);
+    rmdir(keych->loc);
     free(keych);
   }
 }
@@ -459,11 +496,11 @@ static CFDataRef extract_key_copy(CFDataRef pemseq, int *outpem)
 }
 
 SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
-  SecCertificateRef cert, CFDataRef keydata, CFTypeRef pw)
+  SecCertificateRef cert, CFDataRef keydata, CFTypeRef pw, void **kh)
 {
-  int ispem;
+  int ispem = 0;
   CFDataRef rawkey = NULL;
-  char *keych = NULL;
+  tempch_t *keych = NULL;
   int err;
   SecKeychainRef keychain = NULL;
   SecExternalFormat format;
@@ -473,7 +510,7 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
   SecKeyRef key = NULL;
   SecIdentityRef ans = NULL;
 
-  if (!cert) return NULL;
+  if (!cert || !kh) return NULL;
   if (keydata)
     rawkey = extract_key_copy(keydata, &ispem);
   while (rawkey) {
@@ -488,18 +525,16 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
      * private key we're importing be searchable by default in other apps. */
     err = SecKeychainCopySearchList(&searchlist);
     if (err || !searchlist) break;
-    err = SecKeychainCreate(keych, 8, "password", false, NULL, &keychain);
+    err = SecKeychainCreate(keych->loc, sizeof(keych->pw), keych->pw, false, NULL, &keychain);
     if (err || !keychain) {
       CFRelease(searchlist);
       break;
     }
+    keych->ref = keychain;
     err = SecKeychainSetSearchList(searchlist);
     CFRelease(searchlist);
-    if (err) {
-      SecKeychainDelete(keychain);
-      break;
-    }
-    err = SecKeychainUnlock(keychain, 8, "password", true);
+    if (err) break;
+    err = SecKeychainUnlock(keychain, sizeof(keych->pw), keych->pw, true);
     if (err) break;
     format = ispem ? kSecFormatWrappedOpenSSL : kSecFormatOpenSSL;
     type = kSecItemTypePrivateKey;
@@ -522,24 +557,38 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
     break;
   }
   if (key) {
+    /* If we have a key we must also have a keychain */
     err = cSecIdentityCreateWithCertificate(keychain, cert, &ans);
     CFRelease(key);
   }
   /* We MUST NOT call SecKeychainDelete because that will purge all copies of
    * the keychain from memory.  We've already removed it from the search list
    * so we just release it and remove the disk files instead in order to allow
-   * the in memory copy to remain unmolested. */
-  if (keychain) CFRelease(keychain);
-  if (keych) del_temp_keych(keych);
-  if (!ans && key && keychain) {
-    /* Try again with the default keychain list */
+   * the in memory copy to remain unmolested.  Unfortunately on older systems
+   * this is not good enough, so we have to leave the keychain itself around. */
+  if (!ans && keych) {
+    del_temp_keych(keych);
+    keych = NULL;
+  }
+  if (!ans && (!rawkey || (!ispem && !key))) {
+    /* Try again with the default keychain list, but only if a key was not
+     * provided or was provided in non-PEM and we failed to import it. */
     err = cSecIdentityCreateWithCertificate(NULL, cert, &ans);
   }
+  if (ans)
+    *kh = keych;
+  else
+    del_temp_keych(keych);
   return ans;
 }
 
+void DisposeIdentityKeychainHandle(void *ch)
+{
+  del_temp_keych((tempch_t *)ch);
+}
+
 CFArrayRef CreateClientAuthWithCertificatesAndKeyData(CFArrayRef certs,
-                                              CFDataRef keydata, CFTypeRef pw)
+                                    CFDataRef keydata, CFTypeRef pw, void **kh)
 {
   CFMutableArrayRef ans;
   size_t count, i;
@@ -553,7 +602,7 @@ CFArrayRef CreateClientAuthWithCertificatesAndKeyData(CFArrayRef certs,
   if (CFGetTypeID(cert) != SecCertificateGetTypeID()) return NULL;
   ans = CFArrayCreateMutable(kCFAllocatorDefault, count, &kCFTypeArrayCallBacks);
   if (!ans) return NULL;
-  identity = cSecIdentityCreateWithCertificateAndKeyData(cert, keydata, pw);
+  identity = cSecIdentityCreateWithCertificateAndKeyData(cert, keydata, pw, kh);
   if (!identity) {
     CFRelease(ans);
     return NULL;

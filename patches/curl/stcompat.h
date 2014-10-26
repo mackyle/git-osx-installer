@@ -429,11 +429,12 @@ SecCertificateRef cSecCertificateCreateWithData(CFAllocatorRef a, CFDataRef d);
 OSStatus cSecIdentityCreateWithCertificate(CFTypeRef k, SecCertificateRef c,
                                            SecIdentityRef *i);
 SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
-  SecCertificateRef certificateRef, CFDataRef keydata, CFTypeRef pw);
+  SecCertificateRef certificateRef, CFDataRef keydata, CFTypeRef pw, void **kh);
 CFStringRef CopyCertSubject(SecCertificateRef cert);
 OSStatus CopyIdentityWithLabel(const char *label, SecIdentityRef *out);
 CFArrayRef CreateClientAuthWithCertificatesAndKeyData(CFArrayRef certs,
-                                              CFDataRef keydata, CFTypeRef pw);
+                                    CFDataRef keydata, CFTypeRef pw, void **kh);
+void DisposeIdentityKeychainHandle(void *);
 OSStatus cSecItemImport(
   CFDataRef importedData, CFStringRef fileNameOrExtension,
   SecExternalFormat *inputFormat, SecExternalItemType *itemType,

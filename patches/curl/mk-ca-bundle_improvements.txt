@@ -1,5 +1,5 @@
 diff --git a/lib/mk-ca-bundle.pl b/lib/mk-ca-bundle.pl
-index 0485bafd..7ee7b0e1 100755
+index 0485bafd..f4810ce4 100755
 --- a/lib/mk-ca-bundle.pl
 +++ b/lib/mk-ca-bundle.pl
 @@ -32,11 +32,17 @@
@@ -100,7 +100,7 @@ index 0485bafd..7ee7b0e1 100755
      return $sha1;
  }
  
-@@ -258,11 +266,19 @@ my $stdout = $crt eq '-';
+@@ -258,11 +266,23 @@ my $stdout = $crt eq '-';
  my $resp;
  my $fetched;
  
@@ -111,18 +111,22 @@ index 0485bafd..7ee7b0e1 100755
 +print STDERR "SHA1 of old data file: $oldsha1\n" unless $stdout;
  
  unless ($opt_n and -e $txt) {
++  if ($opt_n) {
++    print STDERR "No '$txt' file found to process and option -n given.\n";
++    exit 1;
++  }
 +  if (!$have_lwp) {
 +    print STDERR
-+      "The -n option is required on this OS as no LWP::UserAgent is not present.\n",
++      "The -n option is required on this OS as no LWP::UserAgent is present.\n",
 +      "Use the -v and -h options together to see the source URLs, download\n",
-+      "a suitable certdata.txt file via other means and run this script again\n",
-+      "using the -n option to process the certdata.txt file.\n";
++      "a suitable certdata.txt file via other means (such as curl) and run\n",
++      "this script again using the -n option to process the certdata.txt file.\n";
 +    exit 1;
 +  }
    print STDERR "Downloading '$txt' ...\n" if (!$opt_q);
    my $ua  = new LWP::UserAgent(agent => "$0/$version");
    $ua->env_proxy();
-@@ -292,12 +308,12 @@ if(!$filedate) {
+@@ -292,12 +312,12 @@ if(!$filedate) {
  # get the hash from the download file
  my $newsha1= sha1($txt); 
  
@@ -137,7 +141,7 @@ index 0485bafd..7ee7b0e1 100755
  
  my $currentdate = scalar gmtime($filedate);
  
-@@ -323,7 +339,7 @@ print CRT <<EOT;
+@@ -323,7 +343,7 @@ print CRT <<EOT;
  ## an Apache+mod_ssl webserver for SSL client authentication.
  ## Just configure this file as the SSLCACertificateFile.
  ##

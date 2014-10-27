@@ -694,7 +694,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   /* Configure hostname check. SNI is used if available.
    * Both hostname check and SNI require SSLSetPeerDomainName().
    * Also: the verifyhost setting influences SNI usage */
-  if(data->set.ssl.verifyhost) {
+  /*if(data->set.ssl.verifyhost)*/ {
     err = SSLSetPeerDomainName(connssl->ssl_ctx, conn->host.name,
                                strlen(conn->host.name));
 

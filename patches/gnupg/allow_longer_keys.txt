@@ -1,0 +1,80 @@
+diff --git a/g10/gpg.c b/g10/gpg.c
+index dbf2f40c..d437b257 100644
+--- a/g10/gpg.c
++++ b/g10/gpg.c
+@@ -1995,7 +1995,7 @@ main (int argc, char **argv )
+     }
+ #endif
+     /* initialize the secure memory. */
+-    got_secmem=secmem_init( 32768 );
++    got_secmem=secmem_init( 131072 );
+     maybe_setuid = 0;
+     /* Okay, we are now working under our real uid */
+ 
+diff --git a/g10/keygen.c b/g10/keygen.c
+index 84f852f3..c3b6fe19 100644
+--- a/g10/keygen.c
++++ b/g10/keygen.c
+@@ -1040,7 +1040,7 @@ gen_elg(int algo, unsigned nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
+     assert( is_ELGAMAL(algo) );
+ 
+     if (nbits < 1024) {
+-	nbits = 2048;
++	nbits = 3072;
+ 	log_info(_("keysize invalid; using %u bits\n"), nbits );
+     }
+     else if (nbits > 4096) {
+@@ -1127,7 +1127,7 @@ gen_dsa(unsigned int nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
+ 
+     if( nbits < 768)
+       {
+-	nbits = 2048;
++	nbits = 3072;
+ 	log_info(_("keysize invalid; using %u bits\n"), nbits );
+       }
+     else if(nbits>3072)
+@@ -1257,11 +1257,11 @@ gen_rsa(int algo, unsigned nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
+     assert( is_RSA(algo) );
+ 
+     if( nbits < 1024 ) {
+-	nbits = 2048;
++	nbits = 3072;
+ 	log_info(_("keysize invalid; using %u bits\n"), nbits );
+     }
+-    else if (nbits > 4096) {
+-        nbits = 4096;
++    else if (nbits > 16384) {
++        nbits = 16384;
+         log_info(_("keysize invalid; using %u bits\n"), nbits );
+     }
+ 
+@@ -1491,9 +1491,9 @@ ask_algo (int addmode, int *r_subkey_algo, unsigned int *r_usage)
+   if (!addmode)
+     tty_printf (_("   (%d) RSA and RSA (default)\n"), 1 );
+   if ( !addmode )
+-    tty_printf (_("   (%d) DSA and Elgamal\n"), 2 );
++    tty_printf (_("   (%d) DSA and Elgamal (max key size 3072/4096)\n"), 2 );
+ 
+-  tty_printf(    _("   (%d) DSA (sign only)\n"), 3 );
++  tty_printf(    _("   (%d) DSA (sign only, max key size 3072)\n"), 3 );
+   tty_printf(    _("   (%d) RSA (sign only)\n"), 4 );
+ 
+   if (addmode)
+@@ -1577,7 +1577,7 @@ ask_algo (int addmode, int *r_subkey_algo, unsigned int *r_usage)
+ static unsigned int
+ ask_keysize (int algo, unsigned int primary_keysize)
+ {
+-  unsigned nbits, min, def=2048, max=4096;
++  unsigned nbits, min, def=3072, max=16384;
+   int for_subkey = !!primary_keysize;
+   int autocomp = 0;
+ 
+@@ -1603,7 +1603,7 @@ ask_keysize (int algo, unsigned int primary_keysize)
+   switch(algo)
+     {
+     case PUBKEY_ALGO_DSA:
+-      def=2048;
++      def=3072;
+       max=3072;
+       break;
+ 

@@ -15,6 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 */
 
+#undef sprintf
 #include <Security/Security.h>
 #include <limits.h>
 #include <objc/objc-runtime.h>
@@ -26,6 +27,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #include <sys/uio.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <arpa/inet.h>
 #include "stcompat.h"
 
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE))
@@ -33,6 +35,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 __attribute__((constructor,used)) static void stcompat_initialize(void);
 #endif /* (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE)) */
 
+extern CFStringRef CFStringCreateWithBytesNoCopy(
+  CFAllocatorRef alloc,
+  const UInt8 *bytes,
+  CFIndex numBytes,
+  CFStringEncoding encoding,
+  Boolean isExternalRepresentation,
+  CFAllocatorRef contentsDeallocator); /* available 10.4 but not in header */
 extern CFStringRef NSTemporaryDirectory(void);
 
 static CFStringRef CFCopyTemporaryDirectory(void)
@@ -61,6 +70,27 @@ static CFStringRef CFCopyTemporaryDirectory(void)
   return dir;
 }
 
+char *CFStringCreateUTF8String(CFStringRef s, Boolean release)
+{
+  size_t m;
+  char *c;
+
+  if (!s) return NULL;
+  m = (size_t)CFStringGetMaximumSizeForEncoding(
+    CFStringGetLength(s), kCFStringEncodingUTF8) + 1;
+  c = (char *)malloc(m);
+  if (!c) {
+    if (release) CFRelease(s);
+    return NULL;
+  }
+  if (!CFStringGetCString(s, c, m, kCFStringEncodingUTF8)) {
+    free(c);
+    c = NULL;
+  }
+  if (release) CFRelease(s);
+  return c;
+}
+
 CFDataRef CFDataCreateWithContentsOfFile(CFAllocatorRef a, const char *f)
 {
   char buff[4096];
@@ -85,13 +115,15 @@ CFDataRef CFDataCreateWithContentsOfFile(CFAllocatorRef a, const char *f)
   return d;
 }
 
-static const char *memmem(const void *_m, size_t ml, const void *_s, size_t sl)
+#undef memmem
+#define memmem(v1,l1,v2,l2) cmemmem(v1,l1,v2,l2)
+static void *cmemmem(const void *_m, size_t ml, const void *_s, size_t sl)
 {
   const char *m = (const char *)_m;
   const char *s = (const char *)_s;
   if (!ml || !sl || ml < sl) return NULL;
   if (sl == 1) return memchr(m, *s, ml);
-  if (ml == sl) return memcmp(m, s, sl) ? NULL : m;
+  if (ml == sl) return (void *)(memcmp(m, s, sl) ? NULL : m);
   do {
     size_t o;
     const char *p = memchr(m, *s, ml);
@@ -100,7 +132,7 @@ static const char *memmem(const void *_m, size_t ml, const void *_s, size_t sl)
     ml -= o;
     m += o;
     if (ml < sl) return NULL;
-    if (!memcmp(m, s, sl)) return m;
+    if (!memcmp(m, s, sl)) return (void *)m;
     ++m;
     --ml;
   } while (ml >= sl);
@@ -161,12 +193,12 @@ static const char *find_be(const void *_m, size_t l, size_t *ol, int *ot, int e)
   *ot = 0;
   while (l) {
     const char *t;
-    const char *p = memmem(m, l, marker, mkl);
+    const char *p = (char *)memmem(m, l, marker, mkl);
     if (!p) return NULL;
     l -= (p - m) + mkl;
     m = p + mkl;
     if (p > origm && !is_eol(p[-1])) continue;
-    t = memmem(m, l, "-----", 5);
+    t = (char *)memmem(m, l, "-----", 5);
     if (!t) return NULL;
     l -= (t - m);
     if (l > 5 && !is_eol(t[5])) continue;
@@ -629,6 +661,11 @@ typedef enum {
   small_5
 } SmallEnum;
 
+typedef struct {
+  size_t Length;
+  uint8_t *Data;
+} cCSSM_DATA;
+
 static struct {
   OSStatus (*fSSLSetTrustedRoots)(SSLContextRef,CFArrayRef,Boolean);
   OSStatus (*fSSLGetPeerCertificates)(SSLContextRef cxt, CFArrayRef *certs);
@@ -638,14 +675,10 @@ static struct {
   OSStatus (*fSSLSetProtocolVersionMax)(SSLContextRef cxt, SmallEnum);
   OSStatus (*fSSLSetSessionOption)(SSLContextRef, SmallEnum, Boolean);
   SecCertificateRef (*fSecCertificateCreateWithData)(CFAllocatorRef, CFDataRef);
-  OSStatus (*fSecCertificateCreateFromData)(const CSSM_DATA *, CSSM_CERT_TYPE,
+  OSStatus (*fSecCertificateCreateFromData)(const cCSSM_DATA *, CSSM_CERT_TYPE,
                                       CSSM_CERT_ENCODING, SecCertificateRef *);
-  OSStatus (*fSecCertificateGetCLHandle)(SecCertificateRef, CSSM_CL_HANDLE *);
-  OSStatus (*fSecCertificateGetData)(SecCertificateRef, CSSM_DATA_PTR);
-  OSStatus (*fSecCertificateCopyCommonName)(SecCertificateRef, CFStringRef *);
-  CFStringRef (*fSecCertificateCopySubjectSummary)(SecCertificateRef);
-  CFStringRef (*fSecCertificateCopyLongDescription)(CFAllocatorRef, SecCertificateRef, CFTypeRef *);
-  SecIdentityRef (*fSecIdentityCreate)(CFAllocatorRef, SecCertificateRef, SecKeyRef);
+  OSStatus (*fSecCertificateGetData)(SecCertificateRef, cCSSM_DATA *);
+  CFDataRef (*fSecCertificateCopyData)(SecCertificateRef);
   OSStatus (*fSecKeychainItemImport)(
     CFDataRef,CFStringRef,SecExternalFormat *,SecExternalItemType *,
     SecItemImportExportFlags,const SecKeyImportExportParameters *,
@@ -675,12 +708,8 @@ static void stcompat_initialize(void)
   LOOKUP(SSLSetSessionOption);
   LOOKUP(SecCertificateCreateWithData);
   LOOKUP(SecCertificateCreateFromData);
-  LOOKUP(SecCertificateGetCLHandle);
   LOOKUP(SecCertificateGetData);
-  LOOKUP(SecCertificateCopyCommonName);
-  LOOKUP(SecCertificateCopySubjectSummary);
-  LOOKUP(SecCertificateCopyLongDescription);
-  LOOKUP(SecIdentityCreate);
+  LOOKUP(SecCertificateCopyData);
   LOOKUP(SecKeychainItemImport);
   LOOKUP(SecItemImport);
   LOOKUP(SecIdentityCreateWithCertificate);
@@ -777,7 +806,7 @@ SecCertificateRef cSecCertificateCreateWithData(CFAllocatorRef a, CFDataRef d)
   if (fnc.fSecCertificateCreateWithData)
     return fnc.fSecCertificateCreateWithData(a, d);
   else if (fnc.fSecCertificateCreateFromData) {
-    CSSM_DATA certdata;
+    cCSSM_DATA certdata;
     OSStatus err;
     SecCertificateRef cacert = NULL;
     if (!d) return NULL;
@@ -792,11 +821,19 @@ SecCertificateRef cSecCertificateCreateWithData(CFAllocatorRef a, CFDataRef d)
     return NULL;
 }
 
-static int oids_match(const CSSM_OID *o1, const CSSM_OID *o2)
+CFDataRef cSecCertificateCopyData(SecCertificateRef c)
 {
-  if (!o1 || !o2 || !o1->Length || !o2->Length || o1->Length != o2->Length)
-    return 0;
-  return memcmp(o1->Data, o2->Data, o1->Length) == 0;
+  if (!c) return NULL;
+  if (CFGetTypeID(c) != SecCertificateGetTypeID()) return NULL;
+  if (fnc.fSecCertificateCopyData)
+    return fnc.fSecCertificateCopyData(c);
+  if (fnc.fSecCertificateGetData) {
+    cCSSM_DATA certdata;
+    OSStatus err = fnc.fSecCertificateGetData(c, &certdata);
+    if (err || !certdata.Data || !certdata.Length) return NULL;
+    return CFDataCreate(kCFAllocatorDefault, certdata.Data, certdata.Length);
+  }
+  return NULL;
 }
 
 OSStatus CopyIdentityWithLabel(const char *label, SecIdentityRef *out)
@@ -834,130 +871,6 @@ OSStatus CopyIdentityWithLabel(const char *label, SecIdentityRef *out)
     return errSecItemNotFound;
   }
   return unimpErr;
-}
-
-CFStringRef CopyCertSubject(SecCertificateRef cert)
-{
-  if (fnc.fSecCertificateCopyLongDescription)
-    return fnc.fSecCertificateCopyLongDescription(kCFAllocatorDefault, cert, NULL);
-  if (fnc.fSecCertificateCopySubjectSummary)
-    return fnc.fSecCertificateCopySubjectSummary(cert);
-  if (fnc.fSecCertificateCopyCommonName) {
-    CFStringRef ans = NULL;
-    OSStatus err = fnc.fSecCertificateCopyCommonName(cert, &ans);
-    if (err) ans = NULL;
-    return ans;
-  }
-  if (fnc.fSecCertificateGetCLHandle && fnc.fSecCertificateGetData) {
-    CSSM_CL_HANDLE h = 0;
-    CSSM_DATA certdata;
-    CSSM_DATA_PTR fv;
-    CSSM_X509_NAME_PTR name;
-    CSSM_HANDLE results;
-    CSSM_RETURN result;
-    uint32 cnt, i;
-    int found = 0;
-    CFStringRef ans = NULL;
-    OSStatus err = fnc.fSecCertificateGetData(cert, &certdata);
-    if (err) return NULL;
-    err = fnc.fSecCertificateGetCLHandle(cert, &h);
-    if (err || !h) return NULL;
-    result = CSSM_CL_CertGetFirstFieldValue(h, &certdata,
-      &CSSMOID_X509V1SubjectNameCStruct, &results, &cnt, &fv);
-    if (result || !fv || !fv->Data)
-      return NULL;
-    name = (CSSM_X509_NAME_PTR)fv->Data;
-    for (i = 0; !found && i < name->numberOfRDNs; ++i) {
-      uint32_t j;
-      CSSM_X509_RDN_PTR rdn = &name->RelativeDistinguishedName[i];
-      for (j = 0; j < rdn->numberOfPairs; ++j) {
-        CSSM_X509_TYPE_VALUE_PAIR_PTR tp = &rdn->AttributeTypeAndValue[j];
-        if (oids_match(&tp->type, &CSSMOID_CommonName)) {
-          CFStringBuiltInEncodings encoding;
-          switch (tp->valueType) {
-            case BER_TAG_PRINTABLE_STRING:
-            case BER_TAG_IA5_STRING:
-              encoding = kCFStringEncodingASCII; break;
-            case BER_TAG_PKIX_UTF8_STRING:
-            case BER_TAG_GENERAL_STRING:
-            case BER_TAG_PKIX_UNIVERSAL_STRING:
-              encoding = kCFStringEncodingUTF8; break;
-            case BER_TAG_T61_STRING:
-            case BER_TAG_VIDEOTEX_STRING:
-            case BER_TAG_ISO646_STRING:
-              encoding = kCFStringEncodingISOLatin1; break;
-            case BER_TAG_PKIX_BMP_STRING:
-              encoding = kCFStringEncodingUnicode; break;
-            default:
-              continue;
-          }
-          ans = CFStringCreateWithBytes(kCFAllocatorDefault, tp->value.Data,
-                                        (size_t)tp->value.Length, encoding, true);
-          if (ans) {
-            found = 1;
-            break;
-          }
-        }
-      }
-    }
-    CSSM_CL_CertAbortQuery(h, results);
-    return ans;
-  }
-  return NULL;
-}
-
-Boolean CheckCertOkay(SecCertificateRef cert)
-{
-  if (fnc.fSecCertificateGetCLHandle && fnc.fSecCertificateGetData) {
-    CSSM_CL_HANDLE h = 0;
-    CSSM_DATA certdata;
-    CSSM_DATA_PTR fv;
-    CSSM_X509_NAME_PTR name;
-    CSSM_HANDLE results;
-    CSSM_RETURN result;
-    uint32 cnt, i;
-    int found = 0;
-    OSStatus err = fnc.fSecCertificateGetData(cert, &certdata);
-    if (err) return false;
-    err = fnc.fSecCertificateGetCLHandle(cert, &h);
-    if (err || !h) return false;
-    result = CSSM_CL_CertGetFirstFieldValue(h, &certdata,
-      &CSSMOID_X509V1SubjectNameCStruct, &results, &cnt, &fv);
-    if (result || !fv || !fv->Data)
-      return false;
-    name = (CSSM_X509_NAME_PTR)fv->Data;
-    for (i = 0; !found && i < name->numberOfRDNs; ++i) {
-      uint32_t j;
-      CSSM_X509_RDN_PTR rdn = &name->RelativeDistinguishedName[i];
-      for (j = 0; j < rdn->numberOfPairs; ++j) {
-        CSSM_X509_TYPE_VALUE_PAIR_PTR tp = &rdn->AttributeTypeAndValue[j];
-        switch (tp->valueType) {
-          case BER_TAG_PRINTABLE_STRING:
-          case BER_TAG_IA5_STRING:
-          case BER_TAG_PKIX_UTF8_STRING:
-          case BER_TAG_GENERAL_STRING:
-          case BER_TAG_PKIX_UNIVERSAL_STRING:
-          case BER_TAG_T61_STRING:
-          case BER_TAG_VIDEOTEX_STRING:
-          case BER_TAG_ISO646_STRING:
-          case BER_TAG_PKIX_BMP_STRING:
-            found = 1;
-            break;
-          default:
-            /* nothing */;
-        }
-      }
-    }
-    CSSM_CL_CertAbortQuery(h, results);
-    return found > 0;
-  }
-  if (fnc.fSecCertificateCopySubjectSummary) {
-    CFStringRef summary = fnc.fSecCertificateCopySubjectSummary(cert);
-    size_t len = summary ? CFStringGetLength(summary) : 0;
-    if (summary) CFRelease(summary);
-    return len > 0;
-  }
-  return false;
 }
 
 OSStatus cSecItemImport(
@@ -1018,6 +931,620 @@ void cSSLDisposeContext(SSLContextRef c)
     CFRelease(c);
   else if (fnc.fSSLDisposeContext)
     fnc.fSSLDisposeContext(c);
+}
+
+typedef struct {
+  const uint8_t *d;
+  size_t l;
+} data_t;
+
+#define U(x) ((const uint8_t *)(x))
+static const data_t OID_SubjectAltName = {U("\006\003\125\035\021"), 5};
+static const data_t OID_SubjectKeyIdentifier = {U("\006\003\125\035\016"), 5};
+static const data_t OID_AuthorityKeyIdentifier = {U("\006\003\125\035\043"), 5};
+#undef U
+
+typedef struct {
+  uint8_t clas; /* 0, 1, 2, or 3 */
+  uint8_t cons; /* 0 or 1 */
+  uint8_t rawtag; /* raw value of first byte of tag */
+  uint32_t tag; /* tag value */
+  size_t hl; /* length of header excluding actual data */
+  size_t dl; /* length of actual data */
+} der_atom_t;
+
+typedef struct {
+  uint8_t vers; /* 0 => v1, 1 => v2, 2 => v3 */
+  data_t subject; /* points to sequence */
+  data_t subjectAltNames; /* null unless v3 extension present, points to sequence */
+  data_t subjectKeyId; /* null unless v3 extension present, points to raw bytes */
+  data_t issuer; /* points to sequence */
+  data_t issuerKeyId; /* null unless v3 extension present, points to raw bytes */
+} der_cert_t;
+
+static bool read_der_atom(const data_t *d, der_atom_t *o)
+{
+  uint8_t byte;
+  uint32_t tag;
+  size_t pos, len;
+  if (!d || !d->d || !d->l || !o) return false;
+  o->clas = (*d->d >> 6) & 0x3;
+  o->cons = (*d->d >> 5) & 0x1;
+  o->rawtag = *d->d;
+  tag = *d->d & 0x1f;
+  pos = 1;
+  if (tag == 0x1f) {
+    tag = 0;
+    do {
+      if (pos >= d->l) return false;
+      tag <<= 7;
+      byte = d->d[pos++];
+      tag |= byte & 0x7f;
+    } while (byte & 0x80);
+  }
+  o->tag = tag;
+  if (pos >= d->l) return false;
+  byte = d->d[pos++];
+  if (byte & 0x80) {
+    unsigned cnt = byte & 0x7f;
+    if (!cnt || pos + cnt > d->l) return false;
+    len = 0;
+    do {
+      len <<= 8;
+      len |= d->d[pos++];
+    } while (--cnt);
+  } else {
+    len = byte;
+  }
+  if (pos + len > d->l) return false;
+  o->hl = pos;
+  o->dl = len;
+  return true;
+}
+
+static bool is_der(const data_t *_d, bool exact_length_match_only)
+{
+  data_t d;
+  if (!_d || !_d->d || !_d->l) return false;
+  d.d = _d->d;
+  d.l = _d->l;
+  do {
+    der_atom_t atom;
+    if (!read_der_atom(&d, &atom)) return false;
+    d.l -= atom.hl;
+    d.d += atom.hl;
+    if ((atom.rawtag & 0xfe) != 0x30) {
+      d.l -= atom.dl;
+      d.d += atom.dl;
+    }
+  } while (d.l);
+  return d.d == _d->d + _d->l || !exact_length_match_only;
+}
+
+static int data_matches(const data_t *o1, const data_t *o2)
+{
+  if (!o1 || !o2 || !o1->l || !o2->l || o1->l != o2->l)
+    return 0;
+  return memcmp(o1->d, o2->d, o1->l) == 0;
+}
+
+static bool read_der_cert(const data_t *_d, der_cert_t *o)
+{
+  data_t d;
+  der_atom_t atom;
+
+  if (!_d || !_d->d || !_d->l || !o) return false;
+  if (!is_der(_d, true)) return false;
+  d.d = _d->d;
+  d.l = _d->l;
+  memset(o, 0, sizeof(*o));
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  d.l = atom.dl;
+  d.d += atom.hl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  d.l = atom.dl;
+  d.d += atom.hl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag == 0xA0) {
+    d.l -= atom.hl;
+    d.d += atom.hl;
+    if (atom.dl != 3 || d.d[0] != 2 || d.d[1] != 1) return false;
+    o->vers = d.d[2]; /* not validated */
+    d.l -= atom.dl;
+    d.d += atom.dl;
+    if (!read_der_atom(&d, &atom)) return false;
+  } else {
+    o->vers = 0; /* implied v1 */
+  }
+  if (atom.rawtag != 2) return false;
+  /* skip serialNumber */
+  d.l -= atom.hl + atom.dl;
+  d.d += atom.hl + atom.dl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  /* skip signature */
+  d.l -= atom.hl + atom.dl;
+  d.d += atom.hl + atom.dl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  o->issuer.d = d.d;
+  o->issuer.l = atom.hl + atom.dl;
+  d.l -= atom.hl + atom.dl;
+  d.d += atom.hl + atom.dl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  /* skip validity */
+  d.l -= atom.hl + atom.dl;
+  d.d += atom.hl + atom.dl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  o->subject.d = d.d;
+  o->subject.l = atom.hl + atom.dl;
+  d.l -= atom.hl + atom.dl;
+  d.d += atom.hl + atom.dl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  /* skip subjectPublicKeyInfo */
+  d.l -= atom.hl + atom.dl;
+  d.d += atom.hl + atom.dl;
+  if (o->vers != 2 || !d.l) return true;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag == 0x81) {
+    /* skip issuerUniqueID */
+    d.l -= atom.hl + atom.dl;
+    d.d += atom.hl + atom.dl;
+    if (!d.l) return true;
+    if (!read_der_atom(&d, &atom)) return false;
+  }
+  if (atom.rawtag == 0x82) {
+    /* skip subjectUniqueID */
+    d.l -= atom.hl + atom.dl;
+    d.d += atom.hl + atom.dl;
+    if (!d.l) return true;
+    if (!read_der_atom(&d, &atom)) return false;
+  }
+  if (atom.rawtag != 0xA3) return false;
+  /* found v3 extensions */
+  d.l = atom.dl;
+  d.d += atom.hl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  d.l -= atom.hl;
+  d.d += atom.hl;
+  do {
+    data_t oid, value;
+    if (!read_der_atom(&d, &atom)) return false;
+    if (atom.rawtag != 0x30) return false;
+    d.l -= atom.hl;
+    d.d += atom.hl;
+    if (!read_der_atom(&d, &atom)) return false;
+    if (atom.rawtag != 6) return false;
+    oid.d = d.d;
+    oid.l = atom.hl + atom.dl;
+    d.l -= atom.hl + atom.dl;
+    d.d += atom.hl + atom.dl;
+    if (!read_der_atom(&d, &atom)) return false;
+    if (atom.rawtag == 1) {
+      /* skip over boolean */
+      d.l -= atom.hl + atom.dl;
+      d.d += atom.hl + atom.dl;
+      if (!read_der_atom(&d, &atom)) return false;
+    }
+    if (atom.rawtag != 4) return false;
+    d.l -= atom.hl;
+    d.d += atom.hl;
+    value.d = d.d;
+    value.l = atom.dl;
+    d.l -= atom.dl;
+    d.d += atom.dl;
+    if (data_matches(&oid, &OID_SubjectAltName)) {
+      o->subjectAltNames.d = value.d;
+      o->subjectAltNames.l = value.l;
+    } else if (data_matches(&oid, &OID_SubjectKeyIdentifier)) {
+      if (!read_der_atom(&value, &atom)) return false;
+      if (atom.rawtag != 4) return false;
+      o->subjectKeyId.d = value.d + atom.hl;
+      o->subjectKeyId.l = atom.dl;
+    } else if (data_matches(&oid, &OID_AuthorityKeyIdentifier)) {
+      if (!read_der_atom(&value, &atom)) return false;
+      if (atom.rawtag != 0x30) return false;
+      value.l = atom.dl;
+      value.d += atom.hl;
+      if (!read_der_atom(&value, &atom)) return false;
+      if (atom.rawtag == 0x80) {
+        o->issuerKeyId.d = value.d + atom.hl;
+        o->issuerKeyId.l = atom.dl;
+      }
+    }
+  } while (d.l);
+  return true;
+}
+
+Boolean CheckCertOkay(SecCertificateRef _cert)
+{
+  CFDataRef d = cSecCertificateCopyData(_cert);
+  data_t data;
+  der_cert_t cert;
+  Boolean ans;
+
+  if (!d) return false;
+  data.d = CFDataGetBytePtr(d);
+  data.l = CFDataGetLength(d);
+  ans = read_der_cert(&data, &cert);
+  CFRelease(d);
+  return ans;
+}
+
+static void append_hex_dump(CFMutableStringRef s, const void *_d, size_t l)
+{
+  const unsigned char *d = (unsigned char *)_d;
+  CFStringAppendCString(s, "<", kCFStringEncodingASCII);
+  while (l--) {
+    char byte[3];
+    sprintf(byte, "%02X", *d++);
+    CFStringAppendCString(s, byte, kCFStringEncodingASCII);
+  }
+  CFStringAppendCString(s, ">", kCFStringEncodingASCII);
+}
+
+static CFStringRef CopyCertKeyId(SecCertificateRef _cert, bool issuer)
+{
+  CFDataRef d = cSecCertificateCopyData(_cert);
+  CFMutableStringRef ans = CFStringCreateMutable(kCFAllocatorDefault, 0);
+  bool good = false;
+
+  for (;;) {
+    data_t data;
+    const data_t *key;
+    der_cert_t cert;
+    size_t i;
+
+    if (!d || !ans) break;
+    data.d = CFDataGetBytePtr(d);
+    data.l = CFDataGetLength(d);
+    if (!read_der_cert(&data, &cert)) break;
+    key = issuer ? &cert.issuerKeyId : &cert.subjectKeyId;
+    if (!key->d || !key->l) break;
+    for (i = 0; i < key->l; ++i) {
+      char hexbyte[4];
+      sprintf(hexbyte, "%02X%s", (unsigned)key->d[i], i+1 == key->l ? "" : ":");
+      CFStringAppendCString(ans, hexbyte, kCFStringEncodingASCII);
+    }
+    good = true;
+    break;
+  }
+  if (d) CFRelease(d);
+  if (!good && ans) {CFRelease(ans); ans=NULL;}
+  return ans;
+}
+
+typedef struct {
+  size_t l;
+  const char *oid;
+  const char *name;
+} oid_entry_t;
+
+static const oid_entry_t oid_table[] = {
+  {5, "\006\003\125\004\003", "CN"},
+  {5, "\006\003\125\004\004", "SN"},
+  {5, "\006\003\125\004\005", "serialNumber"},
+  {5, "\006\003\125\004\006", "C"},
+  {5, "\006\003\125\004\007", "L"},
+  {5, "\006\003\125\004\010", "ST"},
+  {5, "\006\003\125\004\011", "street"},
+  {5, "\006\003\125\004\012", "O"},
+  {5, "\006\003\125\004\013", "OU"},
+  {5, "\006\003\125\004\014", "title"},
+  {5, "\006\003\125\004\015", "description"},
+  {5, "\006\003\125\004\017", "businessCategory"},
+  {5, "\006\003\125\004\021", "postalCode"},
+  {5, "\006\003\125\004\024", "telephoneNumber"},
+  {5, "\006\003\125\004\027", "facsimileTelephoneNumber"},
+  {5, "\006\003\125\004\052", "GN"},
+  {5, "\006\003\125\004\053", "initials"},
+  {5, "\006\003\125\004\054", "generationQualifier"},
+  {5, "\006\003\125\004\056", "dnQualifier"},
+  {5, "\006\003\125\004\101", "pseudonym"},
+  {5, "\006\003\125\004\141", "organizationIdentifier"},
+  {11, "\006\011\052\206\110\206\367\015\001\011\001", "emailAddress"},
+  {12, "\006\012\011\222\046\211\223\362\054\144\001\001", "UID"},
+  {12, "\006\012\011\222\046\211\223\362\054\144\001\031", "DC"},
+  {13, "\006\013\053\006\001\004\001\202\067\074\002\001\001", "jurisdictionOfIncorporationLocality"},
+  {13, "\006\013\053\006\001\004\001\202\067\074\002\001\002", "jurisdictionOfIncorporationStateOrProvince"},
+  {13, "\006\013\053\006\001\004\001\202\067\074\002\001\003", "jurisdictionOfIncorporationCountry"}
+};
+#define oid_table_size (sizeof(oid_table)/sizeof(oid_table[0]))
+
+static int comp_entry(const void *_e1, const void *_e2)
+{
+  const oid_entry_t *o1 = (oid_entry_t *)_e1;
+  const oid_entry_t *o2 = (oid_entry_t *)_e2;
+  size_t min = o1->l;
+  int ans;
+  if (o2->l < min) min = o2->l;
+  ans = memcmp(o1->oid, o2->oid, min);
+  if (ans) return ans;
+  if (o1->l < o2->l) return -1;
+  if (o1->l > o2->l) return 1;
+  return 0;
+}
+
+static void append_oid_name(CFMutableStringRef s, const void *_oid, size_t l)
+{
+  oid_entry_t find, *ans;
+  find.oid = (char *)_oid;
+  find.l = l;
+  find.name = NULL;
+  ans = (oid_entry_t *)
+    bsearch(&find, oid_table, oid_table_size, sizeof(find), comp_entry);
+  CFStringAppendCString(s, "/", kCFStringEncodingASCII);
+  if (ans)
+    CFStringAppendCString(s, ans->name, kCFStringEncodingASCII);
+  else {
+    CFMutableStringRef temp = CFStringCreateMutable(kCFAllocatorDefault, 0);
+    const uint8_t *oid = (uint8_t *)_oid;
+    bool bad = false;
+    size_t orig_l = l;
+    const uint8_t *orig_oid = oid;
+    if (!temp || l < 3 || *oid != 6)
+      bad = true;
+    if (!bad) {
+      data_t data;
+      der_atom_t atom;
+      data.d = oid;
+      data.l = l;
+      if (!read_der_atom(&data, &atom))
+        bad = true;
+      if (!bad && (atom.rawtag != 6 || atom.dl < 1))
+        bad = true;
+      if (!bad) {
+        oid = data.d + atom.hl;
+        l = atom.dl;
+        if (l + atom.hl != orig_l)
+          bad = true;
+      }
+    }
+    if (!bad) {
+      size_t idx = 0;
+      do {
+        unsigned idval = 0;
+        uint8_t byte;
+        do {
+          if (!l) {bad=true; break;}
+          idval <<= 7;
+          byte = *oid++;
+          --l;
+          idval |= byte & 0x7f;
+        } while (!bad && (byte & 0x80));
+        if (bad) break;
+        if (!idx) {
+          char twoids[32];
+          unsigned x, y;
+          if (idval < 40) {
+            x = 0; y = idval;
+          } else if (idval < 80) {
+            x = 1; y = idval - 40;
+          } else {
+            x = 2; y = idval - 80;
+          }
+          snprintf(twoids, sizeof(twoids), "%u.%u", x, y);
+          CFStringAppendCString(temp, twoids, kCFStringEncodingASCII);
+          idx += 2;
+        } else {
+          char oneid[16];
+          snprintf(oneid, sizeof(oneid), ".%u", idval);
+          CFStringAppendCString(temp, oneid, kCFStringEncodingASCII);
+          ++idx;
+        }
+      } while (l && !bad);
+    }
+    if (bad || l || !temp || !CFStringGetLength(temp))
+      append_hex_dump(s, orig_oid, orig_l);
+    else
+      CFStringAppend(s, temp);
+    if (temp)
+      CFRelease(temp);
+  }
+  CFStringAppendCString(s, "=", kCFStringEncodingASCII);
+}
+
+#define DER_TAG_UTF8STRING 12
+#define DER_TAG_NUMERICSTRING 18
+#define DER_TAG_PRINTABLESTRING 19
+#define DER_TAG_TELETEXSTRING 20
+#define DER_TAG_VIDEOTEXSTRING 21
+#define DER_TAG_IA5STRING 22
+#define DER_TAG_GRAPHICSTRING 25
+#define DER_TAG_VISIBLESTRING 26
+#define DER_TAG_GENERALSTRING 27
+#define DER_TAG_UNIVERSALSTRING 28
+#define DER_TAG_BMPSTRING 30
+
+static void append_attr_value(CFMutableStringRef s, const void *_d, const der_atom_t *a)
+{
+  const uint8_t *d = (uint8_t *)_d;
+  CFStringBuiltInEncodings encoding = kCFStringEncodingASCII;
+  CFStringRef temp;
+  if (!s || !d || !a || !a->dl) return;
+  switch (a->rawtag) {
+    case DER_TAG_UTF8STRING:
+    case DER_TAG_GRAPHICSTRING:
+    case DER_TAG_GENERALSTRING:
+    case DER_TAG_UNIVERSALSTRING:
+      encoding = kCFStringEncodingUTF8; break;
+    case DER_TAG_NUMERICSTRING:
+    case DER_TAG_PRINTABLESTRING:
+    case DER_TAG_IA5STRING:
+      encoding = kCFStringEncodingASCII; break;
+    case DER_TAG_TELETEXSTRING:
+    case DER_TAG_VIDEOTEXSTRING:
+    case DER_TAG_VISIBLESTRING:
+      encoding = kCFStringEncodingISOLatin1; break;
+    case DER_TAG_BMPSTRING:
+      encoding = kCFStringEncodingUnicode; break;
+    default:
+      append_hex_dump(s, d, a->hl + a->dl);
+      return;
+  }
+  temp = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, d+a->hl, a->dl,
+                                       encoding, true, kCFAllocatorNull);
+  if (temp) {
+    CFStringAppend(s, temp);
+    CFRelease(temp);
+  } else {
+    append_hex_dump(s, d, a->hl + a->dl);
+  }
+}
+
+static CFStringRef CopyCertName(SecCertificateRef _cert, bool issuer)
+{
+  CFDataRef d = cSecCertificateCopyData(_cert);
+  CFMutableStringRef ans = CFStringCreateMutable(kCFAllocatorDefault, 0);
+  bool good = false;
+
+  for (;;) {
+    data_t data;
+    const data_t *name;
+    der_cert_t cert;
+    der_atom_t atom;
+    bool badset = false;
+
+    if (!d || !ans) break;
+    data.d = CFDataGetBytePtr(d);
+    data.l = CFDataGetLength(d);
+    if (!read_der_cert(&data, &cert)) break;
+    name = issuer ? &cert.issuer : &cert.subject;
+    data.d = name->d;
+    data.l = name->l;
+    if (data.d && data.l) {
+      if (!read_der_atom(&data, &atom)) break;
+      if (atom.rawtag != 0x30) break;
+      data.l -= atom.hl;
+      data.d += atom.hl;
+      while (data.l) {
+        data_t set;
+        badset = true;
+        if (!read_der_atom(&data, &atom)) break;
+        if (atom.rawtag != 0x31) break;
+        set.d = data.d + atom.hl;
+        set.l = atom.dl;
+        data.l -= atom.hl + atom.dl;
+        data.d += atom.hl + atom.dl;
+        for (;;) {
+          data_t oid;
+          if (!read_der_atom(&set, &atom)) break;
+          if (atom.rawtag != 0x30) break;
+          set.l -= atom.hl;
+          set.d += atom.hl;
+          if (!read_der_atom(&set, &atom)) break;
+          if (atom.rawtag != 6) break;
+          oid.d = set.d;
+          oid.l = atom.hl + atom.dl;
+          set.l -= atom.hl + atom.dl;
+          set.d += atom.hl + atom.dl;
+          if (!read_der_atom(&set, &atom)) break;
+          append_oid_name(ans, oid.d, oid.l);
+          append_attr_value(ans, set.d, &atom);
+          set.l -= atom.hl + atom.dl;
+          set.d += atom.hl + atom.dl;
+          if (!set.l) {
+            badset=false;
+            break;
+          }
+        }
+        if (badset) break;
+      }
+      if (badset || data.l) break;
+      good = true;
+    }
+    break;
+  }
+  if (d) CFRelease(d);
+  if (!good && ans) {CFRelease(ans); ans=NULL;}
+  return ans;
+}
+
+CFStringRef CopyCertSubject(SecCertificateRef _cert)
+{
+  return CopyCertName(_cert, false);
+}
+
+CFStringRef CopyCertSubjectKeyId(SecCertificateRef _cert)
+{
+  return CopyCertKeyId(_cert, false);
+}
+
+CFStringRef CopyCertIssuer(SecCertificateRef _cert)
+{
+  return CopyCertName(_cert, true);
+}
+
+CFStringRef CopyCertIssuerKeyId(SecCertificateRef _cert)
+{
+  return CopyCertKeyId(_cert, true);
+}
+
+CFStringRef CopyCertSubjectAltNames(SecCertificateRef _cert)
+{
+  CFDataRef d = cSecCertificateCopyData(_cert);
+  CFMutableStringRef ans = CFStringCreateMutable(kCFAllocatorDefault, 0);
+  bool good = false;
+
+  for (;;) {
+    data_t data;
+    der_cert_t cert;
+    der_atom_t atom;
+
+    if (!d || !ans) break;
+    data.d = CFDataGetBytePtr(d);
+    data.l = CFDataGetLength(d);
+    if (!read_der_cert(&data, &cert)) break;
+    if (!cert.subjectAltNames.d || !cert.subjectAltNames.l) break;
+    data.d = cert.subjectAltNames.d;
+    data.l = cert.subjectAltNames.l;
+    if (!read_der_atom(&data, &atom)) break;
+    if (atom.rawtag != 0x30) break;
+    data.l -= atom.hl;
+    data.d += atom.hl;
+    do {
+      if (!read_der_atom(&data, &atom)) break;
+      if (atom.rawtag == 0x82) {
+        CFStringRef temp;
+        if (CFStringGetLength(ans))
+          CFStringAppendCString(ans, ",", kCFStringEncodingASCII);
+        temp = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, data.d+atom.hl,
+          atom.dl, kCFStringEncodingASCII, true, kCFAllocatorNull);
+        if (!temp) break;
+        CFStringAppend(ans, temp);
+        CFRelease(temp);
+      } else if (atom.rawtag == 0x87) {
+        if (CFStringGetLength(ans))
+          CFStringAppendCString(ans, ",", kCFStringEncodingASCII);
+        if (atom.dl == 4) {
+          char ipv4str[16];
+          const uint8_t *ip = data.d+atom.hl;
+          sprintf(ipv4str, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+          CFStringAppendCString(ans, ipv4str, kCFStringEncodingASCII);
+        } else if (atom.dl == 16) {
+          char ntopbuff[INET6_ADDRSTRLEN];
+          if (!inet_ntop(AF_INET6, data.d+atom.hl, ntopbuff, sizeof(ntopbuff)))
+            break;
+          CFStringAppendCString(ans, ntopbuff, kCFStringEncodingASCII);
+        } else {
+          append_hex_dump(ans, data.d+atom.hl, atom.dl);
+        }
+      }
+      data.l -= atom.hl + atom.dl;
+      data.d += atom.hl + atom.dl;
+    } while (data.l);
+    if (!data.l && CFStringGetLength(ans)) good = true;
+    break;
+  }
+  if (d) CFRelease(d);
+  if (!good && ans) {CFRelease(ans); ans=NULL;}
+  return ans;
 }
 
 #elif TARGET_OS_EMBEDDED || TARGET_OS_IPHONE

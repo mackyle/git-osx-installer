@@ -423,14 +423,22 @@ typedef struct {
 CFDataRef CFDataCreateWithContentsOfFile(CFAllocatorRef a, const char *f);
 CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e);
 Boolean CheckCertOkay(SecCertificateRef cert);
+/* caller must free() result unless NULL.  If s is NULL will return NULL.
+ * if s is not NULL and release is true will CFRelease(s) before return */
+char *CFStringCreateUTF8String(CFStringRef s, Boolean release);
 
 OSStatus cSSLSetSessionOption(SSLContextRef cxt, int option, Boolean value);
 SecCertificateRef cSecCertificateCreateWithData(CFAllocatorRef a, CFDataRef d);
+CFDataRef cSecCertificateCopyData(SecCertificateRef c);
 OSStatus cSecIdentityCreateWithCertificate(CFTypeRef k, SecCertificateRef c,
                                            SecIdentityRef *i);
 SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
   SecCertificateRef certificateRef, CFDataRef keydata, CFTypeRef pw, void **kh);
 CFStringRef CopyCertSubject(SecCertificateRef cert);
+CFStringRef CopyCertSubjectAltNames(SecCertificateRef cert);
+CFStringRef CopyCertSubjectKeyId(SecCertificateRef cert);
+CFStringRef CopyCertIssuer(SecCertificateRef cert);
+CFStringRef CopyCertIssuerKeyId(SecCertificateRef cert);
 OSStatus CopyIdentityWithLabel(const char *label, SecIdentityRef *out);
 CFArrayRef CreateClientAuthWithCertificatesAndKeyData(CFArrayRef certs,
                                     CFDataRef keydata, CFTypeRef pw, void **kh);

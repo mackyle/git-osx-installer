@@ -1010,8 +1010,6 @@ darwinssl_connect_step3(struct connectdata *conn,
 {
   struct SessionHandle *data = conn->data;
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
-  CFStringRef server_cert_summary;
-  char server_cert_summary_c[256];
   CFArrayRef server_certs = NULL;
   SecCertificateRef server_cert;
   OSStatus err;
@@ -1025,24 +1023,34 @@ darwinssl_connect_step3(struct connectdata *conn,
   if(err == noErr && server_certs) {
     count = CFArrayGetCount(server_certs);
     if(count) {
-      infof(data, "----\n");
+      infof(data, "---\n");
       infof(data, "Certificate chain\n");
     }
     for(i = 0L ; i < count ; i++) {
+      char *subj, *subjalt=NULL, *issuer, *issuerkey=NULL;
       server_cert = (SecCertificateRef)CFArrayGetValueAtIndex(server_certs, i);
-      server_cert_summary = CopyCertSubject(server_cert);
-      memset(server_cert_summary_c, 0, sizeof(server_cert_summary_c));
-      if(CFStringGetCString(server_cert_summary,
-                            server_cert_summary_c,
-                            sizeof(server_cert_summary_c),
-                            kCFStringEncodingUTF8)) {
-        infof(data, " %u s:%s\n", (unsigned)i, server_cert_summary_c);
-      }
-      CFRelease(server_cert_summary);
+      subj = CFStringCreateUTF8String(CopyCertSubject(server_cert), true);
+      issuer = CFStringCreateUTF8String(CopyCertIssuer(server_cert), true);
+      infof(data, " %u s:%s\n", (unsigned)i, subj ? subj : "<n/a>");
+      if(!i)
+        subjalt = CFStringCreateUTF8String(CopyCertSubjectAltNames(
+                                                           server_cert), true);
+      if(subjalt)
+        infof(data, "   a:%s\n", subjalt);
+      infof(data, "   i:%s\n", issuer ? issuer : "<n/a>");
+      if(i+1 == count && (!subj || !issuer || strcmp(subj, issuer)))
+        issuerkey = CFStringCreateUTF8String(CopyCertIssuerKeyId(server_cert),
+                                                                         true);
+      if(issuerkey)
+        infof(data, "   k:%s\n", issuerkey);
+      free(subj);
+      free(subjalt);
+      free(issuer);
+      free(issuerkey);
     }
     CFRelease(server_certs);
     if(count)
-      infof(data, "----\n");
+      infof(data, "---\n");
   }
 
   connssl->connecting_state = ssl_connect_done;

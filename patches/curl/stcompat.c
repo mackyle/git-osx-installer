@@ -1271,7 +1271,8 @@ static int comp_entry(const void *_e1, const void *_e2)
   return 0;
 }
 
-static void append_oid_name(CFMutableStringRef s, const void *_oid, size_t l)
+static void append_oid_name(CFMutableStringRef s, const char *prefix,
+                            const void *_oid, size_t l, const char *suffix)
 {
   oid_entry_t find, *ans;
   find.oid = (char *)_oid;
@@ -1279,7 +1280,8 @@ static void append_oid_name(CFMutableStringRef s, const void *_oid, size_t l)
   find.name = NULL;
   ans = (oid_entry_t *)
     bsearch(&find, oid_table, oid_table_size, sizeof(find), comp_entry);
-  CFStringAppendCString(s, "/", kCFStringEncodingASCII);
+  if (prefix && *prefix)
+    CFStringAppendCString(s, prefix, kCFStringEncodingASCII);
   if (ans)
     CFStringAppendCString(s, ans->name, kCFStringEncodingASCII);
   else {
@@ -1347,7 +1349,8 @@ static void append_oid_name(CFMutableStringRef s, const void *_oid, size_t l)
     if (temp)
       CFRelease(temp);
   }
-  CFStringAppendCString(s, "=", kCFStringEncodingASCII);
+  if (suffix && *suffix)
+    CFStringAppendCString(s, suffix, kCFStringEncodingASCII);
 }
 
 #define DER_TAG_UTF8STRING 12
@@ -1425,6 +1428,7 @@ static CFStringRef CopyCertName(SecCertificateRef _cert, bool issuer)
       data.d += atom.hl;
       while (data.l) {
         data_t set;
+        unsigned setidx = 0;
         badset = true;
         if (!read_der_atom(&data, &atom)) break;
         if (atom.rawtag != 0x31) break;
@@ -1445,7 +1449,7 @@ static CFStringRef CopyCertName(SecCertificateRef _cert, bool issuer)
           set.l -= atom.hl + atom.dl;
           set.d += atom.hl + atom.dl;
           if (!read_der_atom(&set, &atom)) break;
-          append_oid_name(ans, oid.d, oid.l);
+          append_oid_name(ans, setidx++?"/+":"/", oid.d, oid.l, "=");
           append_attr_value(ans, set.d, &atom);
           set.l -= atom.hl + atom.dl;
           set.d += atom.hl + atom.dl;

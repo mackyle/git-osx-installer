@@ -23,6 +23,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #include <CoreFoundation/CoreFoundation.h>
 #include <stdarg.h>
 
+#undef noErr
+#define noErr 0
 #undef unimpErr
 #define unimpErr -4 /* from MacErrors.h */
 #undef ioErr
@@ -38,6 +40,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #endif
 
 /* Some missing error defines */
+#undef errSecSuccess
+#define errSecSuccess                   0 /* alias for noErr 10.6+ */
 #undef errSSLServerAuthCompleted
 #define errSSLServerAuthCompleted       -9841 /* original name */
 #undef errSSLClientAuthCompleted
@@ -46,6 +50,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #define errSSLPeerAuthCompleted         -9841 /* new name */
 #undef errSSLClientCertRequested
 #define errSSLClientCertRequested       -9842
+#undef errSecTrustSettingDeny
+#define errSecTrustSettingDeny          -67654
+#undef errSecNotTrusted
+#define errSecNotTrusted                -67843
 
 /* Some missing session option defines */
 #undef kSSLSessionOptionBreakOnServerAuth
@@ -390,6 +398,33 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE))
 
+#include <Security/cssmapple.h>
+
+#undef CSSM_CERT_STATUS_EXPIRED
+#define CSSM_CERT_STATUS_EXPIRED                        0x00000001
+#undef CSSM_CERT_STATUS_NOT_VALID_YET
+#define CSSM_CERT_STATUS_NOT_VALID_YET                  0x00000002
+#undef CSSM_CERT_STATUS_IS_IN_INPUT_CERTS
+#define CSSM_CERT_STATUS_IS_IN_INPUT_CERTS              0x00000004
+#undef CSSM_CERT_STATUS_IS_IN_ANCHORS
+#define CSSM_CERT_STATUS_IS_IN_ANCHORS                  0x00000008
+#undef CSSM_CERT_STATUS_IS_ROOT
+#define CSSM_CERT_STATUS_IS_ROOT                        0x00000010
+#undef CSSM_CERT_STATUS_IS_FROM_NET
+#define CSSM_CERT_STATUS_IS_FROM_NET                    0x00000020
+#undef CSSM_CERT_STATUS_TRUST_SETTINGS_FOUND_USER
+#define CSSM_CERT_STATUS_TRUST_SETTINGS_FOUND_USER      0x00000040
+#undef CSSM_CERT_STATUS_TRUST_SETTINGS_FOUND_ADMIN
+#define CSSM_CERT_STATUS_TRUST_SETTINGS_FOUND_ADMIN     0x00000080
+#undef CSSM_CERT_STATUS_TRUST_SETTINGS_FOUND_SYSTEM
+#define CSSM_CERT_STATUS_TRUST_SETTINGS_FOUND_SYSTEM    0x00000100
+#undef CSSM_CERT_STATUS_TRUST_SETTINGS_TRUST
+#define CSSM_CERT_STATUS_TRUST_SETTINGS_TRUST           0x00000200
+#undef CSSM_CERT_STATUS_TRUST_SETTINGS_DENY
+#define CSSM_CERT_STATUS_TRUST_SETTINGS_DENY            0x00000400
+#undef CSSM_CERT_STATUS_TRUST_SETTINGS_IGNORED_ERROR
+#define CSSM_CERT_STATUS_TRUST_SETTINGS_IGNORED_ERROR   0x00000800
+
 #undef kSSLServerSide
 #define kSSLServerSide 0
 #undef kSSLClientSide
@@ -426,6 +461,8 @@ Boolean CheckCertOkay(SecCertificateRef cert);
 /* caller must free() result unless NULL.  If s is NULL will return NULL.
  * if s is not NULL and release is true will CFRelease(s) before return */
 char *CFStringCreateUTF8String(CFStringRef s, Boolean release);
+/* Returns true if name is an IPv4 literal as defined in RFC 3986 section 3.2.2 */
+Boolean IsIPv4Name(const void *name, size_t namelen);
 
 OSStatus cSSLSetSessionOption(SSLContextRef cxt, int option, Boolean value);
 SecCertificateRef cSecCertificateCreateWithData(CFAllocatorRef a, CFDataRef d);
@@ -435,7 +472,7 @@ OSStatus cSecIdentityCreateWithCertificate(CFTypeRef k, SecCertificateRef c,
 SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
   SecCertificateRef certificateRef, CFDataRef keydata, CFTypeRef pw, void **kh);
 CFStringRef CopyCertSubject(SecCertificateRef cert);
-CFStringRef CopyCertSubjectAltNames(SecCertificateRef cert);
+CFStringRef CopyCertSubjectAltNamesString(SecCertificateRef cert);
 CFStringRef CopyCertSubjectKeyId(SecCertificateRef cert);
 CFStringRef CopyCertIssuer(SecCertificateRef cert);
 CFStringRef CopyCertIssuerKeyId(SecCertificateRef cert);
@@ -451,8 +488,32 @@ OSStatus cSecItemImport(
 SSLContextRef cSSLCreateContext(CFAllocatorRef a, int ps, int ct);
 void cSSLDisposeContext(SSLContextRef);
 OSStatus cSSLSetTrustedRoots(SSLContextRef cxt, CFArrayRef rts, Boolean replace);
+OSStatus cSSLCopyPeerTrust(SSLContextRef cxt, SecTrustRef *trust);
+OSStatus cSecTrustSetAnchorCertificatesOnly(SecTrustRef cxt, Boolean anchorsOnly);
 OSStatus cSSLCopyPeerCertificates(SSLContextRef cxt, CFArrayRef *certs);
 OSStatus cSSLSetProtocolVersionMinMax(SSLContextRef cxt, int minVer, int maxVer);
+OSStatus cSecTrustGetResult(
+  SecTrustRef trust,
+  SecTrustResultType *result,
+  CFArrayRef *certChain,
+  CSSM_TP_APPLE_EVIDENCE_INFO **statusChain);
+/* If customRootsOrNull is not null, the root of the chain MUST be in
+   customRootsOrNull.  If explicitCertsOnly is 0x01 then all certs in the
+   chain EXCEPT the root must come from the peer -- no magically appearing
+   intermediate certs from who-knows-where are allowed.  The trust will
+   automatically be evaluated if it has not already been.  If the chain is
+   otherwise okay (would return errSecSuccess) but the trust result is other
+   than unspecified or proceed then either errSecTrustSettingDeny (for
+   kSecTrustResultDeny) or errSecNotTrusted (other codes) will be returned.
+   Flags are CSSM_APPLE_TP_ACTION_FLAGS, pass 0 for normal behavior, only
+   bits 0x1, 0x2 and 0x8 are checked in any case.  If peername is not NULL
+   and not the empty string then it must match the leaf certificate. */
+OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
+             unsigned explicitCertsOnly, unsigned flags, const char *peername);
+/* returns true iff both certs are not NULL AND are DER byte-wise identical */
+Boolean SecCertsEqual(SecCertificateRef c1, SecCertificateRef c2);
+/* returns true iff at least one cert in a is SecCertsEqual to c */
+Boolean SecCertInArray(SecCertificateRef c, CFArrayRef a);
 
 #elif TARGET_OS_EMBEDDED || TARGET_OS_IPHONE
 

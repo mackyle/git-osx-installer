@@ -33,10 +33,13 @@
 
 #ifdef USE_DARWINSSL
 
-#include <Security/Security.h>
-#include <Security/SecureTransport.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <CommonCrypto/CommonDigest.h>
+#include <Security/Security.h>
+#include <Security/SecureTransport.h>
+#include <Security/SecCertificate.h>
+#include <Security/SecTrust.h>
+#include <Security/SecImportExport.h>
 
 /* The SecureTransport compatibility layer is separate */
 #include "stcompat.h"
@@ -424,17 +427,68 @@ CF_INLINE bool is_file(const char *filename)
   return false;
 }
 
+/* Flags:
+ *   0x01 => show alt names for cert 0 if any
+ *   0x02 => show auth key id for last cert if any
+ *   0x20 => show even if empty (certs has 0 elements)
+ */
+static void show_certs_array(struct SessionHandle *data, const char *hdr,
+                             CFArrayRef certs, unsigned flags,
+                             CSSM_TP_APPLE_EVIDENCE_INFO *evdnc)
+{
+  CFIndex i, count = certs ? CFArrayGetCount(certs) : 0;
+
+  if(!hdr)
+    hdr = "Certificate list";
+  if(count || (flags &0x20)) {
+    infof(data, "---\n");
+    infof(data, "%s\n", hdr);
+  }
+  for(i = 0; i < count; ++i) {
+    SecCertificateRef copy = NULL;
+    char *subj, *subjalt=NULL, *issuer, *issuerkey=NULL;
+    SecCertificateRef cert =
+      (SecCertificateRef)CFArrayGetValueAtIndex(certs, i);
+    if(SecIdentityGetTypeID() == CFGetTypeID(cert)) {
+      OSStatus err = SecIdentityCopyCertificate((SecIdentityRef)cert, &copy);
+      if(err)
+        continue;
+      cert = copy;
+    }
+    subj = CFStringCreateUTF8String(CopyCertSubject(cert), true);
+    issuer = CFStringCreateUTF8String(CopyCertIssuer(cert), true);
+    infof(data, "%s%u s:%s\n",
+      ((evdnc && !(evdnc[i].StatusBits & CSSM_CERT_STATUS_IS_IN_INPUT_CERTS))
+       ? "+" : " "), (unsigned)i, subj ? subj : "<n/a>");
+    if(!i && (flags & 0x01))
+      subjalt = CFStringCreateUTF8String(
+                                    CopyCertSubjectAltNamesString(cert), true);
+    if(subjalt)
+      infof(data, "   a:%s\n", subjalt);
+    infof(data, "   i:%s\n", issuer ? issuer : "<n/a>");
+    if((flags & 0x02) && i+1 == count &&
+                                    (!subj || !issuer || strcmp(subj, issuer)))
+      issuerkey = CFStringCreateUTF8String(CopyCertIssuerKeyId(cert), true);
+    if(issuerkey)
+      infof(data, "   k:%s\n", issuerkey);
+    free(subj);
+    free(subjalt);
+    free(issuer);
+    free(issuerkey);
+    if(copy)
+      CFRelease(copy);
+  }
+  if(count || (flags &0x20)) {
+    infof(data, "---\n");
+  }
+}
+
 static CURLcode darwinssl_connect_step1(struct connectdata *conn,
                                         int sockindex)
 {
   struct SessionHandle *data = conn->data;
   curl_socket_t sockfd = conn->sock[sockindex];
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
-#ifdef ENABLE_IPV6
-  struct in6_addr addr;
-#else
-  struct in_addr addr;
-#endif /* ENABLE_IPV6 */
   size_t all_ciphers_count = 0UL, allowed_ciphers_count = 0UL, i;
   SSLCipherSuite *all_ciphers = NULL, *allowed_ciphers = NULL;
   char *ssl_sessionid;
@@ -444,6 +498,10 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   if(connssl->kh) {
     DisposeIdentityKeychainHandle(connssl->kh);
     connssl->kh = NULL;
+  }
+  if(connssl->ra) {
+    CFRelease((CFTypeRef)connssl->ra);
+    connssl->ra = NULL;
   }
   if(connssl->ssl_ctx)
     cSSLDisposeContext(connssl->ssl_ctx);
@@ -456,10 +514,8 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 
   /* check to see if we've been told to use an explicit SSL/TLS version */
   switch(data->set.ssl.version) {
-    case CURL_SSLVERSION_DEFAULT: default:
-      (void)cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kSSLProtocol3,
-                                                           kTLSProtocol12);
-      break;
+    default:
+    case CURL_SSLVERSION_DEFAULT:
     case CURL_SSLVERSION_TLSv1:
       (void)cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kTLSProtocol1,
                                                            kTLSProtocol12);
@@ -485,8 +541,12 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       }
       break;
     case CURL_SSLVERSION_SSLv3:
-      (void)cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kSSLProtocol3,
+      err = cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kSSLProtocol3,
                                                            kSSLProtocol3);
+      if(err != noErr) {
+        failf(data, "Your version of the OS does not support SSLv3");
+        return CURLE_SSL_CONNECT_ERROR;
+      }
       break;
     case CURL_SSLVERSION_SSLv2:
       err = cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kSSLProtocol2,
@@ -516,7 +576,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       if(data->set.str[STRING_CERT_TYPE]) {
         if(strcmp(data->set.str[STRING_CERT_TYPE], "DER") &&
            strcmp(data->set.str[STRING_CERT_TYPE], "PEM")) {
-          failf(data, "not supported file type '%s' for certificate\n",
+          failf(data, "not supported file type '%s' for certificate",
                       data->set.str[STRING_CERT_TYPE]);
           return CURLE_SSL_CERTPROBLEM;
         }
@@ -524,14 +584,14 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       certdata = CFDataCreateWithContentsOfFile(NULL,
                                                 data->set.str[STRING_CERT]);
       if(!certdata) {
-        failf(data, "unable to read certificate data file '%s'\n",
+        failf(data, "unable to read certificate data file '%s'",
                     data->set.str[STRING_CERT]);
         return CURLE_SSL_CERTPROBLEM;
       }
       certs = CreateCertsArrayWithData(certdata, &e);
       if(!certs) {
         CFRelease(certdata);
-        failf(data, "unable to load certificate data file '%s'\n",
+        failf(data, "unable to load certificate data file '%s'",
                     data->set.str[STRING_CERT]);
         return CURLE_SSL_CERTPROBLEM;
       }
@@ -541,7 +601,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
                                                   data->set.str[STRING_KEY]);
         if(!certdata) {
           CFRelease(certs);
-          failf(data, "unable to read certificate key file '%s'\n",
+          failf(data, "unable to read certificate key file '%s'",
                       data->set.str[STRING_KEY]);
           return CURLE_SSL_CERTPROBLEM;
         }
@@ -610,30 +670,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       certs = CFArrayCreate(NULL, (const void **)certs_c, 1L,
                             &kCFTypeArrayCallBacks);
     }
-    if(certs && CFArrayGetCount(certs) >= 1 &&
-      CFGetTypeID(CFArrayGetValueAtIndex(certs,0)) == SecIdentityGetTypeID()) {
-      SecCertificateRef cert = NULL;
-
-      /* If we found one, print it out: */
-      err = SecIdentityCopyCertificate(
-                      (SecIdentityRef)CFArrayGetValueAtIndex(certs, 0), &cert);
-      if(err == noErr) {
-        CFStringRef cert_summary = CopyCertSubject(cert);
-        char cert_summary_c[128];
-
-        if(cert_summary) {
-          memset(cert_summary_c, 0, 128);
-          if(CFStringGetCString(cert_summary,
-                                cert_summary_c,
-                                128,
-                                kCFStringEncodingUTF8)) {
-            infof(data, "Client certificate: %s\n", cert_summary_c);
-          }
-          CFRelease(cert_summary);
-          CFRelease(cert);
-        }
-      }
-    }
+    show_certs_array(data, "Client certificate(s)", certs, 0, NULL);
     err = SSLSetCertificate(connssl->ssl_ctx, certs);
     if(certs)
       CFRelease(certs);
@@ -643,8 +680,13 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     }
   }
 
-  err = SSLSetEnableCertVerify(connssl->ssl_ctx,
-                               data->set.ssl.verifypeer?true:false);
+  /* We don't depend on this setting working and on 10.6 even though the
+   * function is there it always returns unimpErr */
+  (void)cSSLSetSessionOption(connssl->ssl_ctx,
+                             kSSLSessionOptionBreakOnServerAuth, true);
+  /* Later OS versions automatically disable cert verify when break on server
+   * auth is enabled, but we have to do it ourselves on earlier versions. */
+  err = SSLSetEnableCertVerify(connssl->ssl_ctx, false);
   if(err != noErr) {
     failf(data, "SSL: SSLSetEnableCertVerify() failed: OSStatus %d", err);
     return CURLE_SSL_CONNECT_ERROR;
@@ -669,6 +711,10 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       }
       e.f = (errinfo_func_t)failf;
       e.u = data;
+      if(connssl->ra) {
+        CFRelease((CFTypeRef)connssl->ra);
+        connssl->ra = NULL;
+      }
       cacerts = CreateCertsArrayWithData(cadata, &e);
       CFRelease(cadata);
       if(!cacerts) {
@@ -676,40 +722,37 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
               data->set.str[STRING_SSL_CAFILE]);
         return CURLE_SSL_CACERT_BADFILE;
       }
+      connssl->ra = (void *)cacerts;
+      /* we will set these later on the trust before we evaluate so we don't
+       * require this to work here, but we try it anyway. */
       err = cSSLSetTrustedRoots(connssl->ssl_ctx, cacerts, true);
-      if(err != noErr) {
-        failf(data, "SSL: SSLSetTrustedRoots() failed: OSStatus %d", err);
-        return CURLE_SSL_CACERT_BADFILE;
-      }
+      if(err != noErr)
+        infof(data, "WARNING: SSL: SSLSetTrustedRoots() failed: OSStatus %d\n",
+                                                                          err);
     }
   }
   else {
     if(data->set.str[STRING_SSL_CAFILE] || data->set.str[STRING_SSL_CAPATH]) {
-      failf(data, "SSL: CA certificate set, but certificate verification "
-                  "is disabled");
-      return CURLE_SSL_CONNECT_ERROR;
+      infof(data, "WARNING: SSL: CA certificate(s) configured, but certificate"
+                  " verification is disabled\n");
     }
   }
 
-  /* Configure hostname check. SNI is used if available.
-   * Both hostname check and SNI require SSLSetPeerDomainName().
-   * Also: the verifyhost setting influences SNI usage */
-  /*if(data->set.ssl.verifyhost)*/ {
-    err = SSLSetPeerDomainName(connssl->ssl_ctx, conn->host.name,
-                               strlen(conn->host.name));
+  /* Configure hostname for SNI.
+   * SNI requires SSLSetPeerDomainName().
+   * RFC 6066 section 3 forbids IPv4 and IPv6 literal addresses in SNI.
+   */
+  if(conn->host.name && conn->host.name[0] && !strchr(conn->host.name, ':')) {
+    size_t hnl = strlen(conn->host.name);
 
-    if(err != noErr) {
-      infof(data, "WARNING: SSL: SSLSetPeerDomainName() failed: OSStatus %d\n",
-            err);
-    }
+    if(!IsIPv4Name(conn->host.name, hnl)) {
+      err = SSLSetPeerDomainName(connssl->ssl_ctx, conn->host.name,
+                                 strlen(conn->host.name));
 
-    if((Curl_inet_pton(AF_INET, conn->host.name, &addr))
-  #ifdef ENABLE_IPV6
-    || (Curl_inet_pton(AF_INET6, conn->host.name, &addr))
-  #endif
-       ) {
-         infof(data, "WARNING: using IP address, SNI is being disabled by "
-         "the OS.\n");
+      if(err != noErr) {
+        infof(data, "WARNING: SSL: SSLSetPeerDomainName() failed: OSStatus %d"
+              "\n", err);
+      }
     }
   }
 
@@ -886,13 +929,78 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
   /* Here goes nothing: */
   err = SSLHandshake(connssl->ssl_ctx);
 
+  if(err == errSSLServerAuthCompleted) {
+    if(data->set.ssl.verifypeer) {
+      SecTrustRef trust;
+      err = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
+      if(err) {
+        failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+      err = VerifyTrustChain(trust, connssl->ra, 0, 0, conn->host.name);
+      CFRelease(trust);
+    }
+    else {
+      err = noErr;
+    }
+    if(err == noErr)
+      /* the documentation says we need to call SSLHandshake() again */
+      err = SSLHandshake(connssl->ssl_ctx);
+  }
+
+  if(err == errSSLWouldBlock) { /* they're not done with us yet */
+    connssl->connecting_state = connssl->ssl_direction ?
+        ssl_connect_2_writing : ssl_connect_2_reading;
+    return CURLE_OK;
+  }
+
+  /* We may or may not have verified the peer yet if we have noErr depending
+   * on whether or not we got errSSLServerAuthCompleted.  So attempt to call
+   * VerifyTrustChain again now (if it's already been evaluated there's minimal
+   * work on subsequent calls) in that case.  Always attempt to show the
+   * computed certificate chain. */
+  {
+    OSStatus err2;
+    SecTrustRef trust = NULL;
+    SecTrustResultType result;
+    CSSM_TP_APPLE_EVIDENCE_INFO *evidence;
+    CFArrayRef certChain = NULL;
+
+    err2 = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
+    if(!err && data->set.ssl.verifypeer) {
+      if(err2) {
+        failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+      err = VerifyTrustChain(trust, connssl->ra, 0, 0, conn->host.name);
+    }
+
+    /* Try to show the peer certificates unless we've connected successfully
+     * and have verified the peer */
+    if(err || !data->set.ssl.verifypeer) {
+      CFArrayRef srv_certs;
+      OSStatus err3 = cSSLCopyPeerCertificates(connssl->ssl_ctx, &srv_certs);
+
+      if(!err3 && srv_certs)
+        show_certs_array(data, "Server certificate(s)", srv_certs, 0x03, NULL);
+      if(srv_certs)
+        CFRelease(srv_certs);
+    }
+
+    /* Try to show the computed certificate chain even on failure */
+    if(!err2)
+      err2 = cSecTrustGetResult(trust, &result, &certChain, &evidence);
+    if(!err2)
+      show_certs_array(data, (err ? "Candidate/partial certificate chain" :
+                              "Certificate chain"), certChain, 0x05, evidence);
+    if(certChain)
+      CFRelease(certChain);
+    if(trust)
+      CFRelease(trust);
+  }
+
   if(err != noErr) {
     switch (err) {
-      case errSSLWouldBlock:  /* they're not done with us yet */
-        connssl->connecting_state = connssl->ssl_direction ?
-            ssl_connect_2_writing : ssl_connect_2_reading;
-        return CURLE_OK;
-
       case errSSLServerAuthCompleted:
         failf(data, "SSL unexpected errSSLServerAuthCompleted error in "
                     "connection to %s", conn->host.name);
@@ -912,12 +1020,22 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
         failf(data, "SSL certificate problem: Certificate chain had an "
               "expired certificate");
         return CURLE_SSL_CACERT;
+      case errSSLCertNotYetValid:
+        failf(data, "SSL certificate problem: Certificate chain had a "
+              "not yet valid certificate");
+        return CURLE_SSL_CACERT;
       case errSSLBadCert:
         failf(data, "SSL certificate problem: Couldn't understand the server "
               "certificate format");
         return CURLE_SSL_CONNECT_ERROR;
 
       /* These are all certificate problems with the client: */
+      case errSecTrustSettingDeny:
+        failf(data, "SSL authentication failed trust setting is set to deny");
+        return CURLE_SSL_CONNECT_ERROR;
+      case errSecNotTrusted: /* some reason other than denied */
+        failf(data, "SSL authentication failed");
+        return CURLE_SSL_CONNECT_ERROR;
       case errSecAuthFailed:
         failf(data, "SSL authentication failed");
         return CURLE_SSL_CONNECT_ERROR;
@@ -938,8 +1056,8 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
       /* This error is raised if the server's cert didn't match the server's
          host name: */
       case errSSLHostNameMismatch:
-        failf(data, "SSL certificate peer verification failed, the "
-              "certificate did not match \"%s\"\n", conn->host.dispname);
+        failf(data, "SSL certificate peer verification failed, the server's "
+              "certificate did not match \"%s\"", conn->host.dispname);
         return CURLE_PEER_FAILED_VERIFICATION;
 
       /* Generic handshake errors: */
@@ -1008,51 +1126,10 @@ static CURLcode
 darwinssl_connect_step3(struct connectdata *conn,
                         int sockindex)
 {
-  struct SessionHandle *data = conn->data;
+  /*struct SessionHandle *data = conn->data;*/
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
-  CFArrayRef server_certs = NULL;
-  SecCertificateRef server_cert;
-  OSStatus err;
-  CFIndex i, count;
 
-  /* There is no step 3!
-   * Well, okay, if verbose mode is on, let's print the details of the
-   * server certificates. */
-  err = cSSLCopyPeerCertificates(connssl->ssl_ctx, &server_certs);
-  /* Just in case SSLCopyPeerCertificates() returns null too... */
-  if(err == noErr && server_certs) {
-    count = CFArrayGetCount(server_certs);
-    if(count) {
-      infof(data, "---\n");
-      infof(data, "Certificate chain\n");
-    }
-    for(i = 0L ; i < count ; i++) {
-      char *subj, *subjalt=NULL, *issuer, *issuerkey=NULL;
-      server_cert = (SecCertificateRef)CFArrayGetValueAtIndex(server_certs, i);
-      subj = CFStringCreateUTF8String(CopyCertSubject(server_cert), true);
-      issuer = CFStringCreateUTF8String(CopyCertIssuer(server_cert), true);
-      infof(data, " %u s:%s\n", (unsigned)i, subj ? subj : "<n/a>");
-      if(!i)
-        subjalt = CFStringCreateUTF8String(CopyCertSubjectAltNames(
-                                                           server_cert), true);
-      if(subjalt)
-        infof(data, "   a:%s\n", subjalt);
-      infof(data, "   i:%s\n", issuer ? issuer : "<n/a>");
-      if(i+1 == count && (!subj || !issuer || strcmp(subj, issuer)))
-        issuerkey = CFStringCreateUTF8String(CopyCertIssuerKeyId(server_cert),
-                                                                         true);
-      if(issuerkey)
-        infof(data, "   k:%s\n", issuerkey);
-      free(subj);
-      free(subjalt);
-      free(issuer);
-      free(issuerkey);
-    }
-    CFRelease(server_certs);
-    if(count)
-      infof(data, "---\n");
-  }
-
+  /* There is no step 3! */
   connssl->connecting_state = ssl_connect_done;
   return CURLE_OK;
 }
@@ -1211,6 +1288,10 @@ void Curl_darwinssl_close(struct connectdata *conn, int sockindex)
     DisposeIdentityKeychainHandle(connssl->kh);
     connssl->kh = NULL;
   }
+  if(connssl->ra) {
+    CFRelease((CFTypeRef)connssl->ra);
+    connssl->ra = NULL;
+  }
 }
 
 void Curl_darwinssl_close_all(struct SessionHandle *data)
@@ -1347,6 +1428,10 @@ int Curl_darwinssl_random(unsigned char *entropy,
   return 0;
 }
 
+void Curl_darwinssl_md5sum(unsigned char *tmp, /* input */
+                           size_t tmplen,
+                           unsigned char *md5sum, /* output */
+                           size_t md5len);
 void Curl_darwinssl_md5sum(unsigned char *tmp, /* input */
                            size_t tmplen,
                            unsigned char *md5sum, /* output */

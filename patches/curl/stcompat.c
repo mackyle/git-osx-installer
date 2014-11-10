@@ -7,7 +7,8 @@ If this software is included as part of a build of
 the cURL library, it may be used under the same license
 terms as the cURL library.
 
-Otherwise the GPLv2 license applies.
+Otherwise the GPLv2 license applies, see
+  http://www.gnu.org/licenses/gpl-2.0-standalone.html
 
 This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -370,7 +371,7 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
       CFRelease(der);
       if (!cert) {
         if (e)
-          e->f(e->u, "Invalid CA certificate bad DER data\n");
+          e->f(e->u, "Invalid CA certificate bad DER data");
         CFRelease(a);
         return NULL;
       }
@@ -379,7 +380,7 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
       return a;
     } else if (readcnt == -1) {
       if (e)
-        e->f(e->u, "Invalid CA certificate #%u (offset %u) in bundle\n",
+        e->f(e->u, "Invalid CA certificate #%u (offset %u) in bundle",
                    (unsigned)cnt, (unsigned)(p-certs));
       CFRelease(a);
       return NULL;
@@ -388,7 +389,7 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
       SecCertificateRef cert;
       if (!der) {
         if (e)
-          e->f(e->u, "Invalid CA certificate #%u (offset %u) bad base 64 in bundle\n",
+          e->f(e->u, "Invalid CA certificate #%u (offset %u) bad base 64 in bundle",
                      (unsigned)cnt, (unsigned)(pem.start-certs));
         CFRelease(a);
         return NULL;
@@ -397,7 +398,7 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
       CFRelease(der);
       if (!cert) {
         if (e)
-          e->f(e->u, "Invalid CA certificate #%u (offset %u) bad cert data in bundle\n",
+          e->f(e->u, "Invalid CA certificate #%u (offset %u) bad cert data in bundle",
                      (unsigned)cnt, (unsigned)(pem.start-certs));
         CFRelease(a);
         return NULL;
@@ -408,6 +409,10 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
     } else if (!readcnt) break;
     plen -= (pem.start + pem.len) - p;
     p = pem.start + pem.len;
+  }
+  if (!CFArrayGetCount(a)) {
+    CFRelease(a);
+    a = NULL;
   }
   return a;
 }
@@ -667,7 +672,12 @@ typedef struct {
 } cCSSM_DATA;
 
 static struct {
-  OSStatus (*fSSLSetTrustedRoots)(SSLContextRef,CFArrayRef,Boolean);
+  OSStatus (*fSSLSetTrustedRoots)(SSLContextRef, CFArrayRef, Boolean);
+  OSStatus (*fSSLGetPeerSecTrust)(SSLContextRef, SecTrustRef *);
+  OSStatus (*fSSLCopyPeerTrust)(SSLContextRef, SecTrustRef *);
+  OSStatus (*fSecTrustGetResult)(SecTrustRef, SecTrustResultType *,
+                                 CFArrayRef *, CSSM_TP_APPLE_EVIDENCE_INFO **);
+  OSStatus (*fSecTrustSetAnchorCertificatesOnly)(SecTrustRef, Boolean);
   OSStatus (*fSSLGetPeerCertificates)(SSLContextRef cxt, CFArrayRef *certs);
   OSStatus (*fSSLCopyPeerCertificates)(SSLContextRef cxt, CFArrayRef *certs);
   OSStatus (*fSSLSetProtocolVersionEnabled)(SSLContextRef cxt, SmallEnum, Boolean);
@@ -700,6 +710,10 @@ static void stcompat_initialize(void)
 {
 #define LOOKUP(name) *((void **)&fnc.f##name) = dlsym(RTLD_NEXT, #name)
   LOOKUP(SSLSetTrustedRoots);
+  LOOKUP(SSLGetPeerSecTrust);
+  LOOKUP(SSLCopyPeerTrust);
+  LOOKUP(SecTrustGetResult);
+  LOOKUP(SecTrustSetAnchorCertificatesOnly);
   LOOKUP(SSLGetPeerCertificates);
   LOOKUP(SSLCopyPeerCertificates);
   LOOKUP(SSLSetProtocolVersionEnabled);
@@ -728,6 +742,26 @@ OSStatus cSSLSetTrustedRoots(SSLContextRef cxt, CFArrayRef rts, Boolean replace)
   return unimpErr;
 }
 
+OSStatus cSSLCopyPeerTrust(SSLContextRef cxt, SecTrustRef *trust)
+{
+  if (fnc.fSSLCopyPeerTrust)
+    return fnc.fSSLCopyPeerTrust(cxt, trust);
+  if (fnc.fSSLGetPeerSecTrust) {
+    OSStatus err = fnc.fSSLGetPeerSecTrust(cxt, trust);
+    if (!err) CFRetain(*trust);
+    return err;
+  }
+  return unimpErr;
+}
+
+OSStatus cSecTrustGetResult(SecTrustRef trust, SecTrustResultType *result,
+              CFArrayRef *certChain, CSSM_TP_APPLE_EVIDENCE_INFO **statusChain)
+{
+  if (fnc.fSecTrustGetResult)
+    return fnc.fSecTrustGetResult(trust, result, certChain, statusChain);
+  return unimpErr;
+}
+
 OSStatus cSSLCopyPeerCertificates(SSLContextRef cxt, CFArrayRef *certs)
 {
   if (!certs || !cxt) return paramErr;
@@ -745,6 +779,13 @@ OSStatus cSSLCopyPeerCertificates(SSLContextRef cxt, CFArrayRef *certs)
     }
     return err;
   }
+  return unimpErr;
+}
+
+OSStatus cSecTrustSetAnchorCertificatesOnly(SecTrustRef cxt, Boolean anchorsOnly)
+{
+  if (fnc.fSecTrustSetAnchorCertificatesOnly)
+    return fnc.fSecTrustSetAnchorCertificatesOnly(cxt, anchorsOnly);
   return unimpErr;
 }
 
@@ -834,6 +875,42 @@ CFDataRef cSecCertificateCopyData(SecCertificateRef c)
     return CFDataCreate(kCFAllocatorDefault, certdata.Data, certdata.Length);
   }
   return NULL;
+}
+
+Boolean SecCertsEqual(SecCertificateRef c1, SecCertificateRef c2)
+{
+  CFDataRef d1, d2;
+  size_t l1, l2;
+  Boolean ans = false;
+  d1 = cSecCertificateCopyData(c1);
+  if (!d1) return false;
+  d2 = cSecCertificateCopyData(c2);
+  if (!d2) {
+    CFRelease(d1);
+    return false;
+  }
+  l1 = CFDataGetLength(d1);
+  l2 = CFDataGetLength(d2);
+  if (l1 == l2) {
+    const void *p1 = (void *)CFDataGetBytePtr(d1);
+    const void *p2 = (void *)CFDataGetBytePtr(d2);
+    ans = memcmp(p1, p2, l1) == 0;
+  }
+  CFRelease(d1);
+  CFRelease(d2);
+  return ans;
+}
+
+Boolean SecCertInArray(SecCertificateRef c, CFArrayRef a)
+{
+  size_t i, cnt;
+  if (!c || !a || !CFArrayGetCount(a)) return false;
+  cnt = CFArrayGetCount(a);
+  for (i = 0; i < cnt; ++i) {
+    if (SecCertsEqual(c, (SecCertificateRef)CFArrayGetValueAtIndex(a, i)))
+      return true;
+  }
+  return false;
 }
 
 OSStatus CopyIdentityWithLabel(const char *label, SecIdentityRef *out)
@@ -933,15 +1010,184 @@ void cSSLDisposeContext(SSLContextRef c)
     fnc.fSSLDisposeContext(c);
 }
 
+CF_INLINE bool is_ldh(int c)
+{
+  return
+    ('A' <= c && c <= 'Z') ||
+    ('a' <= c && c <= 'z') ||
+    ('0' <= c && c <= '9') ||
+    c == '-';
+}
+
+CF_INLINE size_t get_label_len(const char *p, size_t l)
+{
+  size_t ans = 0;
+  while (l-- && is_ldh(*p++)) ++ans;
+  return ans;
+}
+
+static bool is_dns_name(const void *_p, size_t l, bool wcok)
+{
+  const char *p = (char *)_p;
+  size_t idx = 0;
+
+  if (!p) return false;
+  if (l >= 1 && p[l-1] == '.') --l;
+  if (!l) return false;
+  if (l > 255) return false;
+  do {
+    size_t lablen = get_label_len(p, l);
+    if (lablen > 63) return false;
+    if (!idx && !lablen && wcok && l >= 2 && p[0] == '*' && p[1] == '.') lablen=1;
+    if (!lablen) return false;
+    if (p[0] == '-' || p[lablen - 1] == '-') return false;
+    if (lablen < l) {
+      if (p[lablen] != '.') return false;
+      ++lablen;
+    }
+    l -= lablen;
+    p += lablen;
+    ++idx;
+  } while (l);
+  return true;
+}
+
+CF_INLINE char clc(char c)
+{
+  return 'A' <= c && c <= 'Z' ? c - 'A' + 'a' : c;
+}
+
+CF_INLINE bool matchicase(const char *p1, const char *p2, size_t l)
+{
+  while (l--) {
+    if (clc(*p1++) != clc(*p2++)) return false;
+  }
+  return true;
+}
+
+static bool peername_matches_id(const char *peername, const char *idname)
+{
+  size_t pl, il, idx;
+  if (!peername || !idname) return false;
+  pl = strlen(peername);
+  il = strlen(idname);
+  if (!is_dns_name(peername, pl, false) || !is_dns_name(idname, il, true))
+    return false;
+  idx = 0;
+  if (peername[pl - 1] == '.') --pl;
+  if (idname[il - 1] == '.') --il;
+  while (pl && il) {
+    size_t pll = get_label_len(peername, pl);
+    size_t ill = get_label_len(idname, il);
+    if (!idx && !ill && il >= 2 && idname[0] == '*' && idname[1] == '.') ill=1;
+    if (pll < pl) {
+      if (peername[pll] != '.') return false;
+      ++pll;
+    }
+    if (ill < il) {
+      if (idname[ill] != '.') return false;
+      ++ill;
+    }
+    if (idx || idname[0] != '*') {
+      if (pll != ill) return false;
+      if (!matchicase(peername, idname, pll)) return false;
+    }
+    peername += pll;
+    pl -= pll;
+    idname += ill;
+    il -= ill;
+    ++idx;
+  }
+  return !pl && !il;
+}
+
+CF_INLINE size_t get_num_len(const char *p, size_t l)
+{
+  size_t ans = 0;
+  while (l-- && '0' <= *p && *p <= '9') {
+    ++ans;
+    ++p;
+  }
+  return ans;
+}
+
+Boolean IsIPv4Name(const void *_p, size_t l)
+{
+  const char *p = (char *)_p;
+  size_t idx = 0;
+
+  if (!p || l < 7) return false;
+  do {
+    size_t lablen;
+    if (++idx > 4) return false;
+    lablen = get_num_len(p, l);
+    if (lablen > 3) return false;
+    if (lablen >= 2 && *p == '0') return false;
+    else if (lablen == 3) {
+      if (*p >= '3') return false;
+      if (*p == '2') {
+        if (p[1] >= '6') return false;
+        if (p[1] == '5' && p[2] > '5') return false;
+      }
+    }
+    if (lablen < l) {
+      if (p[lablen] != '.') return false;
+      ++lablen;
+    }
+    l -= lablen;
+    p += lablen;
+  } while (l);
+  return idx == 4;
+}
+
+static bool parse_ipv4_name(const void *_p, size_t l, uint8_t ipv4[4])
+{
+  unsigned short s[4];
+  char ipv4str[16];
+  const char *p = (char *)_p;
+  if (!IsIPv4Name(p, l) || l > 15) return false;
+  memcpy(ipv4str, p, l);
+  ipv4str[l] = 0;
+  if (sscanf(ipv4str, "%hu.%hu.%hu.%hu", s, s+1, s+2, s+3) == 4) {
+    ipv4[0] = (uint8_t)s[0];
+    ipv4[1] = (uint8_t)s[1];
+    ipv4[2] = (uint8_t)s[2];
+    ipv4[3] = (uint8_t)s[3];
+    return true;
+  }
+  return false;
+}
+
+static bool parse_ipv6_name(const void *_p, size_t l, uint8_t ipv6[16])
+{
+  char ipv6str[INET6_ADDRSTRLEN];
+  const char *p = (char *)_p;
+  const char *pct;
+  if (!p) return false;
+  if (l >= 1 && p[0] == '[') {
+    ++p;
+    --l;
+  }
+  if (l >= 1 && p[l-1] == ']') --l;
+  pct = (char *)(l ? memchr(p, '%', l) : NULL);
+  if (pct) l = pct - p;
+  if (l < 3 || l >= INET6_ADDRSTRLEN) return false;
+  memcpy(ipv6str, p, l);
+  ipv6str[l] = 0;
+  return inet_pton(AF_INET6, ipv6str, ipv6) == 1;
+}
+
 typedef struct {
   const uint8_t *d;
   size_t l;
 } data_t;
 
 #define U(x) ((const uint8_t *)(x))
+static const data_t OID_BasicConstraints = {U("\006\003\125\035\023"), 5};
 static const data_t OID_SubjectAltName = {U("\006\003\125\035\021"), 5};
 static const data_t OID_SubjectKeyIdentifier = {U("\006\003\125\035\016"), 5};
 static const data_t OID_AuthorityKeyIdentifier = {U("\006\003\125\035\043"), 5};
+static const data_t OID_CommonName = {U("\006\003\125\004\003"), 5};
 #undef U
 
 typedef struct {
@@ -955,6 +1201,9 @@ typedef struct {
 
 typedef struct {
   uint8_t vers; /* 0 => v1, 1 => v2, 2 => v3 */
+  uint8_t caFlag; /* 0 unless basic constraints present then 0x80=critial 0x01=value */
+  uint8_t isCA; /* true if caFlag==0x81 or subject==issuer && vers < 2 */
+  uint8_t isRoot; /* true if isCA and subject == issuer */
   data_t subject; /* points to sequence */
   data_t subjectAltNames; /* null unless v3 extension present, points to sequence */
   data_t subjectKeyId; /* null unless v3 extension present, points to raw bytes */
@@ -1089,76 +1338,106 @@ static bool read_der_cert(const data_t *_d, der_cert_t *o)
   /* skip subjectPublicKeyInfo */
   d.l -= atom.hl + atom.dl;
   d.d += atom.hl + atom.dl;
-  if (o->vers != 2 || !d.l) return true;
-  if (!read_der_atom(&d, &atom)) return false;
-  if (atom.rawtag == 0x81) {
-    /* skip issuerUniqueID */
-    d.l -= atom.hl + atom.dl;
-    d.d += atom.hl + atom.dl;
-    if (!d.l) return true;
-    if (!read_der_atom(&d, &atom)) return false;
-  }
-  if (atom.rawtag == 0x82) {
-    /* skip subjectUniqueID */
-    d.l -= atom.hl + atom.dl;
-    d.d += atom.hl + atom.dl;
-    if (!d.l) return true;
-    if (!read_der_atom(&d, &atom)) return false;
-  }
-  if (atom.rawtag != 0xA3) return false;
-  /* found v3 extensions */
-  d.l = atom.dl;
-  d.d += atom.hl;
-  if (!read_der_atom(&d, &atom)) return false;
-  if (atom.rawtag != 0x30) return false;
-  d.l -= atom.hl;
-  d.d += atom.hl;
   do {
-    data_t oid, value;
+    if (o->vers != 2 || !d.l) break;
+    if (!read_der_atom(&d, &atom)) return false;
+    if (atom.rawtag == 0x81) {
+      /* skip issuerUniqueID */
+      d.l -= atom.hl + atom.dl;
+      d.d += atom.hl + atom.dl;
+      if (!d.l) break;
+      if (!read_der_atom(&d, &atom)) return false;
+    }
+    if (atom.rawtag == 0x82) {
+      /* skip subjectUniqueID */
+      d.l -= atom.hl + atom.dl;
+      d.d += atom.hl + atom.dl;
+      if (!d.l) break;
+      if (!read_der_atom(&d, &atom)) return false;
+    }
+    if (atom.rawtag != 0xA3) return false;
+    /* found v3 extensions */
+    d.l = atom.dl;
+    d.d += atom.hl;
     if (!read_der_atom(&d, &atom)) return false;
     if (atom.rawtag != 0x30) return false;
     d.l -= atom.hl;
     d.d += atom.hl;
-    if (!read_der_atom(&d, &atom)) return false;
-    if (atom.rawtag != 6) return false;
-    oid.d = d.d;
-    oid.l = atom.hl + atom.dl;
-    d.l -= atom.hl + atom.dl;
-    d.d += atom.hl + atom.dl;
-    if (!read_der_atom(&d, &atom)) return false;
-    if (atom.rawtag == 1) {
-      /* skip over boolean */
+    do {
+      uint8_t crit = 0;
+      data_t oid, value;
+      if (!read_der_atom(&d, &atom)) return false;
+      if (atom.rawtag != 0x30) return false;
+      d.l -= atom.hl;
+      d.d += atom.hl;
+      if (!read_der_atom(&d, &atom)) return false;
+      if (atom.rawtag != 6) return false;
+      oid.d = d.d;
+      oid.l = atom.hl + atom.dl;
       d.l -= atom.hl + atom.dl;
       d.d += atom.hl + atom.dl;
       if (!read_der_atom(&d, &atom)) return false;
-    }
-    if (atom.rawtag != 4) return false;
-    d.l -= atom.hl;
-    d.d += atom.hl;
-    value.d = d.d;
-    value.l = atom.dl;
-    d.l -= atom.dl;
-    d.d += atom.dl;
-    if (data_matches(&oid, &OID_SubjectAltName)) {
-      o->subjectAltNames.d = value.d;
-      o->subjectAltNames.l = value.l;
-    } else if (data_matches(&oid, &OID_SubjectKeyIdentifier)) {
-      if (!read_der_atom(&value, &atom)) return false;
-      if (atom.rawtag != 4) return false;
-      o->subjectKeyId.d = value.d + atom.hl;
-      o->subjectKeyId.l = atom.dl;
-    } else if (data_matches(&oid, &OID_AuthorityKeyIdentifier)) {
-      if (!read_der_atom(&value, &atom)) return false;
-      if (atom.rawtag != 0x30) return false;
-      value.l = atom.dl;
-      value.d += atom.hl;
-      if (!read_der_atom(&value, &atom)) return false;
-      if (atom.rawtag == 0x80) {
-        o->issuerKeyId.d = value.d + atom.hl;
-        o->issuerKeyId.l = atom.dl;
+      if (atom.rawtag == 1) {
+        /* skip over boolean but record its value */
+        if (atom.dl != 1) return false;
+        crit = *(d.d + atom.hl);
+        d.l -= atom.hl + atom.dl;
+        d.d += atom.hl + atom.dl;
+        if (!read_der_atom(&d, &atom)) return false;
       }
-    }
-  } while (d.l);
+      if (atom.rawtag != 4) return false;
+      d.l -= atom.hl;
+      d.d += atom.hl;
+      value.d = d.d;
+      value.l = atom.dl;
+      d.l -= atom.dl;
+      d.d += atom.dl;
+      if (data_matches(&oid, &OID_BasicConstraints)) {
+        if (!read_der_atom(&value, &atom)) return false;
+        if (atom.rawtag != 0x30) return false;
+        value.l = atom.dl;
+        value.d += atom.hl;
+        if (!value.l) {
+          /* CA flag is false and was properly omitted */
+          o->caFlag = crit ? 0x80 : 0;
+        } else {
+          if (!read_der_atom(&value, &atom)) return false;
+          if (atom.rawtag == 1) {
+            /* CA flag is present */
+            if (atom.dl != 1) return false;
+            o->caFlag = (crit ? 0x80 : 0) | (*(value.d + atom.hl) ? 0x1 : 0);
+          }
+        }
+      } else if (data_matches(&oid, &OID_SubjectAltName)) {
+        o->subjectAltNames.d = value.d;
+        o->subjectAltNames.l = value.l;
+      } else if (data_matches(&oid, &OID_SubjectKeyIdentifier)) {
+        if (!read_der_atom(&value, &atom)) return false;
+        if (atom.rawtag != 4) return false;
+        o->subjectKeyId.d = value.d + atom.hl;
+        o->subjectKeyId.l = atom.dl;
+      } else if (data_matches(&oid, &OID_AuthorityKeyIdentifier)) {
+        if (!read_der_atom(&value, &atom)) return false;
+        if (atom.rawtag != 0x30) return false;
+        value.l = atom.dl;
+        value.d += atom.hl;
+        if (!read_der_atom(&value, &atom)) return false;
+        if (atom.rawtag == 0x80) {
+          o->issuerKeyId.d = value.d + atom.hl;
+          o->issuerKeyId.l = atom.dl;
+        }
+      }
+    } while (d.l);
+  } while (0);
+  if (o->vers >= 2) {
+    o->isCA = (o->caFlag|0x80) == 0x81; /* HACK: some old CAs aren't critical! */
+    o->isRoot = (o->isCA && o->subject.l && o->subject.l == o->issuer.l &&
+                 memcmp(o->subject.d, o->issuer.d, o->subject.l) == 0) ? 1 : 0;
+  } else {
+    o->isCA = (o->subject.l && o->subject.l == o->issuer.l &&
+               memcmp(o->subject.d, o->issuer.d, o->subject.l) == 0) ? 1 : 0;
+    o->isRoot = o->isCA;
+  }
   return true;
 }
 
@@ -1365,12 +1644,21 @@ static void append_oid_name(CFMutableStringRef s, const char *prefix,
 #define DER_TAG_UNIVERSALSTRING 28
 #define DER_TAG_BMPSTRING 30
 
-static void append_attr_value(CFMutableStringRef s, const void *_d, const der_atom_t *a)
+/* flags:
+ *   0x01 => strings only
+ *   0x02 => 8-bit strings only
+ *   0x04 => CN Ids strings only
+ *   0x08 => wildcard CN okay
+ *   0x10 => create output string
+ */
+static bool append_attr_value(CFMutableStringRef *s, const void *_d,
+                              const der_atom_t *a, unsigned flags)
 {
   const uint8_t *d = (uint8_t *)_d;
   CFStringBuiltInEncodings encoding = kCFStringEncodingASCII;
   CFStringRef temp;
-  if (!s || !d || !a || !a->dl) return;
+  if (s && !(flags & 0x10) && !*s) return false;
+  if (!s || !d || !a || !a->dl) return false;
   switch (a->rawtag) {
     case DER_TAG_UTF8STRING:
     case DER_TAG_GRAPHICSTRING:
@@ -1386,19 +1674,28 @@ static void append_attr_value(CFMutableStringRef s, const void *_d, const der_at
     case DER_TAG_VISIBLESTRING:
       encoding = kCFStringEncodingISOLatin1; break;
     case DER_TAG_BMPSTRING:
+      if (flags & 0x06) return false;
       encoding = kCFStringEncodingUnicode; break;
     default:
-      append_hex_dump(s, d, a->hl + a->dl);
-      return;
+      if (flags & 0x05) return false;
+      append_hex_dump(*s, d, a->hl + a->dl);
+      return true;
   }
+  if (flags & 0x04 && !is_dns_name(d+a->hl, a->dl, !!(flags & 0x08)))
+    return false;
   temp = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, d+a->hl, a->dl,
                                        encoding, true, kCFAllocatorNull);
   if (temp) {
-    CFStringAppend(s, temp);
+    if (flags & 0x10)
+      *s = CFStringCreateMutable(kCFAllocatorDefault, 0);
+    if (*s)
+      CFStringAppend(*s, temp);
     CFRelease(temp);
   } else {
-    append_hex_dump(s, d, a->hl + a->dl);
+    if (flags & 0x05) return false;
+    append_hex_dump(*s, d, a->hl + a->dl);
   }
+  return *s != NULL;
 }
 
 static CFStringRef CopyCertName(SecCertificateRef _cert, bool issuer)
@@ -1450,7 +1747,7 @@ static CFStringRef CopyCertName(SecCertificateRef _cert, bool issuer)
           set.d += atom.hl + atom.dl;
           if (!read_der_atom(&set, &atom)) break;
           append_oid_name(ans, setidx++?"/+":"/", oid.d, oid.l, "=");
-          append_attr_value(ans, set.d, &atom);
+          append_attr_value(&ans, set.d, &atom, 0);
           set.l -= atom.hl + atom.dl;
           set.d += atom.hl + atom.dl;
           if (!set.l) {
@@ -1490,65 +1787,373 @@ CFStringRef CopyCertIssuerKeyId(SecCertificateRef _cert)
   return CopyCertKeyId(_cert, true);
 }
 
-CFStringRef CopyCertSubjectAltNames(SecCertificateRef _cert)
+/* return CFArrayRef if arr else CFStringRef
+ * flags:
+ *   0x01 includes DNS alts
+ *   0x02 includes IPv4 alts
+ *   0x04 includes IPv6 alts
+ *   0x08 include IP other alts
+ */
+static CFTypeRef CopyCertSubjectAltNamesInt(const der_cert_t *cert, bool arr, unsigned flags)
 {
-  CFDataRef d = cSecCertificateCopyData(_cert);
-  CFMutableStringRef ans = CFStringCreateMutable(kCFAllocatorDefault, 0);
+  data_t data;
+  CFTypeRef ans = arr ?
+    (CFTypeRef)CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks) :
+    (CFTypeRef)CFStringCreateMutable(kCFAllocatorDefault, 0);
   bool good = false;
 
-  for (;;) {
-    data_t data;
-    der_cert_t cert;
+  do {
     der_atom_t atom;
 
-    if (!d || !ans) break;
-    data.d = CFDataGetBytePtr(d);
-    data.l = CFDataGetLength(d);
-    if (!read_der_cert(&data, &cert)) break;
-    if (!cert.subjectAltNames.d || !cert.subjectAltNames.l) break;
-    data.d = cert.subjectAltNames.d;
-    data.l = cert.subjectAltNames.l;
+    if (!cert || !ans) break;
+    if (!cert->subjectAltNames.d || !cert->subjectAltNames.l) break;
+    data.d = cert->subjectAltNames.d;
+    data.l = cert->subjectAltNames.l;
     if (!read_der_atom(&data, &atom)) break;
     if (atom.rawtag != 0x30) break;
     data.l -= atom.hl;
     data.d += atom.hl;
     do {
       if (!read_der_atom(&data, &atom)) break;
-      if (atom.rawtag == 0x82) {
+      if (atom.rawtag == 0x82 && (flags & 0x01)) {
         CFStringRef temp;
-        if (CFStringGetLength(ans))
-          CFStringAppendCString(ans, ",", kCFStringEncodingASCII);
+        if (!arr && CFStringGetLength((CFStringRef)ans))
+          CFStringAppendCString((CFMutableStringRef)ans, ",", kCFStringEncodingASCII);
         temp = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, data.d+atom.hl,
           atom.dl, kCFStringEncodingASCII, true, kCFAllocatorNull);
         if (!temp) break;
-        CFStringAppend(ans, temp);
+        if (arr)
+          CFArrayAppendValue((CFMutableArrayRef)ans, temp);
+        else
+          CFStringAppend((CFMutableStringRef)ans, temp);
         CFRelease(temp);
-      } else if (atom.rawtag == 0x87) {
-        if (CFStringGetLength(ans))
-          CFStringAppendCString(ans, ",", kCFStringEncodingASCII);
-        if (atom.dl == 4) {
-          char ipv4str[16];
-          const uint8_t *ip = data.d+atom.hl;
-          sprintf(ipv4str, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
-          CFStringAppendCString(ans, ipv4str, kCFStringEncodingASCII);
-        } else if (atom.dl == 16) {
-          char ntopbuff[INET6_ADDRSTRLEN];
-          if (!inet_ntop(AF_INET6, data.d+atom.hl, ntopbuff, sizeof(ntopbuff)))
-            break;
-          CFStringAppendCString(ans, ntopbuff, kCFStringEncodingASCII);
-        } else {
-          append_hex_dump(ans, data.d+atom.hl, atom.dl);
+      } else if (atom.rawtag == 0x87 && (flags & 0x0e)) {
+        if ((atom.dl == 4 && (flags & 0x02)) ||
+            (atom.dl == 16 && (flags & 0x04)) ||
+            (atom.dl != 4 && atom.dl != 16 && (flags & 0x08))) {
+          if (arr) {
+            CFDataRef dtemp = CFDataCreate(kCFAllocatorDefault, data.d+atom.hl, atom.dl);
+            if (!dtemp) break;
+            CFArrayAppendValue((CFMutableArrayRef)ans, dtemp);
+            CFRelease(dtemp);
+          } else {
+            if (CFStringGetLength((CFStringRef)ans))
+              CFStringAppendCString((CFMutableStringRef)ans, ",", kCFStringEncodingASCII);
+            if (atom.dl == 4) {
+              char ipv4str[16];
+              const uint8_t *ip = data.d+atom.hl;
+              sprintf(ipv4str, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+              CFStringAppendCString((CFMutableStringRef)ans, ipv4str, kCFStringEncodingASCII);
+            } else if (atom.dl == 16) {
+              char ntopbuff[INET6_ADDRSTRLEN];
+              if (!inet_ntop(AF_INET6, data.d+atom.hl, ntopbuff, sizeof(ntopbuff)))
+                break;
+              CFStringAppendCString((CFMutableStringRef)ans, ntopbuff, kCFStringEncodingASCII);
+            } else {
+              append_hex_dump((CFMutableStringRef)ans, data.d+atom.hl, atom.dl);
+            }
+          }
         }
       }
       data.l -= atom.hl + atom.dl;
       data.d += atom.hl + atom.dl;
     } while (data.l);
-    if (!data.l && CFStringGetLength(ans)) good = true;
-    break;
-  }
-  if (d) CFRelease(d);
+    if (!data.l && ( (arr  && CFArrayGetCount((CFArrayRef)ans)   ) ||
+                     (!arr && CFStringGetLength((CFStringRef)ans))    ))
+      good = true;
+  } while (0);
   if (!good && ans) {CFRelease(ans); ans=NULL;}
   return ans;
+}
+
+static CFArrayRef CopyCertSubjectCNIds(const der_cert_t *cert)
+{
+  CFMutableArrayRef ans =
+    CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+  bool good = false;
+
+  do {
+    data_t data;
+    der_atom_t atom;
+
+    if (!ans || !cert || !cert->subject.d || !cert->subject.l) break;
+    data.d = cert->subject.d;
+    data.l = cert->subject.l;
+    if (!read_der_atom(&data, &atom)) break;
+    if (atom.rawtag != 0x30) break;
+    data.l -= atom.hl;
+    data.d += atom.hl;
+    while (data.l) {
+      data_t set;
+      if (!read_der_atom(&data, &atom)) break;
+      if (atom.rawtag != 0x31) break;
+      set.d = data.d + atom.hl;
+      set.l = atom.dl;
+      data.l -= atom.hl + atom.dl;
+      data.d += atom.hl + atom.dl;
+      if (!read_der_atom(&set, &atom)) break;
+      if (atom.rawtag != 0x30) break;
+      if (atom.hl + atom.dl == set.l) { /* single-value CN only */
+        CFMutableStringRef cnid;
+        data_t oid;
+        set.l -= atom.hl;
+        set.d += atom.hl;
+        if (!read_der_atom(&set, &atom)) break;
+        if (atom.rawtag != 6) break;
+        oid.d = set.d;
+        oid.l = atom.hl + atom.dl;
+        if (data_matches(&oid, &OID_CommonName)) {
+          set.l -= atom.hl + atom.dl;
+          set.d += atom.hl + atom.dl;
+          if (!read_der_atom(&set, &atom)) break;
+          if (append_attr_value(&cnid, set.d, &atom, 0x1f) && cnid) {
+            CFArrayAppendValue(ans, cnid);
+            CFRelease(cnid);
+          }
+        }
+      }
+    }
+    if (!data.l)
+      good = true;
+  } while (0);
+  if (ans && (!good || !CFArrayGetCount(ans))) {
+    CFRelease(ans);
+    ans=NULL;
+  }
+  return ans;
+}
+
+CFStringRef CopyCertSubjectAltNamesString(SecCertificateRef _cert)
+{
+  CFDataRef d = cSecCertificateCopyData(_cert);
+  data_t data;
+  der_cert_t cert;
+  CFStringRef ans = NULL;
+
+  if (!d) return NULL;
+  data.d = CFDataGetBytePtr(d);
+  data.l = CFDataGetLength(d);
+  if (read_der_cert(&data, &cert))
+      ans = (CFStringRef)CopyCertSubjectAltNamesInt(&cert, false, 0x0f);
+  CFRelease(d);
+  return ans;
+}
+
+/* mode:
+ *   0 = DNS/CN ids
+ *   4 = IPv4 ids
+ *   16 = IPv6 ids
+ */
+static CFArrayRef CopyCertSubjectIds(der_cert_t *c, unsigned mode)
+{
+  CFArrayRef ans = NULL;
+  if (!c || (mode != 0 && mode != 4 && mode != 16)) return NULL;
+  if (mode == 4)
+    return ans = (CFArrayRef)CopyCertSubjectAltNamesInt(c, true, 0x02);
+  if (mode == 16)
+    return ans = (CFArrayRef)CopyCertSubjectAltNamesInt(c, true, 0x04);
+  else {
+    ans = (CFArrayRef)CopyCertSubjectAltNamesInt(c, true, 0x01);
+    if (!ans || !CFArrayGetCount(ans)) {
+      if (ans) CFRelease(ans);
+      ans = CopyCertSubjectCNIds(c);
+    }
+  }
+  if (ans && !CFArrayGetCount(ans)) {
+    CFRelease(ans);
+    ans = NULL;
+  }
+  return ans;
+}
+
+OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
+              unsigned explicitCertsOnly, unsigned flags, const char *peername)
+{
+  SecTrustResultType result;
+  CFArrayRef chain = NULL;
+  CSSM_TP_APPLE_EVIDENCE_INFO *evidence;
+  OSStatus err = cSecTrustGetResult(trust, &result, &chain, &evidence);
+  size_t i, cnt;
+  if (err == errSecTrustNotAvailable) {
+    /* We need to evaluate first */
+    CFArrayRef anchors = customRootsOrNull;
+    if (chain) CFRelease(chain);
+    if (anchors)
+      CFRetain(anchors);
+    else {
+      err = SecTrustCopyAnchorCertificates(&anchors);
+      if (err) return err;
+    }
+    err = SecTrustSetAnchorCertificates(trust, anchors);
+    CFRelease(anchors);
+    if (err) return err;
+    err = cSecTrustSetAnchorCertificatesOnly(trust, customRootsOrNull ? true : false);
+    if (err && err != unimpErr) return err;
+    err = SecTrustEvaluate(trust, &result);
+    if (err) return err;
+    chain = NULL;
+    err = cSecTrustGetResult(trust, &result, &chain, &evidence);
+  }
+  if (err) {
+    if (chain) CFRelease(chain);
+    return err;
+  }
+  if (!chain || !evidence || !CFArrayGetCount(chain)) {
+    if (chain) CFRelease(chain);
+    return errSSLXCertChainInvalid;
+  }
+  cnt = (size_t)CFArrayGetCount(chain);
+  if ((peername && *peername) ||
+      (!(flags & CSSM_TP_ACTION_LEAF_IS_CA) &&
+       !(evidence[0].StatusBits & CSSM_CERT_STATUS_IS_ROOT))) {
+    CFDataRef certder = cSecCertificateCopyData(
+                          (SecCertificateRef)CFArrayGetValueAtIndex(chain, 0));
+    data_t der;
+    der_cert_t cert;
+    if (!certder)
+      return errSSLBadCert;
+    der.d = CFDataGetBytePtr(certder);
+    der.l = CFDataGetLength(certder);
+    if (!read_der_cert(&der, &cert))
+      err = errSSLBadCert;
+
+    /* First confirm we have a host name match.  SecureTransport should do
+     * this for us (but will not give us a decent result code) except that
+     * it has problems with IPv6 address matching */
+    if (!err && peername && *peername) {
+      size_t peerlen = strlen(peername);
+      union {
+        uint8_t ipv6[16];
+        uint8_t ipv4[4];
+      } ipa;
+      int mode = -1;
+      if (parse_ipv4_name(peername, peerlen, ipa.ipv4)) mode = 4;
+      else if (is_dns_name(peername, peerlen, false)) mode = 0;
+      else if (parse_ipv6_name(peername, peerlen, ipa.ipv6)) mode = 16;
+      if (mode == -1)
+        /* if we can't parse peername it can't possibly match! */
+        err = errSSLHostNameMismatch;
+      if (!err) {
+        CFArrayRef ids = CopyCertSubjectIds(&cert, mode);
+        if (ids && !CFArrayGetCount(ids)) {
+          CFRelease(ids);
+          ids = NULL;
+        }
+        if (!ids)
+          /* if we don't have anything to match against it can't possibly match! */
+          err = errSSLHostNameMismatch;
+        else {
+          size_t j, idcnt = CFArrayGetCount(ids);
+          bool matched = false;
+          for (j = 0; j < idcnt; ++j) {
+            CFTypeRef oneid = (CFTypeRef)CFArrayGetValueAtIndex(ids, j);
+            if (mode) {
+              const uint8_t *p;
+              size_t l;
+              if (CFDataGetTypeID() != CFGetTypeID(oneid)) continue;
+              p = (uint8_t *)CFDataGetBytePtr((CFDataRef)oneid);
+              l = (size_t)CFDataGetLength((CFDataRef)oneid);
+              if (l != (size_t)mode) continue;
+              if (memcmp(ipa.ipv6, p, l) == 0) {
+                matched = true;
+                break;
+              }
+            } else {
+              char dnsname[256];
+              if (CFStringGetTypeID() != CFGetTypeID(oneid)) continue;
+              if (!CFStringGetCString((CFStringRef)oneid, dnsname,
+                                      sizeof(dnsname), kCFStringEncodingASCII))
+                continue;
+              if (peername_matches_id(peername, dnsname)) {
+                matched = true;
+                break;
+              }
+            }
+          }
+          CFRelease(ids);
+          if (!matched)
+            err = errSSLHostNameMismatch;
+        }
+      }
+    }
+
+    /* Confirm that the first certificate is NOT a CA (otherwise it's not a
+     * valid chain), but again SecureTransport should have already checked that
+     * for us.  CSSM_TP_ACTION_LEAF_IS_CA overrides.  Also we never check the
+     * root certificate even if it's also the leaf. */
+    if (!err && !(flags & CSSM_TP_ACTION_LEAF_IS_CA) &&
+        !(evidence[0].StatusBits & CSSM_CERT_STATUS_IS_ROOT) && cert.isCA)
+      err = errSSLXCertChainInvalid;
+
+    CFRelease(certder);
+    if (err) return err;
+  }
+  if (explicitCertsOnly & 0x01) {
+    /* Check all but root */
+    for (i = 0; i < cnt; ++i) {
+      if (!(evidence[i].StatusBits & CSSM_CERT_STATUS_IS_IN_INPUT_CERTS) &&
+          !(evidence[i].StatusBits & CSSM_CERT_STATUS_IS_ROOT)) {
+        /* If the magical cert had not appeared, the chain would have stopped
+         * here and the error would be no root, so return that error */
+        CFRelease(chain);
+        return errSSLNoRootCert;
+      }
+    }
+  }
+  if (!(flags & CSSM_TP_ACTION_ALLOW_EXPIRED) ||
+      !(flags & CSSM_TP_ACTION_ALLOW_EXPIRED_ROOT)) {
+    /* check for expired or not yet valid certs */
+    for (i = 0; i < cnt; ++i) {
+      if ((flags & CSSM_TP_ACTION_ALLOW_EXPIRED) &&
+          !(evidence[i].StatusBits & CSSM_CERT_STATUS_IS_ROOT))
+        continue;
+      if ((flags & CSSM_TP_ACTION_ALLOW_EXPIRED_ROOT) &&
+          (evidence[i].StatusBits & CSSM_CERT_STATUS_IS_ROOT))
+        continue;
+      if (evidence[i].StatusBits & CSSM_CERT_STATUS_EXPIRED) {
+        CFRelease(chain);
+        return errSSLCertExpired;
+      }
+      if (evidence[i].StatusBits & CSSM_CERT_STATUS_NOT_VALID_YET) {
+        CFRelease(chain);
+        return errSSLCertNotYetValid;
+      }
+    }
+  }
+  /* check for no root */
+  if (!(evidence[cnt-1].StatusBits & CSSM_CERT_STATUS_IS_ROOT)) {
+    CFRelease(chain);
+    return errSSLNoRootCert;
+  }
+  /* check for unknown root */
+  if (!(evidence[cnt-1].StatusBits & CSSM_CERT_STATUS_IS_IN_ANCHORS)) {
+    CFRelease(chain);
+    return errSSLUnknownRootCert;
+  }
+  if (customRootsOrNull) {
+    /* make sure we're not using a gratuitous root, Mac OS X likes to just
+     * go ahead and use its anchors sometimes despite settings to the contrary */
+    if (!SecCertInArray((SecCertificateRef)CFArrayGetValueAtIndex(chain, cnt-1),
+                        customRootsOrNull)) {
+      CFRelease(chain);
+      return errSSLNoRootCert;
+    }
+  }
+  CFRelease(chain);
+  /* everything looks good, so check the trust result code now */
+  switch (result) {
+    case kSecTrustResultProceed:
+    case kSecTrustResultUnspecified:
+      /* good result */
+      return noErr;
+    case kSecTrustResultDeny:
+      /* DENIED! */
+      return errSecTrustSettingDeny;
+    default:
+      /* drop out */;
+  }
+  /* everything else (confirm, invalid, recoverable, fatal, other) */
+  return errSecNotTrusted;
 }
 
 #elif TARGET_OS_EMBEDDED || TARGET_OS_IPHONE

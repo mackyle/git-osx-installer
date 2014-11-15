@@ -38,8 +38,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "utf8.h"
 #include <locale.h>
 #include <langinfo.h>
+#include <libcharset.h>
 #include <xlocale.h>
 #include <iconv.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(OLD_ICONV) || (defined(__sun__) && !defined(_XPG6))
 	typedef const char **iconv_p2;
@@ -79,8 +82,19 @@ static char *strlcpyuc(char *dst, const char *src, size_t cnt)
 	return dst;
 }
 
+static char touc(char c)
+{
+    return ('a' <= c && c <= 'z') ? c - 'a' + 'A' : c;
+}
+
+static char tolc(char c)
+{
+    return ('A' <= c && c <= 'Z') ? c - 'A' + 'a' : c;
+}
+
 void git_setup_gettext(void)
 {
+	const char *codeset;
 	const char *localedir;
 	char bundlepath[PATH_MAX];
 	CFURLRef burl;
@@ -107,15 +121,38 @@ void git_setup_gettext(void)
 		if (use_pref_locale < 0)
 			use_pref_locale = 0;
 	}
-	setlocale(LC_ALL, "");
-	strlcpyuc(charset, nl_langinfo(CODESET), sizeof(charset));
-	is_utf8_codeset = !strcmp(charset, "UTF-8");
+	if (!setlocale(LC_ALL, "")) {
+		const char *newlc = NULL;
+		const char *lcvar = getenv("LC_ALL");
+		if (!lcvar) lcvar = getenv("LC_MESSAGES");
+		if (!lcvar) lcvar = getenv("LANG");
+		if (lcvar && strlen(lcvar) == 2 && !strchr(lcvar, '_')) {
+			char trylc[6];
+			trylc[0] = tolc(lcvar[0]);
+			trylc[1] = tolc(lcvar[1]);
+			trylc[2] = '_';
+			trylc[3] = touc(lcvar[0]);
+			trylc[4] = touc(lcvar[1]);
+			trylc[5] = '\0';
+			newlc = setlocale(LC_ALL, trylc);
+		}
+		if (!newlc)
+			setlocale(LC_ALL, "C");
+	}
+	codeset = nl_langinfo(CODESET);
+	if (!codeset || !*codeset)
+		codeset = locale_charset();
+	strlcpyuc(charset, codeset, sizeof(charset));
+	is_utf8_codeset = !charset[0] || !strcmp(charset, "UTF-8");
 	strlcpy(localename, querylocale(LC_MESSAGES_MASK, NULL), sizeof(localename));
-	ic = iconv_open(
-		strcmp(charset, "US-ASCII") ? charset : "US-ASCII//TRANSLIT",
-		"UTF-8");
-	if (ic != (iconv_t)-1)
-		icok = 1;
+	if (!is_utf8_codeset) {
+		char transcharset[64];
+		strlcpy(transcharset, charset, sizeof(transcharset));
+		strlcat(transcharset, "//TRANSLIT", sizeof(transcharset));
+		ic = iconv_open(transcharset, "UTF-8");
+		if (ic != (iconv_t)-1)
+			icok = 1;
+	}
 	localedir = getenv("GIT_TEXTDOMAINDIR");
 	if (!localedir)
 		localedir = GIT_LOCALE_PATH; /* typically $prefix/share/locale */

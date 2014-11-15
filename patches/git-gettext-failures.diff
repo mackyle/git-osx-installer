@@ -1,0 +1,38 @@
+These three tests don't make sense with git-gettext and
+are expected to fail.
+
+diff --git a/t/t0200-gettext-basic.sh b/t/t0200-gettext-basic.sh
+index 8853d8af..974dd016 100755
+--- a/t/t0200-gettext-basic.sh
++++ b/t/t0200-gettext-basic.sh
+@@ -41,7 +41,7 @@ test_expect_success GETTEXT 'sanity: Icelandic locale was compiled' '
+ 
+ # TODO: When we have more locales, generalize this to test them
+ # all. Maybe we'll need a dir->locale map for that.
+-test_expect_success GETTEXT_LOCALE 'sanity: gettext("") metadata is OK' '
++test_expect_failure GETTEXT_LOCALE 'sanity: gettext("") metadata is OK' '
+     # Return value may be non-zero
+     LANGUAGE=is LC_ALL="$is_IS_locale" gettext "" >zero-expect &&
+     grep "Project-Id-Version: Git" zero-expect &&
+@@ -100,7 +100,7 @@ test_expect_success GETTEXT_LOCALE 'xgettext: Perl extraction with %s' '
+     test_cmp expect actual
+ '
+ 
+-test_expect_success GETTEXT_LOCALE 'sanity: Some gettext("") data for real locale' '
++test_expect_failure GETTEXT_LOCALE 'sanity: Some gettext("") data for real locale' '
+     LANGUAGE=is LC_ALL="$is_IS_locale" gettext "" >real-locale &&
+     test -s real-locale
+ '
+diff --git a/t/t0201-gettext-fallbacks.sh b/t/t0201-gettext-fallbacks.sh
+index 5d80a985..5124ff6d 100755
+--- a/t/t0201-gettext-fallbacks.sh
++++ b/t/t0201-gettext-fallbacks.sh
+@@ -18,7 +18,7 @@ test_expect_success 'sanity: $GIT_INTERNAL_GETTEXT_TEST_FALLBACKS is set' '
+     test -n "$GIT_INTERNAL_GETTEXT_TEST_FALLBACKS"
+ '
+ 
+-test_expect_success C_LOCALE_OUTPUT 'sanity: $GIT_INTERNAL_GETTEXT_SH_SCHEME" is fallthrough' '
++test_expect_failure C_LOCALE_OUTPUT 'sanity: $GIT_INTERNAL_GETTEXT_SH_SCHEME" is fallthrough' '
+     echo fallthrough >expect &&
+     echo $GIT_INTERNAL_GETTEXT_SH_SCHEME >actual &&
+     test_cmp expect actual

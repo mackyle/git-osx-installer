@@ -1094,12 +1094,11 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     /* we have been connected fine, we're not waiting for anything else. */
     connssl->connecting_state = ssl_connect_3;
 
+    /* this could possibly negatively affect renegotiation, however, we're
+     * not prepared to handle any subsequent errSSLServerAuthCompleted errors
+     * anyway so it's probably broken already. */
     /* remove any temporary files now */
-    /* this is disabled because if TLS renegotiation is allowed then we will
-     * probably need any client certificates and key again and calling this
-     * now would preclude that.  It will be called immediately on close and
-     * on error though so that shouldn't really be a problem. */
-    /*cleanup_mem(connssl);*/
+    cleanup_mem(connssl);
 
     /* Informational message */
     (void)SSLGetNegotiatedCipher(connssl->ssl_ctx, &cipher);

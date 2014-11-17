@@ -1,0 +1,84 @@
+Received: by 10.52.240.3 with SMTP id vw3csp78054vdc;
+        Sun, 16 Nov 2014 07:54:20 -0800 (PST)
+X-Received: by 10.180.10.231 with SMTP id l7mr24323411wib.1.1416153260005;
+        Sun, 16 Nov 2014 07:54:20 -0800 (PST)
+Return-Path: <phillip.szelat@gmail.com>
+Received: from mail-wi0-x233.google.com (mail-wi0-x233.google.com. [2a00:1450:400c:c05::233])
+        by mx.google.com with ESMTPS id ea8si11305811wib.15.2014.11.16.07.54.19
+        for <multiple recipients>
+        (version=TLSv1 cipher=ECDHE-RSA-RC4-SHA bits=128/128);
+        Sun, 16 Nov 2014 07:54:19 -0800 (PST)
+Received-SPF: pass (google.com: domain of phillip.szelat@gmail.com designates 2a00:1450:400c:c05::233 as permitted sender) client-ip=2a00:1450:400c:c05::233;
+Authentication-Results: mx.google.com;
+       spf=pass (google.com: domain of phillip.szelat@gmail.com designates 2a00:1450:400c:c05::233 as permitted sender) smtp.mail=phillip.szelat@gmail.com;
+       dkim=pass header.i=@gmail.com;
+       dmarc=pass (p=NONE dis=NONE) header.from=gmail.com
+Received: by mail-wi0-x233.google.com with SMTP id ex7so6386888wid.6
+        for <multiple recipients>; Sun, 16 Nov 2014 07:54:19 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=from:to:cc:subject:date:message-id:mime-version:content-type
+         :content-transfer-encoding;
+        bh=i7bL37OjbOBDCpzs6WG7aomZLOfjx1dmtwn356ejGEM=;
+        b=NHMNK7ZCfiT4n/qXki0v3iX/5d3/SaJDg65G5RfvBzN72X6zVP/VM0NiFDs56ZK8OY
+         2dYy1dUnzpWztLYn2MMHI1TkGYyRPIaATJODkQK/IX1KNM6KIKgdE8dj9jsACdz95bF3
+         8NbOnOhOS7xvuaUSIQcIvs24VmZ9QwPYWoJ2g8XOE3uyOOcp59yP/DgGwxo6CMm5FM9V
+         sLTFpxNVDYbXLZa40oeQeKaWzZgauotfisVPd5qeleOr19QzRE1tWtyIloZNOTgFBnat
+         R5IwF7cI2muvoMMZXFBTZj4ykVyj7LUhC8cnJ5x1Uozvqeq8HNKhRSLu3ccRsGxW9IdE
+         lPmQ==
+X-Received: by 10.194.109.69 with SMTP id hq5mr32864841wjb.86.1416153259412;
+        Sun, 16 Nov 2014 07:54:19 -0800 (PST)
+Return-Path: <phillip.szelat@gmail.com>
+Received: from phillip.fritz.box (i59F45E09.versanet.de. [89.244.94.9])
+        by mx.google.com with ESMTPSA id u13sm11554651wiv.10.2014.11.16.07.54.18
+        for <multiple recipients>
+        (version=TLSv1.2 cipher=ECDHE-RSA-AES128-SHA bits=128/128);
+        Sun, 16 Nov 2014 07:54:18 -0800 (PST)
+From: Phillip Sz <phillip.szelat@gmail.com>
+To: git@vger.kernel.org
+Cc: tr@thomasrast.ch,
+	jk@jk.gs,
+	stimming@tuhh.de,
+	matthias.ruester@gmail.com,
+	magnus.goerlitz@googlemail.com,
+	ralf.thielow@gmail.com,
+	Phillip Sz <phillip.szelat@gmail.com>
+Subject: [PATCH] l10n: de.po: translate 2 new messages
+Date: Sun, 16 Nov 2014 16:54:17 +0100
+Message-Id: <1416153257-2407-1-git-send-email-phillip.szelat@gmail.com>
+X-Mailer: git-send-email 2.1.3
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Phillip
+
+Signed-off-by: Phillip Sz <phillip.szelat@gmail.com>
+---
+ po/de.po | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/po/de.po b/po/de.po
+index c807967..5af3f8f 100644
+--- a/po/de.po
++++ b/po/de.po
+@@ -5473,7 +5473,7 @@ msgstr "prüft die Reflogs (Standard)"
+ 
+ #: builtin/fsck.c:613
+ msgid "also consider packs and alternate objects"
+-msgstr ""
++msgstr "ziehen Sie außerdem Pakete und alternative Objekte in Betracht"
+ 
+ #: builtin/fsck.c:614
+ msgid "enable more strict checking"
+@@ -8253,7 +8253,7 @@ msgstr "Referenz muss sich auf dem angegebenen Wert befinden"
+ 
+ #: builtin/push.c:495
+ msgid "check"
+-msgstr ""
++msgstr "Überprüfung"
+ 
+ #: builtin/push.c:496
+ msgid "control recursive pushing of submodules"
+-- 
+2.1.3

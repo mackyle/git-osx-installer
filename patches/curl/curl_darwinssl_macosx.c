@@ -483,6 +483,18 @@ static void show_certs_array(struct SessionHandle *data, const char *hdr,
   }
 }
 
+static void cleanup_mem(struct ssl_connect_data *connssl)
+{
+  if(connssl->kh) {
+    DisposeIdentityKeychainHandle(connssl->kh);
+    connssl->kh = NULL;
+  }
+  if(connssl->ra) {
+    CFRelease((CFTypeRef)connssl->ra);
+    connssl->ra = NULL;
+  }
+}
+
 static CURLcode darwinssl_connect_step1(struct connectdata *conn,
                                         int sockindex)
 {
@@ -495,14 +507,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   size_t ssl_sessionid_len;
   OSStatus err = noErr;
 
-  if(connssl->kh) {
-    DisposeIdentityKeychainHandle(connssl->kh);
-    connssl->kh = NULL;
-  }
-  if(connssl->ra) {
-    CFRelease((CFTypeRef)connssl->ra);
-    connssl->ra = NULL;
-  }
+  cleanup_mem(connssl);
   if(connssl->ssl_ctx)
     cSSLDisposeContext(connssl->ssl_ctx);
   connssl->ssl_ctx = cSSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
@@ -1089,6 +1094,13 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     /* we have been connected fine, we're not waiting for anything else. */
     connssl->connecting_state = ssl_connect_3;
 
+    /* remove any temporary files now */
+    /* this is disabled because if TLS renegotiation is allowed then we will
+     * probably need any client certificates and key again and calling this
+     * now would preclude that.  It will be called immediately on close and
+     * on error though so that shouldn't really be a problem. */
+    /*cleanup_mem(connssl);*/
+
     /* Informational message */
     (void)SSLGetNegotiatedCipher(connssl->ssl_ctx, &cipher);
     (void)SSLGetNegotiatedProtocolVersion(connssl->ssl_ctx, &protocol);
@@ -1166,8 +1178,10 @@ darwinssl_connect_common(struct connectdata *conn,
       return CURLE_OPERATION_TIMEDOUT;
     }
     retcode = darwinssl_connect_step1(conn, sockindex);
-    if(retcode)
+    if(retcode) {
+      cleanup_mem(connssl);
       return retcode;
+    }
   }
 
   while(ssl_connect_2 == connssl->connecting_state ||
@@ -1219,6 +1233,8 @@ darwinssl_connect_common(struct connectdata *conn,
      * or epoll() will always have a valid fdset to wait on.
      */
     retcode = darwinssl_connect_step2(conn, sockindex);
+    if(retcode)
+      cleanup_mem(connssl);
     if(retcode || (nonblocking &&
                    (ssl_connect_2 == connssl->connecting_state ||
                     ssl_connect_2_reading == connssl->connecting_state ||
@@ -1230,8 +1246,10 @@ darwinssl_connect_common(struct connectdata *conn,
 
   if(ssl_connect_3==connssl->connecting_state) {
     retcode = darwinssl_connect_step3(conn, sockindex);
-    if(retcode)
+    if(retcode) {
+      cleanup_mem(connssl);
       return retcode;
+    }
   }
 
   if(ssl_connect_done==connssl->connecting_state) {
@@ -1284,14 +1302,7 @@ void Curl_darwinssl_close(struct connectdata *conn, int sockindex)
     connssl->ssl_ctx = NULL;
   }
   connssl->ssl_sockfd = 0;
-  if(connssl->kh) {
-    DisposeIdentityKeychainHandle(connssl->kh);
-    connssl->kh = NULL;
-  }
-  if(connssl->ra) {
-    CFRelease((CFTypeRef)connssl->ra);
-    connssl->ra = NULL;
-  }
+  cleanup_mem(connssl);
 }
 
 void Curl_darwinssl_close_all(struct SessionHandle *data)

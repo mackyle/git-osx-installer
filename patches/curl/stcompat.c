@@ -29,6 +29,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #include <unistd.h>
 #include <dirent.h>
 #include <arpa/inet.h>
+#include <pwd.h>
+#include <crt_externs.h>
 #include "stcompat.h"
 
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE))
@@ -418,6 +420,48 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
 }
 
 typedef struct {
+  /* note that we use geteuid and not getuid because any created files will
+   * end up being owned by geteuid and therefore using geteuid()'s HOME wil
+   * end up being the least disruptive and also if geteuid() != getuid() then
+   * we probably can't read getuid()'s HOME anyway so that's a guaranteed fail */
+  char *home; /* "HOME=..." from getpwuid(geteuid()) if different from environ */
+  char *cur_home; /* "HOME=..." as found in environ if home set otherwise NULL */
+} homedirs_t;
+
+static char *find_home_env(void)
+{
+  char ***eptr = _NSGetEnviron();
+  char **ptr;
+  if (!eptr) return NULL;
+  ptr = *eptr;
+  while (*ptr && strncmp(*ptr, "HOME=", 5)) {
+    ++ptr;
+  }
+  return *ptr ? *ptr : NULL;
+}
+
+static void get_home_dirs(homedirs_t *dirs)
+{
+  struct passwd *pwinf;
+
+  if (!dirs) return;
+  dirs->home = NULL;
+  dirs->cur_home = find_home_env();
+  pwinf = getpwuid(geteuid());
+  if (pwinf && pwinf->pw_dir &&
+      (!dirs->cur_home || strcmp(dirs->cur_home+5, pwinf->pw_dir)))
+    asprintf(&dirs->home, "HOME=%s", pwinf->pw_dir);
+  if (!dirs->home)
+    dirs->cur_home = NULL;
+}
+
+static void free_home_dirs(homedirs_t *dirs)
+{
+  if (dirs)
+    free(dirs->home);
+}
+
+typedef struct {
   SecKeychainRef ref;
   char pw[16]; /* random 15-character (0x20-0x7e), NULL terminated password */
   char loc[1]; /* Always will have at least a NULL byte */
@@ -451,6 +495,7 @@ static tempch_t *new_temp_keych(void)
   char newdir[PATH_MAX];
   Boolean okay;
   CFStringRef tempdir = CFCopyTemporaryDirectory();
+
   if (!tempdir) return NULL;
   okay = CFStringGetCString(tempdir, newdir, sizeof(newdir) - 32, kCFStringEncodingUTF8);
   CFRelease(tempdir);
@@ -463,7 +508,10 @@ static tempch_t *new_temp_keych(void)
   strlcpy(ans->pw, "(:vCZ\"t{UA-zl3g", sizeof(ans->pw)); /* fallback if random fails */
   gen_rand_pw(ans->pw, sizeof(ans->pw)-1);
   ans->pw[sizeof(ans->pw)-1] = '\0';
-  if (!mkdtemp(ans->loc)) return NULL;
+  if (!mkdtemp(ans->loc)) {
+    free(ans);
+    return NULL;
+  }
   strcat(ans->loc, "/temp.keychain");
   return ans;
 }
@@ -476,6 +524,7 @@ static void del_temp_keych(tempch_t *keych)
   if (l > 14 && !strcmp(keych->loc + (l - 14), "/temp.keychain")) {
     DIR *d;
     if (keych->ref) {
+      (void)SecKeychainLock(keych->ref);
       (void)SecKeychainDelete(keych->ref);
       CFRelease(keych->ref);
       keych->ref = NULL;
@@ -551,6 +600,7 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
   if (keydata)
     rawkey = extract_key_copy(keydata, &ispem);
   while (rawkey) {
+    homedirs_t dirs;
     CFArrayRef searchlist = NULL;
     keych = new_temp_keych();
     if (!keych) break;
@@ -559,20 +609,54 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
      * SecKeychainDelete removes it from the search list, or we can also get
      * the search list before the create and restore it right after.
      * By immediately restoring the search list, we avoid having the new
-     * private key we're importing be searchable by default in other apps. */
+     * private key we're importing be searchable by default in other apps.
+     * If we are running with HOME != ~geteuid() then we likely have no
+     * ~/Library/Preferences/com.apple.security.plist which means the system
+     * will "helpfully" set the default keychain to this new keychain we've
+     * just created which is very bad.  If Xcode is running it will listen
+     * to that event and then call SecKeychainSetDefault with that very
+     * same temporary keychain (I have no idea why it does this stupid thing)
+     * and that will make it permanent for the user.  Ugh.  To avoid this,
+     * we temporarily set HOME to getpwuid(geteuid())->pw_dir while we are
+     * creating the temporary keychain and then put HOME back the way it was
+     * immediately thereafter.  Git likes to run tests with HOME set to
+     * alternate locations so it's prudent to handle this. */
+    get_home_dirs(&dirs);
+    if (dirs.home)
+      putenv(dirs.home);
     err = SecKeychainCopySearchList(&searchlist);
-    if (err || !searchlist) break;
-    err = SecKeychainCreate(keych->loc, sizeof(keych->pw), keych->pw, false, NULL, &keychain);
+    if (err || !searchlist) {
+      free_home_dirs(&dirs);
+      break;
+    }
+    err = SecKeychainCreate(keych->loc, sizeof(keych->pw), keych->pw, false,
+                            NULL, &keychain);
     if (err || !keychain) {
+      free_home_dirs(&dirs);
       CFRelease(searchlist);
       break;
     }
     keych->ref = keychain;
     err = SecKeychainSetSearchList(searchlist);
+    if (dirs.home) {
+      if (dirs.cur_home)
+        putenv(dirs.cur_home);
+      else
+        unsetenv("HOME");
+    }
+    free_home_dirs(&dirs);
     CFRelease(searchlist);
     if (err) break;
     err = SecKeychainUnlock(keychain, sizeof(keych->pw), keych->pw, true);
     if (err) break;
+    {
+      SecKeychainSettings settings;
+      settings.version = SEC_KEYCHAIN_SETTINGS_VERS1;
+      settings.lockOnSleep = false;
+      settings.useLockInterval = false;
+      settings.lockInterval = INT_MAX;
+      (void)SecKeychainSetSettings(keychain, &settings);
+    }
     format = ispem ? kSecFormatWrappedOpenSSL : kSecFormatOpenSSL;
     type = kSecItemTypePrivateKey;
     memset(&params, 0, sizeof(params));

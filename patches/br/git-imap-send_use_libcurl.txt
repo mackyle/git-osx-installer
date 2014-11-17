@@ -1,4 +1,4 @@
-From 881db2f0a5c88da4fa6c3a2997753a25274ff60a Mon Sep 17 00:00:00 2001
+From 194a0c682490288b3d9151d24b924d8968bf9974 Mon Sep 17 00:00:00 2001
 From: Bernhard Reiter <ockham@raz.or.at>
 Date: Wed, 27 Aug 2014 00:40:17 +0200
 Subject: [PATCH] git-imap-send: use libcurl for implementation
@@ -27,8 +27,8 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  Documentation/git-imap-send.txt |   4 +-
  INSTALL                         |  17 ++--
  Makefile                        |  16 +++-
- imap-send.c                     | 187 ++++++++++++++++++++++++++++++++--------
- 4 files changed, 178 insertions(+), 46 deletions(-)
+ imap-send.c                     | 189 ++++++++++++++++++++++++++++++++--------
+ 4 files changed, 180 insertions(+), 46 deletions(-)
 
 diff --git a/Documentation/git-imap-send.txt b/Documentation/git-imap-send.txt
 index 875d2831..13f8184c 100644
@@ -121,7 +121,7 @@ index 9f984a9e..7e6677c0 100644
  git-http-fetch$X: http.o http-walker.o http-fetch.o GIT-LDFLAGS $(GITLIBS)
  	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) \
 diff --git a/imap-send.c b/imap-send.c
-index 524fbabc..8fd470e8 100644
+index 524fbabc..2ae02248 100644
 --- a/imap-send.c
 +++ b/imap-send.c
 @@ -29,6 +29,9 @@
@@ -206,7 +206,7 @@ index 524fbabc..8fd470e8 100644
  		if (!srvc->use_ssl && CAP(STARTTLS)) {
  			if (imap_exec(ctx, NULL, "STARTTLS") != RESP_OK)
  				goto bail;
-@@ -1365,14 +1368,138 @@ static int git_imap_config(const char *key, const char *val, void *cb)
+@@ -1365,14 +1368,140 @@ static int git_imap_config(const char *key, const char *val, void *cb)
  	return 0;
  }
  
@@ -254,7 +254,6 @@ index 524fbabc..8fd470e8 100644
 +{
 +	CURL *curl;
 +	struct strbuf path = STRBUF_INIT;
-+	struct strbuf auth = STRBUF_INIT;
 +
 +	if (curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK)
 +		die("curl_global_init failed");
@@ -273,12 +272,15 @@ index 524fbabc..8fd470e8 100644
 +	strbuf_addstr(&path, imap_folder);
 +
 +	curl_easy_setopt(curl, CURLOPT_URL, path.buf);
++	strbuf_release(&path);
 +	curl_easy_setopt(curl, CURLOPT_PORT, server.port);
 +
 +	if (server.auth_method) {
++		struct strbuf auth = STRBUF_INIT;
 +		strbuf_addstr(&auth, "AUTH=");
 +		strbuf_addstr(&auth, server.auth_method);
 +		curl_easy_setopt(curl, CURLOPT_LOGIN_OPTIONS, auth.buf);
++		strbuf_release(&auth);
 +	}
 +
 +	if (server.use_ssl)
@@ -309,8 +311,8 @@ index 524fbabc..8fd470e8 100644
 +
 +	fprintf(stderr, "sending %d message%s\n", total, (total != 1) ? "s" : "");
 +	while (1) {
-+		int prev_len;
 +		unsigned percent = n * 100 / total;
++		int prev_len;
 +
 +		fprintf(stderr, "%4u%% (%d/%d) done\r", percent, n, total);
 +
@@ -349,7 +351,7 @@ index 524fbabc..8fd470e8 100644
  	int nongit_ok;
  
  	git_extract_argv0_path(argv[0]);
-@@ -1385,6 +1512,11 @@ int main(int argc, char **argv)
+@@ -1385,6 +1514,11 @@ int main(int argc, char **argv)
  	setup_git_directory_gently(&nongit_ok);
  	git_config(git_imap_config, NULL);
  
@@ -361,7 +363,7 @@ index 524fbabc..8fd470e8 100644
  	if (!server.port)
  		server.port = server.use_ssl ? 993 : 143;
  
-@@ -1418,30 +1550,13 @@ int main(int argc, char **argv)
+@@ -1418,30 +1552,13 @@ int main(int argc, char **argv)
  	}
  
  	/* write it to the imap server */
@@ -399,6 +401,3 @@ index 524fbabc..8fd470e8 100644
 +	return curl_append_msgs_to_imap(&server, &all_msgs, total);
 +#endif
  }
--- 
-2.1.1
-

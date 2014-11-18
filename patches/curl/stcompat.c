@@ -582,7 +582,8 @@ static CFDataRef extract_key_copy(CFDataRef pemseq, int *outpem)
 }
 
 SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
-  SecCertificateRef cert, CFDataRef keydata, CFTypeRef pw, void **kh)
+  SecCertificateRef cert, CFDataRef keydata, CFTypeRef pw, CFStringRef hint,
+  void **kh)
 {
   int ispem = 0;
   CFDataRef rawkey = NULL;
@@ -664,8 +665,11 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
     params.flags = kSecKeyImportOnlyOne|kSecKeyNoAccessControl;
     if (pw)
       params.passphrase = pw;
-    else
+    else {
       params.flags |= kSecKeySecurePassphrase;
+      /* Note that params.alertTitle is ignored */
+      params.alertPrompt = hint;
+    }
     err = cSecItemImport(rawkey, NULL, &format, &type,
       ispem?kSecItemPemArmour:0, &params, keychain, &items);
     CFRelease(rawkey);
@@ -709,7 +713,8 @@ void DisposeIdentityKeychainHandle(void *ch)
 }
 
 CFArrayRef CreateClientAuthWithCertificatesAndKeyData(CFArrayRef certs,
-                                    CFDataRef keydata, CFTypeRef pw, void **kh)
+                                    CFDataRef keydata, CFTypeRef pw,
+                                    CFStringRef hint, void **kh)
 {
   CFMutableArrayRef ans;
   size_t count, i;
@@ -723,7 +728,8 @@ CFArrayRef CreateClientAuthWithCertificatesAndKeyData(CFArrayRef certs,
   if (CFGetTypeID(cert) != SecCertificateGetTypeID()) return NULL;
   ans = CFArrayCreateMutable(kCFAllocatorDefault, count, &kCFTypeArrayCallBacks);
   if (!ans) return NULL;
-  identity = cSecIdentityCreateWithCertificateAndKeyData(cert, keydata, pw, kh);
+  identity = cSecIdentityCreateWithCertificateAndKeyData(cert, keydata, pw,
+                                                         hint, kh);
   if (!identity) {
     CFRelease(ans);
     return NULL;

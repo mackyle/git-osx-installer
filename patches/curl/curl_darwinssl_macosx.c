@@ -576,6 +576,8 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       CFDataRef certdata;
       CFDataRef keypw = NULL;
       CFArrayRef clientauth;
+      const char *hintstr = NULL;
+      CFMutableStringRef hint = NULL;
       e.f = (errinfo_func_t)failf;
       e.u = data;
       if(data->set.str[STRING_CERT_TYPE]) {
@@ -593,6 +595,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
                     data->set.str[STRING_CERT]);
         return CURLE_SSL_CERTPROBLEM;
       }
+      hintstr = data->set.str[STRING_CERT];
       certs = CreateCertsArrayWithData(certdata, &e);
       if(!certs) {
         CFRelease(certdata);
@@ -610,21 +613,31 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
                       data->set.str[STRING_KEY]);
           return CURLE_SSL_CERTPROBLEM;
         }
+        hintstr = data->set.str[STRING_KEY];
       }
       if(data->set.str[STRING_KEY_PASSWD]) {
         keypw = CFDataCreate(NULL, (UInt8 *)data->set.str[STRING_KEY_PASSWD],
           strlen(data->set.str[STRING_KEY_PASSWD]));
+      }
+      if(hintstr) {
+        hint = CFStringCreateMutable(kCFAllocatorDefault, 0);
+        if(hint) {
+          CFStringAppendCString(hint, "Private key ", kCFStringEncodingUTF8);
+          CFStringAppendCString(hint, hintstr, kCFStringEncodingUTF8);
+        }
       }
       if(connssl->kh) {
         DisposeIdentityKeychainHandle(connssl->kh);
         connssl->kh = NULL;
       }
       clientauth = CreateClientAuthWithCertificatesAndKeyData(certs, certdata,
-                                                          keypw, &connssl->kh);
+                                                    keypw, hint, &connssl->kh);
       CFRelease(certdata);
       CFRelease(certs);
       if(keypw)
         CFRelease(keypw);
+      if(hint)
+        CFRelease(hint);
       certs = clientauth;
       if(!certs) {
         failf(data, "unable to load certificate key (bad password or "

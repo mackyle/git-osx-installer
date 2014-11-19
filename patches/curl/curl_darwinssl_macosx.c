@@ -620,10 +620,16 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
           strlen(data->set.str[STRING_KEY_PASSWD]));
       }
       if(hintstr) {
+        const char *base = strrchr(hintstr, '/');
+        if(base && base[1])
+          ++base;
+        else
+          base = hintstr;
         hint = CFStringCreateMutable(kCFAllocatorDefault, 0);
         if(hint) {
-          CFStringAppendCString(hint, "Private key ", kCFStringEncodingUTF8);
-          CFStringAppendCString(hint, hintstr, kCFStringEncodingUTF8);
+          CFStringAppendCString(hint, "Enter password for private key ",
+                                kCFStringEncodingUTF8);
+          CFStringAppendCString(hint, base, kCFStringEncodingUTF8);
         }
       }
       if(connssl->kh) {

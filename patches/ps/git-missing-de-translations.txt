@@ -51,9 +51,8 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-Phillip
-
 Signed-off-by: Phillip Sz <phillip.szelat@gmail.com>
+Signed-off-by: Ralf Thielow <ralf.thielow@gmail.com>
 ---
  po/de.po | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
@@ -67,7 +66,7 @@ index c807967..5af3f8f 100644
  #: builtin/fsck.c:613
  msgid "also consider packs and alternate objects"
 -msgstr ""
-+msgstr "ziehen Sie außerdem Pakete und alternative Objekte in Betracht"
++msgstr "ebenso Pakete und alternative Objekte betrachten"
  
  #: builtin/fsck.c:614
  msgid "enable more strict checking"
@@ -76,7 +75,7 @@ index c807967..5af3f8f 100644
  #: builtin/push.c:495
  msgid "check"
 -msgstr ""
-+msgstr "Überprüfung"
++msgstr "check|on-demand"
  
  #: builtin/push.c:496
  msgid "control recursive pushing of submodules"

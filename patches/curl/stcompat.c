@@ -230,6 +230,7 @@ static const char *find_be(const void *_m, size_t l, size_t *ol, int *ot, int e)
 typedef enum {
   pemtype_unknown,
   pemtype_certificate, /* "CERTIFICATE" or "TRUSTED CERTIFICATE" */
+  pemtype_publickey, /* "PUBLIC KEY" */
   pemtype_privatekey_rsa /* "RSA PRIVATE KEY" */
 } pemtype_t;
 
@@ -265,6 +266,8 @@ static int nextpem(const char *p, size_t l, peminfo_t *o)
     o->type = pemtype_certificate;
   } else if (begtype == 15 && !memcmp(beg + 11, "RSA PRIVATE KEY", 15)) {
     o->type = pemtype_privatekey_rsa;
+  } else if (begtype == 10 && !memcmp(beg + 11, "PUBLIC KEY", 10)) {
+    o->type = pemtype_publickey;
   } else {
     o->type = pemtype_unknown;
   }
@@ -463,6 +466,7 @@ static void free_home_dirs(homedirs_t *dirs)
 
 typedef struct {
   SecKeychainRef ref;
+  homedirs_t dirs;
   char pw[16]; /* random 15-character (0x20-0x7e), NULL terminated password */
   char loc[1]; /* Always will have at least a NULL byte */
 } tempch_t;
@@ -513,6 +517,7 @@ static tempch_t *new_temp_keych(void)
     return NULL;
   }
   strcat(ans->loc, "/temp.keychain");
+  get_home_dirs(&ans->dirs);
   return ans;
 }
 
@@ -524,8 +529,22 @@ static void del_temp_keych(tempch_t *keych)
   if (l > 14 && !strcmp(keych->loc + (l - 14), "/temp.keychain")) {
     DIR *d;
     if (keych->ref) {
+      int needs_reset = 0;
+      if (keych->dirs.home) {
+        keych->dirs.cur_home = find_home_env();
+        if (!keych->dirs.cur_home || strcmp(keych->dirs.cur_home, keych->dirs.home)) {
+          needs_reset = 1;
+          putenv(keych->dirs.home);
+        }
+      }
       (void)SecKeychainLock(keych->ref);
       (void)SecKeychainDelete(keych->ref);
+      if (needs_reset) {
+        if (keych->dirs.cur_home)
+          putenv(keych->dirs.cur_home);
+        else
+          unsetenv("HOME");
+      }
       CFRelease(keych->ref);
       keych->ref = NULL;
     }
@@ -547,6 +566,7 @@ static void del_temp_keych(tempch_t *keych)
       closedir(d);
     }
     rmdir(keych->loc);
+    free_home_dirs(&keych->dirs);
     free(keych);
   }
 }
@@ -601,7 +621,6 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
   if (keydata)
     rawkey = extract_key_copy(keydata, &ispem);
   while (rawkey) {
-    homedirs_t dirs;
     CFArrayRef searchlist = NULL;
     keych = new_temp_keych();
     if (!keych) break;
@@ -622,32 +641,26 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
      * creating the temporary keychain and then put HOME back the way it was
      * immediately thereafter.  Git likes to run tests with HOME set to
      * alternate locations so it's prudent to handle this. */
-    get_home_dirs(&dirs);
-    if (dirs.home)
-      putenv(dirs.home);
+    if (keych->dirs.home)
+      putenv(keych->dirs.home);
     err = SecKeychainCopySearchList(&searchlist);
-    if (err || !searchlist) {
-      free_home_dirs(&dirs);
-      break;
-    }
-    err = SecKeychainCreate(keych->loc, sizeof(keych->pw), keych->pw, false,
-                            NULL, &keychain);
-    if (err || !keychain) {
-      free_home_dirs(&dirs);
+    if (!err && searchlist)
+      err = SecKeychainCreate(keych->loc, sizeof(keych->pw), keych->pw, false,
+                              NULL, &keychain);
+    if (searchlist) {
+      if (!err)
+        err = SecKeychainSetSearchList(searchlist);
       CFRelease(searchlist);
-      break;
     }
-    keych->ref = keychain;
-    err = SecKeychainSetSearchList(searchlist);
-    if (dirs.home) {
-      if (dirs.cur_home)
-        putenv(dirs.cur_home);
+    if (keych->dirs.home) {
+      if (keych->dirs.cur_home)
+        putenv(keych->dirs.cur_home);
       else
         unsetenv("HOME");
     }
-    free_home_dirs(&dirs);
-    CFRelease(searchlist);
-    if (err) break;
+    if (err || !keychain)
+      break;
+    keych->ref = keychain;
     err = SecKeychainUnlock(keychain, sizeof(keych->pw), keych->pw, true);
     if (err) break;
     {

@@ -1,0 +1,926 @@
+From 711c8bac575e57ebdcf486977d2ec478015943a6 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Fri, 21 Nov 2014 19:56:21 -0800
+Subject: [PATCH] git-send-email: use libcurl for implementation
+
+Use libcurl's API to send SMTP messages rather than
+various Perl modules that may be unavailable.
+
+Using libcurl to send SMTP messages from Perl is
+challenging.  No released version of WWW::Curl
+properly supports the CURLOPT_MAIL_RCPT option.
+
+Furthermore, although it's trivial to patch WWW::Curl
+to properly handle CURLOPT_MAIL_RCPT, the resulting
+module builds a shared object that is tied to a
+particular version of Perl such that a module built
+for Perl 5.8 will NOT load into Perl 5.10.  This is
+rather undesirable.
+
+Instead, since we only use a small subset of the
+extensive libcurl API to send SMTP messages, we build
+our own helper as git-send-email--libcurl that allows
+Perl to talk to libcurl.  This helper is not sensitive
+to the version of Perl and works with any version of
+Perl provided the libcurl shared library is available.
+
+However, the interface to the helper is not very
+friendly as everything has to be marshalled and then
+unmarshalled for each call (even theugh the protocol
+is very simple).  So we use a git-send-email--libcurl.pl
+helper that exports a WWW::Curl::Libcurl interface that
+behaves very similarly to WWW::Curl::Easy which
+makes use of the libcurl helper very simple.
+
+This version of git-send-email supports everything
+the old version did and probably some additional
+authentication mechanisms as well.
+
+Furthermore, in an effort to avoid exposing information
+about the sending system that could render it more
+vulnerable to hackers, this version of git-send-email
+omits the X-Mailer header and hashes the Message-Id
+value to render it opaque.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ git-send-email--libcurl.pl | 218 +++++++++++++++++++++++++
+ git-send-email.perl        | 157 +++++++++---------
+ send-email--libcurl.c      | 393 +++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 684 insertions(+), 84 deletions(-)
+ create mode 100644 git-send-email--libcurl.pl
+ create mode 100644 send-email--libcurl.c
+
+diff --git a/git-send-email--libcurl.pl b/git-send-email--libcurl.pl
+new file mode 100644
+index 00000000..533d2173
+--- /dev/null
++++ b/git-send-email--libcurl.pl
+@@ -0,0 +1,218 @@
++=comment
++
++send-email--libcurl.pl -- libcURL helper for git-send-email.perl
++Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
++
++This program is free software; you can redistribute it and/or
++modify it under the terms of the GNU General Public License
++as published by the Free Software Foundation; either version 2
++of the License, or (at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++
++=cut
++
++package WWW::Curl::Libcurl;
++
++use File::Basename;
++use Cwd 'realpath';
++use IPC::Open2;
++
++our $helper = realpath(dirname($0).'/git-send-email--libcurl');
++die "Missing $helper\n" unless -x $helper;
++
++sub spawn {
++	my ($pid, $chldout, $chldin);
++	$pid = open2($chldout, $chldin, $helper, "--spawn");
++	die "Cannot spawn $helper\n" unless $pid;
++	my $self = {};
++	$self->{'pid'} = $pid;
++	$self->{'chldin'} = $chldin;
++	$self->{'chldout'} = $chldout;
++	return bless $self;
++}
++
++sub DESTROY {
++	my $self = shift;
++	close($self->{'chldin'});
++	waitpid($self->{'pid'}, 0);
++	close($self->{'chldout'});
++}
++
++sub _get_val {
++	use bytes;
++	my $self = shift;
++	my $tag = shift;
++	my $val = shift;
++	die "Invalid tag: '$tag'\n" unless length($tag) == 4;
++	print {$self->{'chldin'}} $tag.pack('N',$val);
++	my $data;
++	my $result = read($self->{'chldout'}, $data, 4);
++	die "Read result from helper failed\n" unless $result && $result == 4;
++	return unpack('N', $data);
++}
++
++sub _get_string {
++	use bytes;
++	my $self = shift;
++	my $tag = shift;
++	my $val = shift;
++	my $strlen = $self->_get_val($tag, $val);
++	return "" unless $strlen;
++	my $data;
++	my $result = read($self->{'chldout'}, $data, $strlen);
++	die "Read result from helper failed\n" unless $result && $result == $strlen;
++	return $data;
++}
++
++sub _set_string {
++	use bytes;
++	my $self = shift;
++	my $tag = shift;
++	my $str = shift;
++	die "Invalid tag: '$tag'\n" unless length($tag) == 4;
++	print {$self->{'chldin'}} $tag.pack('N',length($str)).$str;
++	my $data;
++	my $result = read($self->{'chldout'}, $data, 4);
++	die "Read result from helper failed\n" unless $result && $result == 4;
++	return unpack('N', $data);
++}
++
++sub strerror {
++	my $self = shift;
++	my $code = shift;
++	return $self->_get_string('stre', $code);
++}
++
++sub perform {
++	my $self = shift;
++	return $self->_get_val('prfm', 0);
++}
++
++sub errbuf {
++	my $self = shift;
++	return $self->_get_string('errb', 0);
++}
++
++sub lastheader {
++	my $self = shift;
++	return $self->_get_string('lsth', 0);
++}
++
++sub getinfo_response_code {
++	my $self = shift;
++	return $self->_get_val('rspc', 0);
++}
++
++sub setopt_ssl_verifyhost {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('vhst', $bool ? 1 : 0);
++}
++
++sub setopt_ssl_verifypeer {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('vper', $bool ? 1 : 0);
++}
++
++sub setopt_verbose {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('verb', $bool ? 1 : 0);
++}
++
++sub setopt_noprogress {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('nopg', $bool ? 1 : 0);
++}
++
++sub setopt_upload {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('upld', $bool ? 1 : 0);
++}
++
++# For non smtps connections whether to use STARTTLS
++# 0 = never, 1 = required, -1 = try if offered
++sub setopt_use_ssl {
++	my $self = shift;
++	my $val = shift;
++	return $self->_get_val('ussl', $val);
++}
++
++sub setopt_cainfo {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('cain', $val);
++}
++
++sub setopt_capath {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('capa', $val);
++}
++
++sub setopt_mail_auth {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('auth', $val);
++}
++
++sub setopt_mail_from {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('from', $val);
++}
++
++sub setopt_username {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('user', $val);
++}
++
++sub setopt_password {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('pswd', $val);
++}
++
++# Arg must be one or more AUTH=<value> separated by ';'
++# The default is "AUTH=*" (for any available) which is the same as
++# "AUTH=LOGIN;AUTH=PLAIN;AUTH=CRAM-MD5;AUTH=DIGEST-MD5;AUTH=GSSAPI" .
++#                                       ";AUTH=EXTERNAL;AUTH=NTLM;AUTH=XOAUTH2"
++# A badly formated options string will cause CURLE_URL_MALFORMAT (3).
++sub setopt_login_options {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('mech', $val);
++}
++
++sub setopt_readdata {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('data', $val);
++}
++
++sub setopt_url {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('url_', $val);
++}
++
++sub setopt_mail_rcpt {
++	use bytes;
++	my $self = shift;
++	my $strings = join('', map($_.pack('C',0), @_));
++	return $self->_set_string('rcpt', $strings);
++}
++
++1;
+diff --git a/git-send-email.perl b/git-send-email.perl
+index 9949db01..aaddcaad 100755
+--- a/git-send-email.perl
++++ b/git-send-email.perl
+@@ -26,8 +26,12 @@ use Data::Dumper;
+ use Term::ANSIColor;
+ use File::Temp qw/ tempdir tempfile /;
+ use File::Spec::Functions qw(catfile);
++use Digest::MD5 qw(md5_hex);
+ use Error qw(:try);
+ use Git;
++use File::Basename;
++require(dirname($0).'/git-send-email--libcurl.pl');
++use constant CURLE_LOGIN_DENIED => 67;
+ 
+ Getopt::Long::Configure qw/ pass_through /;
+ 
+@@ -293,6 +297,7 @@ my $rc = GetOptions("h" => \$help,
+ 		    "smtp-server-option=s" => \@smtp_server_options,
+ 		    "smtp-server-port=s" => \$smtp_server_port,
+ 		    "smtp-user=s" => \$smtp_authuser,
++		    "no-smtp-user" => sub {delete $config_settings{'smtpuser'}},
+ 		    "smtp-pass:s" => \$smtp_authpass,
+ 		    "smtp-ssl" => sub { $smtp_encryption = 'ssl' },
+ 		    "smtp-encryption=s" => \$smtp_encryption,
+@@ -902,8 +907,10 @@ sub make_message_id {
+ 		require Sys::Hostname;
+ 		$du_part = 'user@' . Sys::Hostname::hostname();
+ 	}
+-	my $message_id_template = "<%s-git-send-email-%s>";
++	my $message_id_template = "%s-git-send-email-%s";
+ 	$message_id = sprintf($message_id_template, $uniq, $du_part);
++	@_ = split /@/, $message_id;
++	$message_id = '<'.substr(md5_hex($_[0]),0,31).'@'.substr(md5_hex($_[1]),1,31).'>';
+ 	#print "new message id = $message_id\n"; # Was useful for debugging
+ }
+ 
+@@ -1058,12 +1065,12 @@ sub smtp_host_string {
+ 	}
+ }
+ 
+-# Returns 1 if authentication succeeded or was not necessary
+-# (smtp_user was not specified), and 0 otherwise.
++# Returns a filled hashref from Git::credential fill if authentication
++# has been requested, undef otherwise.
+ 
+ sub smtp_auth_maybe {
+ 	if (!defined $smtp_authuser || $auth) {
+-		return 1;
++		return $auth;
+ 	}
+ 
+ 	# Workaround AUTH PLAIN/LOGIN interaction defect
+@@ -1076,47 +1083,36 @@ sub smtp_auth_maybe {
+ 	# TODO: Authentication may fail not because credentials were
+ 	# invalid but due to other reasons, in which we should not
+ 	# reject credentials.
+-	$auth = Git::credential({
++	$auth = {
+ 		'protocol' => 'smtp',
+ 		'host' => smtp_host_string(),
+ 		'username' => $smtp_authuser,
+ 		# if there's no password, "git credential fill" will
+ 		# give us one, otherwise it'll just pass this one.
+ 		'password' => $smtp_authpass
+-	}, sub {
+-		my $cred = shift;
+-		return !!$smtp->auth($cred->{'username'}, $cred->{'password'});
+-	});
+-
++	};
++	Git::credential($auth, 'fill');
+ 	return $auth;
+ }
+ 
+ sub ssl_verify_params {
+-	eval {
+-		require IO::Socket::SSL;
+-		IO::Socket::SSL->import(qw/SSL_VERIFY_PEER SSL_VERIFY_NONE/);
+-	};
+-	if ($@) {
+-		print STDERR "Not using SSL_VERIFY_PEER due to out-of-date IO::Socket::SSL.\n";
+-		return;
+-	}
+-
+-	if (!defined $smtp_ssl_cert_path) {
+-		# use the OpenSSL defaults
+-		return (SSL_verify_mode => SSL_VERIFY_PEER());
+-	}
++	return unless defined $smtp_ssl_cert_path; # use defaults
+ 
+ 	if ($smtp_ssl_cert_path eq "") {
+-		return (SSL_verify_mode => SSL_VERIFY_NONE());
++		$smtp->setopt_ssl_verifyhost(0);
++		$smtp->setopt_ssl_verifypeer(0);
+ 	} elsif (-d $smtp_ssl_cert_path) {
+-		return (SSL_verify_mode => SSL_VERIFY_PEER(),
+-			SSL_ca_path => $smtp_ssl_cert_path);
++		#$smtp->setopt_capath($smtp_ssl_cert_path);
++		die "SecureTransport does not support a CA directory, use a CA file instead.\n";
+ 	} elsif (-f $smtp_ssl_cert_path) {
+-		return (SSL_verify_mode => SSL_VERIFY_PEER(),
+-			SSL_ca_file => $smtp_ssl_cert_path);
++		# These are the default values
++		#$smtp->setopt_ssl_verifyhost(1);
++		#$smtp->setopt_ssl_verifypeer(1);
++		$smtp->setopt_cainfo($smtp_ssl_cert_path);
+ 	} else {
+-		print STDERR "Not using SSL_VERIFY_PEER because the CA path does not exist.\n";
+-		return (SSL_verify_mode => SSL_VERIFY_NONE());
++		print STDERR "Not using SSL_VERIFYPEER because the CA path does not exist.\n";
++		$smtp->setopt_ssl_verifyhost(0);
++		$smtp->setopt_ssl_verifypeer(0);
+ 	}
+ }
+ 
+@@ -1163,7 +1159,6 @@ To: $to${ccline}
+ Subject: $subject
+ Date: $date
+ Message-Id: $message_id
+-X-Mailer: git-send-email $gitversion
+ ";
+ 	if ($reply_to) {
+ 
+@@ -1230,61 +1225,56 @@ X-Mailer: git-send-email $gitversion
+ 			die "The required SMTP server is not properly defined."
+ 		}
+ 
++		if (!$smtp) {
++			$smtp = WWW::Curl::Libcurl->spawn;
++			if (!$smtp) {
++				die "Unable to initialize SMTP properly. Check config and use --smtp-debug. ",
++				    "VALUES: server=$smtp_server ",
++				    "encryption=$smtp_encryption ",
++				    "hello=$smtp_domain",
++				    defined $smtp_server_port ? " port=$smtp_server_port" : "";
++			}
++			if ($debug_net_smtp || $ENV{'GIT_CURL_VERBOSE'}) {
++				$smtp->setopt_verbose(1);
++			} else {
++				$smtp->setopt_noprogress(1);
++			}
++			$smtp->setopt_upload(1);
++		}
++		my $scheme;
+ 		if ($smtp_encryption eq 'ssl') {
+ 			$smtp_server_port ||= 465; # ssmtp
+-			require Net::SMTP::SSL;
+-			$smtp_domain ||= maildomain();
+-			require IO::Socket::SSL;
+-			# Net::SMTP::SSL->new() does not forward any SSL options
+-			IO::Socket::SSL::set_client_defaults(
+-				ssl_verify_params());
+-			$smtp ||= Net::SMTP::SSL->new($smtp_server,
+-						      Hello => $smtp_domain,
+-						      Port => $smtp_server_port,
+-						      Debug => $debug_net_smtp);
+-		}
+-		else {
+-			require Net::SMTP;
+-			$smtp_domain ||= maildomain();
++			$scheme = 'smtps';
++			ssl_verify_params();
++		} else {
+ 			$smtp_server_port ||= 25;
+-			$smtp ||= Net::SMTP->new($smtp_server,
+-						 Hello => $smtp_domain,
+-						 Debug => $debug_net_smtp,
+-						 Port => $smtp_server_port);
+-			if ($smtp_encryption eq 'tls' && $smtp) {
+-				require Net::SMTP::SSL;
+-				$smtp->command('STARTTLS');
+-				$smtp->response();
+-				if ($smtp->code == 220) {
+-					$smtp = Net::SMTP::SSL->start_SSL($smtp,
+-									  ssl_verify_params())
+-						or die "STARTTLS failed! ".IO::Socket::SSL::errstr();
+-					$smtp_encryption = '';
+-					# Send EHLO again to receive fresh
+-					# supported commands
+-					$smtp->hello($smtp_domain);
+-				} else {
+-					die "Server does not support STARTTLS! ".$smtp->message;
+-				}
++			$scheme = 'smtp';
++			$smtp->setopt_use_ssl($smtp_encryption eq 'tls' ? 1 : -1);
++		}
++		$smtp_domain ||= maildomain();
++		$smtp->setopt_url("$scheme://$smtp_server:$smtp_server_port/$smtp_domain");
++		$smtp->setopt_mail_from($raw_from);
++		$smtp->setopt_mail_rcpt(@recipients);
++
++		smtp_auth_maybe;
++		if ($auth && !$auth->{'finished_auth'}) {
++			$smtp->setopt_username($auth->{'username'});
++			$smtp->setopt_password($auth->{'password'});
++		}
++
++		my $payload = join("\r\n", split(/\n/, "$header\n$message", -1));
++		$smtp->setopt_readdata($payload);
++		my $retcode = $smtp->perform;
++		if ($auth && !$auth->{'finished_auth'}) {
++			if ($retcode == CURLE_LOGIN_DENIED) {
++				Git::credential($auth, 'reject');
++			} elsif (!$retcode) {
++				Git::credential($auth, 'approve');
+ 			}
++			$auth->{'finished_auth'} = 1;
+ 		}
+-
+-		if (!$smtp) {
+-			die "Unable to initialize SMTP properly. Check config and use --smtp-debug. ",
+-			    "VALUES: server=$smtp_server ",
+-			    "encryption=$smtp_encryption ",
+-			    "hello=$smtp_domain",
+-			    defined $smtp_server_port ? " port=$smtp_server_port" : "";
+-		}
+-
+-		smtp_auth_maybe or die $smtp->message;
+-
+-		$smtp->mail( $raw_from ) or die $smtp->message;
+-		$smtp->to( @recipients ) or die $smtp->message;
+-		$smtp->data or die $smtp->message;
+-		$smtp->datasend("$header\n$message") or die $smtp->message;
+-		$smtp->dataend() or die $smtp->message;
+-		$smtp->code =~ /250|200/ or die "Failed to send $subject\n".$smtp->message;
++		die "Failed to send $subject\nError ($retcode) ".$smtp->strerror($retcode).": ".$smtp->errbuf, "\n"
++			if $retcode;
+ 	}
+ 	if ($quiet) {
+ 		printf (($dry_run ? "Dry-" : "")."Sent %s\n", $subject);
+@@ -1301,8 +1291,7 @@ X-Mailer: git-send-email $gitversion
+ 		}
+ 		print $header, "\n";
+ 		if ($smtp) {
+-			print "Result: ", $smtp->code, ' ',
+-				($smtp->message =~ /\n([^\n]+\n)$/s), "\n";
++			print "Result: ", $smtp->lastheader, "\n";
+ 		} else {
+ 			print "Result: OK\n";
+ 		}
+@@ -1541,7 +1530,7 @@ sub cleanup_compose_files {
+ 	unlink($compose_filename, $compose_filename . ".final") if $compose;
+ }
+ 
+-$smtp->quit if $smtp;
++$smtp = undef;
+ 
+ sub unique_email_list {
+ 	my %seen;
+diff --git a/send-email--libcurl.c b/send-email--libcurl.c
+new file mode 100644
+index 00000000..c275da22
+--- /dev/null
++++ b/send-email--libcurl.c
+@@ -0,0 +1,393 @@
++/*
++
++send-email--libcurl.c -- libcURL helper for git-send-email.perl
++Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
++
++This program is free software; you can redistribute it and/or
++modify it under the terms of the GNU General Public License
++as published by the Free Software Foundation; either version 2
++of the License, or (at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++
++*/
++
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <arpa/inet.h>
++#include <curl/curl.h>
++
++typedef struct {
++	char tag[4];
++	uint32_t val;
++} cmd_t;
++
++static int process_cmds(FILE *in, FILE *out, CURL *curl);
++
++int main(int argc, char *const argv[])
++{
++	int result;
++	CURL *curl;
++	FILE *inbinary = freopen(NULL, "rb", stdin);;
++	FILE *outbinary = freopen(NULL, "ab", stdout);
++	if (!inbinary || !outbinary || argc != 2 || strcmp(argv[1], "--spawn"))
++		return 2;
++
++	curl = curl_easy_init();
++	if (!curl)
++		return 3;
++
++	result = process_cmds(inbinary, outbinary, curl);
++	curl_easy_cleanup(curl);
++	return result;
++}
++
++static int read_string(FILE *in, size_t len, char **out)
++{
++	char *string = (char *)malloc(len + 1);
++	if (!string)
++		return 10;
++	if (!fread(string, len, 1, in)) {
++		free(string);
++		return 11;
++	}
++	string[len] = '\0';
++	*out = string;
++	return 0;
++}
++
++static int handle_string_opt(CURL *curl, CURLoption o, size_t l, FILE *in, int *err)
++{
++	int result;
++	char *string;
++	*err = read_string(in, l, &string);
++	if (*err)
++		return 1000000 + *err;
++	result = curl_easy_setopt(curl, o, string);
++	free(string);
++	return result;
++}
++
++static int send_res(FILE *out, CURLcode res)
++{
++	uint32_t e = htonl((uint32_t)res);
++	if (fwrite(&e, sizeof(e), 1, out) != 1)
++		return 12;
++	fflush(out);
++	return 0;
++}
++
++static int send_string(FILE *out, const void *p, size_t l)
++{
++	int err = send_res(out, (CURLcode)l);
++	if (err)
++		return err;
++	if (fwrite(p, l, 1, out) != 1)
++		return 12;
++	fflush(out);
++	return 0;
++}
++
++typedef struct {
++	const char *data;
++	size_t len;
++	size_t offset;
++} context_t;
++
++static size_t readfunc(void *ptr, size_t size, size_t nmemb, void *_cxt)
++{
++	context_t *cxt = (context_t *)_cxt;
++	size_t max = size * nmemb;
++	if (max > cxt->len - cxt->offset)
++		max = cxt->len - cxt->offset;
++	if (max) {
++		memcpy(ptr, cxt->data + cxt->offset, max);
++		cxt->offset += max;
++	}
++	return max;
++}
++
++typedef struct {
++	char *line;
++	size_t space;
++} hdrline_t;
++
++static size_t hdrfunc(char *ptr, size_t size, size_t nmemb, void *_cxt)
++{
++	hdrline_t *cxt = (hdrline_t *)_cxt;
++	size_t max = size * nmemb;
++	size_t len = max;
++	if (len >= cxt->space)
++		len = cxt->space - 1;
++	memcpy(cxt->line, ptr, len);
++	while (len && (ptr[len - 1] == '\r' || ptr[len - 1] == '\n'))
++		--len;
++	cxt->line[len] = '\0';
++	return max;
++}
++
++static int progressfunc(void *p, double t, double n, double u, double x)
++{
++	(void)p;
++	(void)t;
++	(void)n;
++	(void)u;
++	(void)x;
++	return 0;
++}
++
++static int xferfunc(void *p, curl_off_t t, curl_off_t n, curl_off_t u, curl_off_t x)
++{
++	(void)p;
++	(void)t;
++	(void)n;
++	(void)u;
++	(void)x;
++	return 0;
++}
++
++static size_t writefunc(char *p, size_t s, size_t n, void *u)
++{
++	(void)p;
++	(void)u;
++	return s * n;
++}
++
++enum {
++	CURLCMD_PERFORM = -1000,
++	CURLGET_ERRBUF,
++	CURLGET_LASTHDR,
++	CURLGET_STRERROR
++};
++
++typedef struct {
++	char tag[4];
++	int opt;
++} cmd_lookup_t;
++
++static cmd_lookup_t commands[] = {
++	{{'a','u','t','h'}, CURLOPT_MAIL_AUTH},
++	{{'c','a','i','n'}, CURLOPT_CAINFO},
++	{{'c','a','p','a'}, CURLOPT_CAPATH},
++	{{'d','a','t','a'}, CURLOPT_READDATA},
++	{{'e','r','r','b'}, CURLGET_ERRBUF},
++	{{'f','r','o','m'}, CURLOPT_MAIL_FROM},
++	{{'l','s','t','h'}, CURLGET_LASTHDR},
++	{{'m','e','c','h'}, CURLOPT_LOGIN_OPTIONS},
++	{{'n','o','p','g'}, CURLOPT_NOPROGRESS},
++	{{'p','r','f','m'}, CURLCMD_PERFORM},
++	{{'p','s','w','d'}, CURLOPT_PASSWORD},
++	{{'r','c','p','t'}, CURLOPT_MAIL_RCPT},
++	{{'r','s','p','c'}, CURLINFO_RESPONSE_CODE},
++	{{'s','t','r','e'}, CURLGET_STRERROR},
++	{{'u','p','l','d'}, CURLOPT_UPLOAD},
++	{{'u','r','l','_'}, CURLOPT_URL},
++	{{'u','s','e','r'}, CURLOPT_USERNAME},
++	{{'u','s','s','l'}, CURLOPT_USE_SSL},
++	{{'v','e','r','b'}, CURLOPT_VERBOSE},
++	{{'v','h','s','t'}, CURLOPT_SSL_VERIFYHOST},
++	{{'v','p','e','r'}, CURLOPT_SSL_VERIFYPEER}
++};
++
++static int cmp_cmd(const void *_e1, const void *_e2)
++{
++	const cmd_lookup_t *e1 = (cmd_lookup_t *)_e1;
++	const cmd_lookup_t *e2 = (cmd_lookup_t *)_e2;
++	return memcmp(e1->tag, e2->tag, 4);
++}
++
++static int find_command(const char tag[4])
++{
++	cmd_lookup_t search;
++	const cmd_lookup_t *ans;
++
++	memcpy(search.tag, tag, 4);
++	ans  = (cmd_lookup_t *)
++		bsearch(&search, commands, sizeof(commands)/sizeof(commands[0]),
++			sizeof(commands[0]), cmp_cmd);
++	return ans ? ans->opt : -1;
++}
++
++static int process_cmds(FILE *in, FILE *out, CURL *curl)
++{
++	cmd_t cmd;
++	char errbuf[CURL_ERROR_SIZE+1];
++	char hdrbuf[1024];
++	char *data = NULL;
++	size_t datalen = 0;
++	struct curl_slist *recipients = NULL;
++
++	errbuf[0] = '\0';
++	hdrbuf[0] = '\0';
++	while (!ferror(in) && !ferror(out) && fread(&cmd, sizeof(cmd), 1, in)) {
++		char *string;
++		int err = 0;
++		CURLcode res = 0;
++		int opt = find_command(cmd.tag);
++		const char *stringval = NULL;
++
++		cmd.val = ntohl(cmd.val);
++		switch (opt) {
++
++		case CURLOPT_NOPROGRESS:
++		case CURLOPT_SSL_VERIFYPEER:
++		case CURLOPT_UPLOAD:
++		case CURLOPT_VERBOSE:
++			res = curl_easy_setopt(curl, (CURLoption)opt,
++						cmd.val ? 1L : 0L);
++			break;
++
++		case CURLOPT_CAINFO:
++		case CURLOPT_CAPATH:
++		case CURLOPT_LOGIN_OPTIONS:
++		case CURLOPT_MAIL_AUTH:
++		case CURLOPT_MAIL_FROM:
++		case CURLOPT_PASSWORD:
++		case CURLOPT_URL:
++		case CURLOPT_USERNAME:
++			res = handle_string_opt(curl, (CURLoption)opt,
++						cmd.val, in, &err);
++			break;
++
++		case CURLOPT_SSL_VERIFYHOST:
++			res = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST,
++						cmd.val ? 2L : 0L);
++			break;
++
++		case CURLOPT_USE_SSL:
++			res = curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)(
++				(cmd.val & 0x80000000) ? CURLUSESSL_TRY :
++					(cmd.val ? CURLUSESSL_ALL : CURLUSESSL_NONE)));
++			break;
++
++		case CURLOPT_READDATA:
++			if (data)
++				free(data);
++			err = read_string(in, cmd.val, &data);
++			if (err)
++				break;
++			datalen = cmd.val;
++			break;
++
++		case CURLGET_ERRBUF:
++			stringval = errbuf;
++			break;
++
++		case CURLGET_LASTHDR:
++			stringval = hdrbuf;
++			break;
++
++		case CURLGET_STRERROR:
++			stringval = curl_easy_strerror((CURLcode) cmd.val);
++			break;
++
++		case CURLINFO_RESPONSE_CODE:
++		{
++			long response;
++			res = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE , &response);
++			if (res)
++			  res += 1000000;
++			else
++			  res = response;
++			break;
++		}
++
++		case CURLOPT_MAIL_RCPT:
++		{
++			const char *ptr;
++			if (recipients) {
++				curl_slist_free_all(recipients);
++				recipients = NULL;
++			}
++			err = read_string(in, cmd.val, &string);
++			if (err)
++				break;
++			ptr = string;
++			while (cmd.val) {
++				const char *nul = memchr(ptr, 0, cmd.val);
++				if (!nul)
++					return 13;
++				recipients = curl_slist_append(recipients, ptr);
++				cmd.val -= ++nul - ptr;
++				ptr = nul;
++			}
++			free(string);
++			res = curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
++			break;
++		}
++
++		case CURLCMD_PERFORM:
++		{
++			context_t cxt;
++			hdrline_t lasthdr;
++
++			cxt.data = data;
++			cxt.len = datalen;
++			cxt.offset = 0;
++			errbuf[0] = '\0';
++			lasthdr.line = hdrbuf;
++			lasthdr.space = sizeof(hdrbuf);
++			hdrbuf[0] = '\0';
++			res = curl_easy_setopt(curl,
++					CURLOPT_ERRORBUFFER, errbuf);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_INFILESIZE, (long)datalen);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_READDATA, &cxt);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_READFUNCTION, (void *)readfunc);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_PROGRESSFUNCTION, (void *)progressfunc);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_XFERINFOFUNCTION, (void *)xferfunc);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_WRITEFUNCTION, (void *)writefunc);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_HEADERDATA, &lasthdr);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_HEADERFUNCTION, (void *)hdrfunc);
++			if (!res)
++				res = curl_easy_perform(curl);
++			break;
++		}
++
++		default:
++			err = 20;
++			break;
++
++		}
++		if (!err)
++			err = stringval ?
++				send_string(out, stringval, strlen(stringval)) :
++				send_res(out, res);
++		if (err)
++			return err;
++	}
++
++	if (recipients)
++		curl_slist_free_all(recipients);
++	if (data)
++		free(data);
++
++	if (ferror(in) || !feof(in) || ferror(out))
++		return 4;
++
++	return 0;
++}

@@ -1,6 +1,6 @@
-From 711c8bac575e57ebdcf486977d2ec478015943a6 Mon Sep 17 00:00:00 2001
+From 05efa7c96932918f729613b38d4aa9d3a29026a9 Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Fri, 21 Nov 2014 19:56:21 -0800
+Date: Sat, 22 Nov 2014 08:07:05 -0800
 Subject: [PATCH] git-send-email: use libcurl for implementation
 
 Use libcurl's API to send SMTP messages rather than
@@ -47,7 +47,8 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  git-send-email--libcurl.pl | 218 +++++++++++++++++++++++++
  git-send-email.perl        | 157 +++++++++---------
  send-email--libcurl.c      | 393 +++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 684 insertions(+), 84 deletions(-)
+ t/t9001-send-email.sh      |  10 --
+ 4 files changed, 684 insertions(+), 94 deletions(-)
  create mode 100644 git-send-email--libcurl.pl
  create mode 100644 send-email--libcurl.c
 
@@ -527,7 +528,7 @@ index 9949db01..aaddcaad 100755
  	my %seen;
 diff --git a/send-email--libcurl.c b/send-email--libcurl.c
 new file mode 100644
-index 00000000..c275da22
+index 00000000..94fd9dea
 --- /dev/null
 +++ b/send-email--libcurl.c
 @@ -0,0 +1,393 @@
@@ -924,3 +925,87 @@ index 00000000..c275da22
 +
 +	return 0;
 +}
+diff --git a/t/t9001-send-email.sh b/t/t9001-send-email.sh
+index 19a3ced6..d7360ebd 100755
+--- a/t/t9001-send-email.sh
++++ b/t/t9001-send-email.sh
+@@ -162,7 +162,6 @@ Cc: cc@example.com,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ In-Reply-To: <unique-message-id@example.com>
+ References: <unique-message-id@example.com>
+ 
+@@ -509,7 +508,6 @@ Cc: cc@example.com,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -556,7 +554,6 @@ Cc: A <author@example.com>,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -591,7 +588,6 @@ Cc: A <author@example.com>,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -616,7 +612,6 @@ To: to@example.com
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -650,7 +645,6 @@ Cc: A <author@example.com>,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -681,7 +675,6 @@ Cc: A <author@example.com>,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -712,7 +705,6 @@ Cc: A <author@example.com>,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -747,7 +739,6 @@ Cc: A <author@example.com>,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF
+@@ -775,7 +766,6 @@ Cc: A <author@example.com>,
+ Subject: [PATCH 1/1] Second.
+ Date: DATE-STRING
+ Message-Id: MESSAGE-ID-STRING
+-X-Mailer: X-MAILER-STRING
+ 
+ Result: OK
+ EOF

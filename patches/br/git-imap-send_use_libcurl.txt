@@ -19,6 +19,7 @@ test the new code with a wide variety of parameter combinations. I did
 test both secure and insecure (imaps:// and imap://) connections and
 values of "PLAIN" and "LOGIN" for the authMethod.
 
+Helped-by: Junio C Hamano <gitster@pobox.com>
 Helped-by: Kyle J. McKay <mackyle@gmail.com>
 Backport-by: Kyle J. McKay <mackyle@gmail.com>
 Signed-off-by: Bernhard Reiter <ockham@raz.or.at>

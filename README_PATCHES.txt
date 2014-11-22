@@ -30,7 +30,7 @@ Git Patches
 * Add 2 missing translations to complete de.po
 
   - `patches/ps/git-missing-de-translations.txt`
-  
+
   From the list at:
   <http://article.gmane.org/gmane.comp.version-control.git/259788>.
 
@@ -54,9 +54,16 @@ Git Patches
 
   - `patches/sc/any-notes-ref.txt`
   - `patches/km/any-notes-ref-tests.txt`
-  
+
   Both patches included in the thread and discussion at:
   <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
+
+* Do not create config files that are executable
+
+  - `patches/mh/git-no-config-executable.txt`
+
+  Available from the list and picked up to hopefully be in a maint update.
+  <http://article.gmane.org/gmane.comp.version-control.git/259773>.
 
 
 Curl Patches

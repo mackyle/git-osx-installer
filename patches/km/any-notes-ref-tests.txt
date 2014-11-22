@@ -13,39 +13,26 @@ more relaxed notes refs rules leave it unchanged, the merge
 succeeds.  This has a follow-on effect which makes the
 next two tests fail as well.
 
-Replace refs/heads/master with refs/heads/xmaster (which
-does not exist) in the merge test to restore the expected
-failure and therefore also restore the passing state of the
-following two tests.
+The refs/heads/master ref could just be replaced with
+another ref name that does not exist such as refs/heads/xmaster,
+but there are already several tests using non-existant refs
+so instead just remove the refs/heads/master line.
 
+Suggested-by: Johan Herland <johan@herland.net>
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-Note that while the comments in this patch depend on
-the "notes: accept any ref for merge" patch being previously
-applied in order to make sense, the actual change does not.
-
-If this patch is applied without the "accept any notes ref"
-patch being applied, the tests will still succeed.
-
-In other words, applying this patch before the other one
-will NOT introduce any new test failures.
-
- t/t3308-notes-merge.sh | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ t/t3308-notes-merge.sh | 1 -
+ 1 file changed, 1 deletion(-)
 
 diff --git a/t/t3308-notes-merge.sh b/t/t3308-notes-merge.sh
-index 24d82b49..7cbee7d6 100755
+index 24d82b49..f0feb64b 100755
 --- a/t/t3308-notes-merge.sh
 +++ b/t/t3308-notes-merge.sh
-@@ -90,7 +90,7 @@ test_expect_success 'fail to merge various non-note-trees' '
+@@ -90,7 +90,6 @@ test_expect_success 'fail to merge various non-note-trees' '
  	test_must_fail git notes merge refs/notes/ &&
  	test_must_fail git notes merge refs/notes/dir &&
  	test_must_fail git notes merge refs/notes/dir/ &&
 -	test_must_fail git notes merge refs/heads/master &&
-+	test_must_fail git notes merge refs/heads/xmaster &&
  	test_must_fail git notes merge x: &&
  	test_must_fail git notes merge x:foo &&
  	test_must_fail git notes merge foo^{bar
--- 
-2.1.2
-

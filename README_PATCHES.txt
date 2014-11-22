@@ -1,0 +1,146 @@
+Patches Information
+===================
+
+The various patches, enhancements and downright replacements used to build
+the version of Git and supplementary software included in the Git OS X
+Installer are collected here.
+
+For the files/patches included herein, some have explicit licenses embedded
+within them (typically GPLv2).  For the ones that do not explicitly mention
+a license the standard Git license applies -- this is especially true for
+any 'Signed-off-by' patches taken from the Git mailing list.  The standard
+Git license is GPLv2 ONLY.
+
+Other files that do not have an explicit license and did not come from the
+Git mailing list are my own code and where the source file does not say
+otherwise are licensed under GPLv2 or, at your option, any later version.
+
+
+Git Patches
+-----------
+
+* Use Mac OS X native API to show language translations
+
+  - `src/build-prefix.h`
+  - `src/gettext.c`
+  - `src/gettext-util.c`
+  - `patches/git-sh-i18n-sh-git_gettext.diff`
+  - `patches/git-gettext-failures.diff`
+
+* Add 2 missing translations to complete de.po
+
+  - `patches/ps/git-missing-de-translations.txt`
+  
+  From the list at:
+  <http://article.gmane.org/gmane.comp.version-control.git/259788>.
+
+* Use libcurl for imap send
+
+  - `patches/br/git-imap-send_use_libcurl.txt`
+
+  This is a backport of v1 of the patch from the mailing list at:
+  <http://article.gmane.org/gmane.comp.version-control.git/255954>.
+  Additionally it has the strbuf leak fixes suggested on the list at:
+  <http://article.gmane.org/gmane.comp.version-control.git/259120>.
+
+* Use libcurl for send email
+
+  - `patches/km/git-send-email-libcurl.txt`
+
+  My own patches to make `git-send-email.perl` use libcurl instead of
+  OpenSSL.  Has not been posted elsewhere.
+
+* Allow notes refs to be anywhere if given in full
+
+  - `patches/sc/any-notes-ref.txt`
+  - `patches/km/any-notes-ref-tests.txt`
+  
+  Both patches included in the thread and discussion at:
+  <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
+
+
+Curl Patches
+------------
+
+In order to provide compatibility with Mac OS X 10.4 AND web sites using
+SHA-256/SHA-384 hashes in their certificates, the version of libcurl that has
+been included as part of the Git OS X Installer uses the darwinssl backend
+that relies on Secure Transport instead of OpenSSL.
+
+Unfortunately the released version of the darwinssl backend has many
+deficiencies that make it unsuitable for use as a replacement when users are
+expecting to be able to provide multiple client certificates possibly combined
+with an RSA private key all in PEM format.
+
+Additionally the as-released darwinssl backend doesn't really work on older
+Mac OS X versions as-is.  Oh it may compile on Mac OS X 10.5 without complaints
+but it immediately crashes and burns when you try to use it.  And it does not
+support Mac OS X 10.4 at all as released.
+
+* Curl darwinssl backend universal Mac OS X compatibility
+
+  - `patches/curl/curl_darwinssl_macosx.c`
+  - `patches/curl/ntlm_core_no_oneshot_patch.txt`
+  - `patches/curl/stcompat.c`
+  - `patches/curl/stcompat.h`
+  - `patches/curl/urldata_add_khra_patch.txt`
+
+* Curl IPv6 scope address parsing fix
+
+  - `patches/curl/url_scopename_patch.txt`
+
+* Curl mk-ca-bundle script improvements
+
+  - `patches/curl/mk-ca-bundle_improvements.txt`
+
+
+GnuPG Patches
+-------------
+
+The standard build of gpg does not allow one to create any keys with bit
+lengths larger than 4096 bits.  (Once created, existing versions of gpg can
+use such a key without problems.)  However, according to NIST 800-57, a RSA key
+3072 bits in length only provides 128 bits of security strength.  In order to
+comply with NIST policy on the use of AES to protect national information and
+meet the TOP SECRET requirements a security strength of at least 192 bits is
+required.  That necessitates an RSA key of 7680 bits (see NIST 800-57).  Hence
+the gpg patch to permit creation of such keys.
+
+* Allow larger RSA keys to be created
+
+  - `patches/gnupg/allow_longer_keys.txt`
+
+
+Compatibility Patches
+---------------------
+
+Other than the giant Curl darwinssl backend patch, some other compatibility
+patches are needed in order to build for Mac OS X 10.4 without losing any
+functionality.
+
+These consist of the remaining files in the include and src subdirectories
+and provide the following compatibility fixes:
+
+* Curl support for NTLM on Mac OS X 10.4
+
+  Special thanks to Libtomcrypt <http://libtom.org/> for providing a public
+  domain version of DES needed to make this work.
+
+* Git support CRAM-MD5 when `git-imap-send` is using a tunnel
+
+  This is really just some glue and an implementation of HMAC MD5 based
+  on RFC 2104 that uses the OS X Common Crypto MD5 hash implementation.
+
+* GnuPG support using libedit instead of libreadline
+
+  This is just some simplistic linker glue (`src/gnupgcompat.c`) and a clever
+  compiler prefix file (`src/gnupg-prefix.h`).
+
+
+Other Stuff
+-----------
+
+For the neophyte using gpg the first time can be rather intimidating.  To this
+end a copy of the GNU Privacy Handbook has been included here in doc/gnupg.  It
+has not been modified and was simply copied from the original location at
+<https://www.gnupg.org/gph/en/manual.html>.

@@ -472,6 +472,7 @@ OSStatus cSecIdentityCreateWithCertificate(CFTypeRef k, SecCertificateRef c,
 SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
   SecCertificateRef certificateRef, CFDataRef keydata, CFTypeRef pw,
   CFStringRef hint, void **kh);
+void CopyCertValidity(SecCertificateRef cert, CFStringRef *nb, CFStringRef *na);
 CFStringRef CopyCertSubject(SecCertificateRef cert);
 CFStringRef CopyCertSubjectAltNamesString(SecCertificateRef cert);
 CFStringRef CopyCertSubjectKeyId(SecCertificateRef cert);

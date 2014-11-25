@@ -1307,6 +1307,8 @@ typedef struct {
   uint8_t caFlag; /* 0 unless basic constraints present then 0x80=critial 0x01=value */
   uint8_t isCA; /* true if caFlag==0x81 or subject==issuer && vers < 2 */
   uint8_t isRoot; /* true if isCA and subject == issuer */
+  char notBefore[16]; /* Not before date either 13 chars or 15 chars plus Nul */
+  char notAfter[16];  /* Not after date see notBefore for format */
   data_t subject; /* points to sequence */
   data_t subjectAltNames; /* null unless v3 extension present, points to sequence */
   data_t subjectKeyId; /* null unless v3 extension present, points to raw bytes */
@@ -1427,9 +1429,27 @@ static bool read_der_cert(const data_t *_d, der_cert_t *o)
   d.d += atom.hl + atom.dl;
   if (!read_der_atom(&d, &atom)) return false;
   if (atom.rawtag != 0x30) return false;
-  /* skip validity */
-  d.l -= atom.hl + atom.dl;
-  d.d += atom.hl + atom.dl;
+  {
+    /* parse validity */
+    data_t vdate;
+    vdate.d = d.d + atom.hl;
+    vdate.l = atom.dl;
+    d.l -= atom.hl + atom.dl;
+    d.d += atom.hl + atom.dl;
+    if (!read_der_atom(&vdate, &atom)) return false;
+    if (atom.rawtag != 0x17 && atom.rawtag != 0x18) return false;
+    if (atom.rawtag == 0x17 && atom.dl != 13) return false;
+    if (atom.rawtag == 0x18 && atom.dl != 15) return false;
+    memcpy(o->notBefore, vdate.d + atom.hl, atom.dl);
+    vdate.l += atom.hl + atom.dl;
+    vdate.d += atom.hl + atom.dl;
+    if (!read_der_atom(&vdate, &atom)) return false;
+    if (atom.rawtag != 0x17 && atom.rawtag != 0x18) return false;
+    if (atom.rawtag == 0x17 && atom.dl != 13) return false;
+    if (atom.rawtag == 0x18 && atom.dl != 15) return false;
+    memcpy(o->notAfter, vdate.d + atom.hl, atom.dl);
+    if (vdate.d + atom.hl + atom.dl != d.d) return false;
+  }
   if (!read_der_atom(&d, &atom)) return false;
   if (atom.rawtag != 0x30) return false;
   o->subject.d = d.d;
@@ -1799,6 +1819,92 @@ static bool append_attr_value(CFMutableStringRef *s, const void *_d,
     append_hex_dump(*s, d, a->hl + a->dl);
   }
   return *s != NULL;
+}
+
+CF_INLINE int is_dig(char c)
+{
+  return '0' <= c && c <= '9';
+}
+
+static void append_year_string(CFMutableStringRef cfstr, const char *vstr)
+{
+  size_t vl = strlen(vstr);
+  if ((vl == 13 || vl == 15) && vstr[vl - 1] == 'Z') {
+    size_t off = 4;
+    unsigned short uc[4];
+    if (vl == 13 && is_dig(vstr[0]) && is_dig(vstr[1])) {
+      int yr2 = (vstr[0] - '0') * 10 + (vstr[1] - '0');
+      if (yr2 >= 50) {
+        uc[0] = '1';
+	uc[1] = '9';
+      } else {
+        uc[0] = '2';
+	uc[1] = '0';
+      }
+      uc[2] = (unsigned char)vstr[0];
+      uc[3] = (unsigned char)vstr[1];
+      off = 2;
+    } else {
+      uc[0] = vstr[0];
+      uc[1] = vstr[1];
+      uc[2] = vstr[2];
+      uc[3] = vstr[3];
+    }
+    CFStringAppendCharacters(cfstr, uc, 4);
+    uc[0] = '-';
+    uc[1] = vstr[off];
+    uc[2] = vstr[off+1];
+    uc[3] = '-';
+    CFStringAppendCharacters(cfstr, uc, 4);
+    uc[0] = vstr[off+2];
+    uc[1] = vstr[off+3];
+    uc[2] = 'T';
+    CFStringAppendCharacters(cfstr, uc, 3);
+    uc[0] = vstr[off+4];
+    uc[1] = vstr[off+5];
+    uc[2] = ':';
+    CFStringAppendCharacters(cfstr, uc, 3);
+    uc[0] = vstr[off+6];
+    uc[1] = vstr[off+7];
+    CFStringAppendCharacters(cfstr, uc, 3);
+    uc[0] = vstr[off+8];
+    uc[1] = vstr[off+9];
+    uc[2] = 'Z';
+    CFStringAppendCharacters(cfstr, uc, 3);
+  } else {
+    CFStringAppendCString(cfstr, vstr, kCFStringEncodingASCII);
+  }
+}
+
+void CopyCertValidity(SecCertificateRef _cert, CFStringRef *_nb, CFStringRef *_na)
+{
+  CFDataRef d = cSecCertificateCopyData(_cert);
+  CFMutableStringRef nb, na;
+  data_t data;
+  der_cert_t cert;
+
+  if (!d || !_nb || !_na) return;
+  *_nb = NULL;
+  *_na = NULL;
+  data.d = CFDataGetBytePtr(d);
+  data.l = CFDataGetLength(d);
+  if (!read_der_cert(&data, &cert)) {
+    CFRelease(d);
+    return;
+  }
+  CFRelease(d);
+  nb = CFStringCreateMutable(kCFAllocatorDefault, 0);
+  if (!nb)
+    return;
+  na = CFStringCreateMutable(kCFAllocatorDefault, 0);
+  if (!na) {
+    CFRelease(nb);
+    return;
+  }
+  append_year_string(nb, cert.notBefore);
+  append_year_string(na, cert.notAfter);
+  *_nb = nb;
+  *_na = na;
 }
 
 static CFStringRef CopyCertName(SecCertificateRef _cert, bool issuer)

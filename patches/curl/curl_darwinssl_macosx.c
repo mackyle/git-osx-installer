@@ -431,6 +431,7 @@ CF_INLINE bool is_file(const char *filename)
  *   0x01 => show alt names for cert 0 if any
  *   0x02 => show auth key id for last cert if any
  *   0x20 => show even if empty (certs has 0 elements)
+ *   0x80 => suppress dates display
  */
 static void show_certs_array(struct SessionHandle *data, const char *hdr,
                              CFArrayRef certs, unsigned flags,
@@ -446,7 +447,7 @@ static void show_certs_array(struct SessionHandle *data, const char *hdr,
   }
   for(i = 0; i < count; ++i) {
     SecCertificateRef copy = NULL;
-    char *subj, *subjalt=NULL, *issuer, *issuerkey=NULL;
+    char *subj, *subjalt=NULL, *issuer, *issuerkey=NULL, *na=NULL, *nb=NULL;
     SecCertificateRef cert =
       (SecCertificateRef)CFArrayGetValueAtIndex(certs, i);
     if(SecIdentityGetTypeID() == CFGetTypeID(cert)) {
@@ -455,11 +456,19 @@ static void show_certs_array(struct SessionHandle *data, const char *hdr,
         continue;
       cert = copy;
     }
+    if(!(flags & 0x80)) {
+      CFStringRef cfnb, cfna;
+      CopyCertValidity(cert, &cfnb, &cfna);
+      nb = CFStringCreateUTF8String(cfnb, true);
+      na = CFStringCreateUTF8String(cfna, true);
+    }
     subj = CFStringCreateUTF8String(CopyCertSubject(cert), true);
     issuer = CFStringCreateUTF8String(CopyCertIssuer(cert), true);
     infof(data, "%s%u s:%s\n",
       ((evdnc && !(evdnc[i].StatusBits & CSSM_CERT_STATUS_IS_IN_INPUT_CERTS))
        ? "+" : " "), (unsigned)i, subj ? subj : "<n/a>");
+    if(nb && na)
+      infof(data, "   d:%s,%s\n", nb, na);
     if(!i && (flags & 0x01))
       subjalt = CFStringCreateUTF8String(
                                     CopyCertSubjectAltNamesString(cert), true);
@@ -471,6 +480,8 @@ static void show_certs_array(struct SessionHandle *data, const char *hdr,
       issuerkey = CFStringCreateUTF8String(CopyCertIssuerKeyId(cert), true);
     if(issuerkey)
       infof(data, "   k:%s\n", issuerkey);
+    free(nb);
+    free(na);
     free(subj);
     free(subjalt);
     free(issuer);

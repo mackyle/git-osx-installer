@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!--
+<head>
+-->
+<head>
+  <meta charset='utf-8' />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <script type="text/javascript">var NREUMQ=[];NREUMQ.f=function(){}</script>
+
+  <title>Git OS X Installer</title>
+
+  <style type="text/css">
+    body {
+      margin-top: 1.0em;
+      background-color: white;
+      font-family: Times, "Times New Roman", serif;
+      color: black;
+    }
+    #container {
+      margin: 0 auto;
+      max-width: 90ex;
+      position: relative;
+    }
+    @media screen {
+      .last { margin-bottom: -1em;}
+      .aftermargin {
+        position: absolute;
+        height: 100%;
+        width: 1px;
+      }
+    }
+    h1 { font-size: 3.8em; color: black; margin-bottom: 0.1em; }
+    h1 .small { font-size: 0.4em; }
+    h1 a { text-decoration: none; }
+    h2 { font-size: 1.5em; color: black; }
+    h3 { /* text-align: center;*/ color: black; }
+    h1, h2, h3, th { font-family: Helvetica, Arial, FreeSans, sans-serif; font-weight: normal; }
+    a { color: black; }
+    .description { font-size: 1.2em; margin-bottom: 1em; margin-top: 2em; font-style: italic; }
+    .download { float: right; }
+    tt, .nowrap { white-space: nowrap; }
+    pre, ttx { font-family: Menlo, Monaco, Consolas, Courier, "Courier New", monospace;}
+    pre { font-size: 90%; padding: 0.5em 1ex; border: thin dotted silver; }
+    hr { border: 0; width: 80%; border-bottom: thin solid silver; }
+    p { text-align: justify; }
+    p.left { text-align: left; }
+    .inset { margin-left: 1ex; margin-right: 1ex; }
+    .footer { text-align:center; padding-top:2em; font-style: italic; }
+    ul.ulnone { list-style-type: none; }
+    li { margin-top: 0.5em; margin-bottom: 0.5em; }
+    .indent { display: block; margin-left: 5ex; margin-right: 5ex; text-align: left; }
+    .spacer05 { display: inline-block; height: 1em; width: 0.5ex; }
+    .spacer25 { display: inline-block; height: 1em; width: 2.5ex; }
+
+    .nobreak { white-space: nowrap; }
+    .hash td { font-size: 80%; line-height: 1.0; font-family: monospace; }
+    .hash tr > td:first-child { text-align: right; }
+    .hash tr > td:first-child:after { content: ':'; }
+
+    table.download-list {
+      border-collapse: separate;
+      border-spacing: 1.25ex 0;
+      width: 100%;
+      margin-bottom: 0.5em;
+    }
+
+    table.download-list > * > tr > td:first-child,
+    table.download-list > * > tr > td:first-child + td,
+    table.download-list > * > tr > td:first-child + td + td,
+    table.download-list > * > tr > td:first-child + td + td + td {
+      white-space: nowrap;
+    }
+
+    tr.header th {
+      text-align: left;
+      border-bottom: thin solid black;
+    }
+    tr.separator {
+      height: 0.25em;
+    }
+
+    span.down {
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      margin-right: 2px;
+      vertical-align: baseline;
+      background-repeat: no-repeat;
+      background-position: 0% 100%;
+      background-size: 1em 1em;
+      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAQnRFWHRDb21tZW50AHRJTUUgY2h1bmtsZW4gNyBpZ25vcmVkDUFTQ0lJOiAuLi4uLjA3DUhFWDogMDdENjA5MTYxMDMwMzeLgNWuAAACTUlEQVR4nJRQW2iSYRj+tgq6k5BuDILdObqoYLBRxsjBsKvoIoKKokbrMMibrZsMNseojPJAbINg0zZlFVEi1Yi8aNJWiXlG51lvdOiNiBcefp++74tfZGzQXnh43+89PN/zvoTsYhfmeoQrr3oxsngSY0v9UFvPYLfeHe2c8Yjw5rcB7z0v8fHPLNTLA3sjGNIfFqw/n+PFVzUnufu6b28Ep59JBMu6Dk9Xx/DWbcTIwon/I+h5RIrHpruK1xZPYeHHE8x8HsWK2wDNh4u4v9yHByuKnYmi0agzHA7j6MN9uG4Zwuz3STp8D5OOGzB8G+cqphyXcYse1Ww2O7cPD6ZSKVQqFWwVt6AyHsfNpWHMrWmh/XQblg0dxt+dx6V5OcrlMux2O0wmk7JNEAqFnIVCAfF4HLlcDsl0Amf1coxaVZhfm8Yd6zAllcHlcsHv9yMQCECn0/1TEQwGBzc3N1EqlcBUUDW8YePXOhTaQ7hqVmDg8UG43W74fD4kk0mwz+ga0Gg0SuL1evnv+Xwe2WwWmUyGI51OIxqPoHfqABKJBB9knqlkdY/Hg4mJCWd3vV4n1WqV0GFCCxxUCaHNJJvKEX2/g8RiMRKJRAg9MgddmdB7ETbLCPgx2EMQBEJ35A10LUJ/42BkVAEnZj21Wo1IJBI2o+xmj2azycGKIsScmN8eNxoNjv2MQBxqtVpELpdzzwCgnWdxZ575NoFUKuWNrCBCbGTGYmaddZlMxpV02Wy2L3QXFbsBI+v0IkS5DJ2rUqLVvwAAAP//AwDkwh7q3xB35AAAAABJRU5ErkJggg==);
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="container">
+
+<h1>Git OS X Installer</h1>
+
+<div class="description">
+<p>Universal binary OS X Installer for Git that supports Mac OS X 10.4.8 and later including PPC/X86 and 32/64 bit.</p>
+</div>
+
+<p>The Git translations ARE included.  The installer also contains an option (off by default) to make the installed
+version of Git choose its translation based on the System Preferences > International > Languages settings
+(instead of the <tt>LANG</tt> etc. environment variables) if desired.</p>
+
+<p>All of <tt>git send-email</tt>, <tt>git imap-send</tt> and <tt>git instaweb</tt> are fully functional out-of-the-box
+after installation &#x2013; no additional software installation required.</p>
+
+<p>Optional installs of <a href="http://repo.or.cz/topgit/pro.git">TopGit</a>, a <tt>curl</tt> command line
+tool (that uses the <tt>libcurl.dylib</tt> installed for Git), <a href="https://www.gnupg.org/">GnuPG</a>&#x2019;s
+<tt>gpg</tt> utility and library headers (so that a new version of Git can be built from source using the
+libraries installed for Git) are included in the installer.</p>
+
+<h3 id="quick">Quick Download</h3>
+
+<table class="download-list">
+<thead>
+<tr class="header">
+<th>Download</th><th>Size</th><th>Tag</th><th>Released</th><th>Info</th>
+</tr>
+<tr class="separator"><td colspan="4"></td></tr>
+</thead>
+<tbody>
+
+<tr><td><a href="https://github.com/mackyle/gitosxinstaller/releases/download/v2.1.3/git-2.1.3-osx-installer.dmg"><span class="down"></span>git-2.1.3-osx-installer.dmg</a></td>
+<td>10 MiB</td>
+<td>v2.1.3</td>
+<td>2014-10-29</td>
+<td>Mac OS X 10.4+ universal installer for Git version 2.1.3 [<a href="#gitosx-v2.1.3_in">hashes</a>]</td></tr>
+
+</tbody>
+</table>
+
+<h2>Important Notes</h2>
+
+<p>In order to fully support SHA-256 certificates on Mac OS X 10.4 and Mac OS X 10.5 and to be more fully integrated
+with the native OS X experience, this installed version of Git uses libcurl for all http/https/imap/imaps/smtp/smtps activity
+where libcurl has been compiled to use the OS X native Secure Transport instead of OpenSSL.  (This means that Git will use
+the standard root certificates from the normal system keychain locations for https/smtps/imaps authentication unless one
+of the various certificate configuration options is used to tell it otherwise.)</p>
+
+<p>In practice there should be no difference in use between Git built this way and Git built to use curl/OpenSSL with one
+minor exception.</p>
+
+<p>Secure Transport does not support a directory of certificates like OpenSSL does.  An error will result if any of
+the following are used:</p>
+<ul>
+<li><tt>http.sslCAPath</tt> (but <tt>http.sslCAInfo</tt> works just fine)</li>
+<li><tt>GIT_SSL_CAPATH</tt> (but <tt>GIT_SSL_CAINFO</tt> works just fine)</li>
+<li><tt>sendemail.smtpsslcertpath</tt> set to a directory (but set to a file works just fine)</li>
+<li><tt>--smtp-ssl-cert-path</tt> set to a directory with <tt>git send-email</tt> (but set to a file works just fine)</li>
+</ul>
+
+<p>Additionally since the version of <tt>git imap-send</tt> that&#x2019;s included is a curl-only version, there is one tiny
+behavioral difference to be aware of.  When <tt>git imap-send</tt> is set to use a tunnel (i.e. <tt>imap.tunnel</tt> is set),
+an OpenSSL-using version of <tt>git imap-send</tt> will attempt to use the <tt>STARTTLS</tt> command if the other end of
+the tunnel supports it.  A libcurl-using version of <tt>git imap-send</tt> will never do this.  This only affects tunnels.  All
+direct connections using <tt>imaps</tt> will always be encrypted.</p>
+
+<h2>Patch Sources</h2>
+
+<p>Various patches have been applied in order to make the build work well with Mac OS X.  They are all available
+from the <a href="https://github.com/mackyle/gitosxinstaller">Git OS X Installer repository</a> and the
+<a href="https://github.com/mackyle/gitosxinstaller/blob/master/README_PATCHES.txt">README_PATCHES.txt</a> file
+details them all.</p>
+
+<h2 id="downloads">Downloads</h2>
+<p>Pre-built universal binary installers of Git (including required support libraries and executables)
+runnable on Mac OS X 10.4 or later are available from the <a href="https://github.com/mackyle/gitosxinstaller/releases"
+>releases</a> area.
+</p>
+<p>Here are some convenient download links:</p>
+<dl>
+
+<dt id="gitosx-v2.1.3_in"><a href="https://github.com/mackyle/gitosxinstaller/releases/download/v2.1.3/git-2.1.3-osx-installer.dmg"><span class="down"></span><tt>git-2.1.3-osx-installer.dmg</tt></a> Mac OS X 10.4+ universal installer package (tag: <tt>v2.1.3</tt>)</dt>
+<dd><table class='hash'><tr><td>SIZE</td><td>10 MiB</td></tr>
+<tr><td>MD5</td><td>2c5dcd64efb7c468a54066f0e98a1636</td></tr>
+<tr><td>SHA1</td><td>677f9154bf50b6e2374d96cd262b32761c553024</td></tr>
+<tr><td>SHA256</td><td>1a5e557d81ba2e873912bb09d84b5da6fa970ceed85cc5c172eda0df16ddee95</td></tr></table></dd>
+
+</dl>
+
+<h2>License</h2>
+
+<p>Git itself is licensed under GPLv2.  Some of the libraries it has been linked with have less restrictive licenses,
+but since GPLv2 is the most restrictive of the bunch it&#x2019;s the controlling one.  GnuPG is licensed under
+GPLv3 but is an optional install (aggregated into the installer) and does not affect the license used by Git.</p>
+
+<p>The installer will display ALL licences for all software included in ihe installer package.</p>
+
+<h2>See Also</h2>
+
+<ul class="last">
+<li><a href="http://git-scm.com/">The Git home page</a></li>
+<li style="margin-bottom:0">The <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU General Public License v2.0</a></li>
+</ul>
+
+</div>
+
+<span class="aftermargin"></span></body>
+<!--
+</body>
+-->
+</html>

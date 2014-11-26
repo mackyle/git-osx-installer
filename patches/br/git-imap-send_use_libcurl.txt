@@ -1,4 +1,4 @@
-From 24cbdcde3d7a21cd2fdd978db2868a2779316d4d Mon Sep 17 00:00:00 2001
+From 320c4bf4867a67214f74a98f7d2d456b2231a73f Mon Sep 17 00:00:00 2001
 From: Bernhard Reiter <ockham@raz.or.at>
 Date: Wed, 27 Aug 2014 00:40:17 +0200
 Subject: [PATCH] git-imap-send: use libcurl for implementation
@@ -122,7 +122,7 @@ index 9f984a9e..7e6677c0 100644
  git-http-fetch$X: http.o http-walker.o http-fetch.o GIT-LDFLAGS $(GITLIBS)
  	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) \
 diff --git a/imap-send.c b/imap-send.c
-index 524fbabc..26519f9b 100644
+index 524fbabc..c3d0ac2a 100644
 --- a/imap-send.c
 +++ b/imap-send.c
 @@ -29,6 +29,9 @@
@@ -284,8 +284,8 @@ index 524fbabc..26519f9b 100644
 +		strbuf_release(&auth);
 +	}
 +
-+	if (server.use_ssl)
-+		curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
++	if (!server.use_ssl)
++		curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_TRY);
 +
 +	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, server.ssl_verify);
 +	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, server.ssl_verify);

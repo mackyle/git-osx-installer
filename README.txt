@@ -1,10 +1,10 @@
 Git OS X Installer
 ==================
 
-Patches (see the README_PATCHES.txt file) to build a version of Git for Mac OS X
-10.4.8 and later (PPC/X86/32/64) that includes the Git translations (optionally
-selected based on System Preferences > International > Languages) and integrates
-well with the native OS X libraries.
+Patches (see the README_PATCHES.txt file) to build a version of Git for
+Mac OS X 10.4.8 and later (PPC/X86/32/64) that includes the Git translations
+(optionally selected based on System Preferences > International > Languages)
+and integrates well with the native OS X libraries.
 
 The built version of Git uses Secure Transport (via a very enhanced version of
 curl's darwinssl backend) to fully support SHA-256 https certificates on

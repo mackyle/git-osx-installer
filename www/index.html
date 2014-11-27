@@ -39,7 +39,7 @@
     a { color: black; }
     .description { font-size: 1.2em; margin-bottom: 1em; margin-top: 2em; font-style: italic; }
     .download { float: right; }
-    tt, .nowrap { white-space: nowrap; }
+    tt, .nowrap { white-space: nowrap; font-size: 90%; }
     pre, ttx { font-family: Menlo, Monaco, Consolas, Courier, "Courier New", monospace;}
     pre { font-size: 90%; padding: 0.5em 1ex; border: thin dotted silver; }
     hr { border: 0; width: 80%; border-bottom: thin solid silver; }
@@ -91,6 +91,19 @@
       background-size: 1em 1em;
       background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAQnRFWHRDb21tZW50AHRJTUUgY2h1bmtsZW4gNyBpZ25vcmVkDUFTQ0lJOiAuLi4uLjA3DUhFWDogMDdENjA5MTYxMDMwMzeLgNWuAAACTUlEQVR4nJRQW2iSYRj+tgq6k5BuDILdObqoYLBRxsjBsKvoIoKKokbrMMibrZsMNseojPJAbINg0zZlFVEi1Yi8aNJWiXlG51lvdOiNiBcefp++74tfZGzQXnh43+89PN/zvoTsYhfmeoQrr3oxsngSY0v9UFvPYLfeHe2c8Yjw5rcB7z0v8fHPLNTLA3sjGNIfFqw/n+PFVzUnufu6b28Ep59JBMu6Dk9Xx/DWbcTIwon/I+h5RIrHpruK1xZPYeHHE8x8HsWK2wDNh4u4v9yHByuKnYmi0agzHA7j6MN9uG4Zwuz3STp8D5OOGzB8G+cqphyXcYse1Ww2O7cPD6ZSKVQqFWwVt6AyHsfNpWHMrWmh/XQblg0dxt+dx6V5OcrlMux2O0wmk7JNEAqFnIVCAfF4HLlcDsl0Amf1coxaVZhfm8Yd6zAllcHlcsHv9yMQCECn0/1TEQwGBzc3N1EqlcBUUDW8YePXOhTaQ7hqVmDg8UG43W74fD4kk0mwz+ga0Gg0SuL1evnv+Xwe2WwWmUyGI51OIxqPoHfqABKJBB9knqlkdY/Hg4mJCWd3vV4n1WqV0GFCCxxUCaHNJJvKEX2/g8RiMRKJRAg9MgddmdB7ETbLCPgx2EMQBEJ35A10LUJ/42BkVAEnZj21Wo1IJBI2o+xmj2azycGKIsScmN8eNxoNjv2MQBxqtVpELpdzzwCgnWdxZ575NoFUKuWNrCBCbGTGYmaddZlMxpV02Wy2L3QXFbsBI+v0IkS5DJ2rUqLVvwAAAP//AwDkwh7q3xB35AAAAABJRU5ErkJggg==);
     }
+
+    span.git {
+      display: inline-block;
+      width: 0.8em;
+      height: 0.8em;
+      margin-right: 2px;
+      vertical-align: baseline;
+      background-repeat: no-repeat;
+      background-position: 0% 100%;
+      background-size: 0.8em 0.8em;
+      background-image: url(git-icon.png);
+    }
+
   </style>
 </head>
 
@@ -98,7 +111,7 @@
 
 <div id="container">
 
-<h1>Git OS X Installer</h1>
+<h1><span class="git"></span>Git OS X Installer</h1>
 
 <div class="description">
 <p>Universal binary OS X Installer for Git that supports Mac OS X 10.4.8 and later including PPC/X86 and 32/64 bit.</p>
@@ -106,7 +119,7 @@
 
 <p>The Git translations ARE included.  The installer also contains an option (off by default) to make the installed
 version of Git choose its translation based on the System Preferences > International > Languages settings
-(instead of the <tt>LANG</tt> etc. environment variables) if desired.</p>
+(instead of the <tt>LANG</tt> etc. environment variables) if desired.  Support for <tt>perl-regexp</tt> is also included.</p>
 
 <p>All of <tt>git send-email</tt>, <tt>git imap-send</tt> and <tt>git instaweb</tt> are fully functional out-of-the-box
 after installation &#x2013; no additional software installation required.</p>
@@ -139,10 +152,10 @@ libraries installed for Git) are included in the installer.</p>
 <h2>Important Notes</h2>
 
 <p>In order to fully support SHA-256 certificates on Mac OS X 10.4 and Mac OS X 10.5 and to be more fully integrated
-with the native OS X experience, this installed version of Git uses libcurl for all http/https/imap/imaps/smtp/smtps activity
+with the native OS X experience, this version of Git uses libcurl for all http/https/imap/imaps/smtp/smtps activity
 where libcurl has been compiled to use the OS X native Secure Transport instead of OpenSSL.  (This means that Git will use
 the standard root certificates from the normal system keychain locations for https/smtps/imaps authentication unless one
-of the various certificate configuration options is used to tell it otherwise.)</p>
+of the various Git certificate configuration options is used to tell it otherwise.)</p>
 
 <p>In practice there should be no difference in use between Git built this way and Git built to use curl/OpenSSL with one
 minor exception.</p>
@@ -153,7 +166,7 @@ the following are used:</p>
 <li><tt>http.sslCAPath</tt> (but <tt>http.sslCAInfo</tt> works just fine)</li>
 <li><tt>GIT_SSL_CAPATH</tt> (but <tt>GIT_SSL_CAINFO</tt> works just fine)</li>
 <li><tt>sendemail.smtpsslcertpath</tt> set to a directory (but set to a file works just fine)</li>
-<li><tt>--smtp-ssl-cert-path</tt> set to a directory with <tt>git send-email</tt> (but set to a file works just fine)</li>
+<li><tt>smtp-ssl-cert-path</tt> set to a directory with <tt>git send-email</tt> (but set to a file works just fine)</li>
 </ul>
 
 <p>Additionally since the version of <tt>git imap-send</tt> that&#x2019;s included is a curl-only version, there is one tiny
@@ -197,7 +210,8 @@ GPLv3 but is an optional install (aggregated into the installer) and does not af
 
 <ul class="last">
 <li><a href="http://git-scm.com/">The Git home page</a></li>
-<li style="margin-bottom:0">The <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU General Public License v2.0</a></li>
+<li>The <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU General Public License v2.0</a></li>
+<li style="margin-bottom:0">The <a href="http://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3.0</a></li>
 </ul>
 
 </div>

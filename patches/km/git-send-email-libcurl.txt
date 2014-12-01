@@ -26,7 +26,7 @@ Perl provided the libcurl shared library is available.
 
 However, the interface to the helper is not very
 friendly as everything has to be marshalled and then
-unmarshalled for each call (even theugh the protocol
+unmarshalled for each call (even though the protocol
 is very simple).  So we use a git-send-email--libcurl.pl
 helper that exports a WWW::Curl::Libcurl interface that
 behaves very similarly to WWW::Curl::Easy which

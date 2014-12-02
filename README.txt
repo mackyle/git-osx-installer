@@ -17,9 +17,9 @@ options is used).
 Patches are also included to allow GnuPG to generate larger RSA keys (again,
 see README_PATCHES.txt for details).
 
-Pre-built installers that include Git, TopGit (optional), curl comand line
-utility (optional) and GnuPG (optional) can be found in the releases area at:
-<https://github.com/mackyle/git-osx-installer/releases>.
+Pre-built installers that include Git, TopGit (optional), the curl comand line
+utility (optional) and GnuPG (optional) can be found on the Git OS X Installer
+home page.
 
 See the Git OS X Installer home page at:
 <http://mackyle.github.io/git-osx-installer>

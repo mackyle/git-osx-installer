@@ -65,6 +65,13 @@ Git Patches
   Available from the list and picked up to hopefully be in a maint update.
   <http://article.gmane.org/gmane.comp.version-control.git/259773>.
 
+* Read reflog correctly with newlines at BUFSIZ-1 locations
+
+  - patches/jk/reflog-backwards-fix.txt
+
+  Available from the list and picked up to hopefully be in a maint update.
+  <http://article.gmane.org/gmane.comp.version-control.git/260849>.
+
 
 Curl Patches
 ------------

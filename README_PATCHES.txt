@@ -50,6 +50,13 @@ Git Patches
   My own patches to make `git-send-email.perl` use libcurl instead of
   OpenSSL.  Has not been posted elsewhere.
 
+* Support Tcl 8.4 for git-gui
+
+  - `patches/km/git-gui-tcl-8_4.txt`
+
+  My own patch to make git-gui actually work with Tcl 8.4 which is all
+  it's supposed to require.  Has not been posted elsewhere but is trivial.
+
 * Allow notes refs to be anywhere if given in full
 
   - `patches/sc/any-notes-ref.txt`

@@ -32,7 +32,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define OLD_ICONV 1
 #endif
 #ifdef __x86_64__
-#define XDL_FAST_HASH 1
+/* XDL_FAST_HASH has some extremely bad worst case performance issues */
+/* See http://thread.gmane.org/gmane.comp.version-control.git/261638 */
+/* #define XDL_FAST_HASH 1 */
 #endif
 #undef GETTEXT_H
 #define GETTEXT_H

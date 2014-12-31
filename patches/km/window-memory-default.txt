@@ -1,0 +1,97 @@
+From 47509e8719ca02f5d0cc2655b7c29d5465e166e4 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Wed, 31 Dec 2014 10:07:44 -0800
+Subject: [PATCH] pack-objects.c: change pack.windowmemory default
+
+The default value of pack.windowmemory = 0 allows unlimited memory
+use while repacking.  In the case of a gc --aggressive running with
+a 64-bit memory space, this can easily lead to memory thrashing and
+bring the system to its knees.
+
+Instead of using a default pack.windowmemory = 0 value, use a default
+value of system-memory-size / 2 / number-of-packing-threads but cap
+it to no more than 2G - 1 on a 32-bit address space.
+
+The memory thrashing behavior can still be restored by explicitly
+setting pack.windowmemory = 0 in a config file or using an explicit
+--window-memory=0 switch.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ builtin/pack-objects.c | 40 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
+index 3eb86e06..b1433b74 100644
+--- a/builtin/pack-objects.c
++++ b/builtin/pack-objects.c
+@@ -20,6 +20,10 @@
+ #include "streaming.h"
+ #include "thread-utils.h"
+ #include "pack-bitmap.h"
++#ifdef __APPLE__
++#  include <sys/types.h>
++#  include <sys/sysctl.h>
++#endif
+ 
+ static const char *pack_usage[] = {
+ 	N_("git pack-objects --stdout [options...] [< ref-list | < object-list]"),
+@@ -70,7 +74,7 @@ static unsigned long delta_cache_size = 0;
+ static unsigned long max_delta_cache_size = 256 * 1024 * 1024;
+ static unsigned long cache_max_small_delta_size = 1000;
+ 
+-static unsigned long window_memory_limit = 0;
++static unsigned long window_memory_limit = (unsigned long)-1L;
+ 
+ /*
+  * stats
+@@ -2518,6 +2522,34 @@ static void get_object_list(int ac, const char **av)
+ 		loosen_unused_packed_objects(&revs);
+ }
+ 
++static void set_default_window_memory_limit(void)
++{
++#ifdef __APPLE__
++	int mib[2];
++	size_t len;
++	uint64_t memsize;
++#endif
++
++	window_memory_limit = 0;
++#ifdef __APPLE__
++	mib[0] = CTL_HW;
++	mib[1] = HW_MEMSIZE;
++	len = sizeof(memsize);
++	if (!sysctl(mib, 2, &memsize, &len, NULL, 0)) {
++		memsize /= 2U;
++		if (!delta_search_threads)	/* --threads=0 means autodetect */
++			delta_search_threads = online_cpus();
++		if (delta_search_threads > 1)
++			memsize /= (unsigned)delta_search_threads;
++#ifndef __LP64__
++		if (memsize >= 2U * 1024U * 1024U * 1024U)
++			memsize = 2U * 1024U * 1024U * 1024U - 1U;
++#endif
++		window_memory_limit = (unsigned long)memsize;
++	}
++#endif
++}
++
+ static int option_parse_index_version(const struct option *opt,
+ 				      const char *arg, int unset)
+ {
+@@ -2688,9 +2720,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+ 	else if (pack_compression_level < 0 || pack_compression_level > Z_BEST_COMPRESSION)
+ 		die("bad pack compression level %d", pack_compression_level);
+ #ifdef NO_PTHREADS
+-	if (delta_search_threads != 1)
++	if (delta_search_threads != 1) {
++		delta_search_threads = 1;
+ 		warning("no threads support, ignoring --threads");
++	}
+ #endif
++	if (window_memory_limit == (unsigned long)-1L)
++		set_default_window_memory_limit();
+ 	if (!pack_to_stdout && !pack_size_limit)
+ 		pack_size_limit = pack_size_limit_cfg;
+ 	if (pack_to_stdout && pack_size_limit)

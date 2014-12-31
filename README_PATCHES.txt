@@ -64,6 +64,15 @@ Git Patches
   My own patch to make thread-utils.c online_cpus function return the
   correct value on older Mac OS X versions.  Has not been posted elsewhere.
 
+* Use a different pack.windowmemory default setting instead of 0
+
+  - patches/km/window-memory-default.txt
+
+  My own patch to change the pack.windowmemory default from 0 (meaning
+  unlimited) to a sane default that should avoid memory thrashing especially
+  when running gc --aggressive with a 64-bit address space.  Has not been
+  posted elsewhere.
+
 * Allow notes refs to be anywhere if given in full
 
   - `patches/sc/any-notes-ref.txt`

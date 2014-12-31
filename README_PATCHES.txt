@@ -73,6 +73,14 @@ Git Patches
   when running gc --aggressive with a 64-bit address space.  Has not been
   posted elsewhere.
 
+* Avoid PERL5LIB etc. variable conflicts
+
+  - patches/km/no-perl-vars.txt
+
+  My own patch to unset troublesome Perl environment variables before running
+  subcommands.  This prevents incompatible PERL5LIB libraries from being picked
+  up by Git's perl-based utilities.  Has not been posted elsewhere.
+
 * Allow notes refs to be anywhere if given in full
 
   - `patches/sc/any-notes-ref.txt`

@@ -1,0 +1,32 @@
+From 3b1e8dc08ed55211a017cfa4f195f4ffc0e8f753 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Wed, 31 Dec 2014 10:23:21 -0800
+Subject: [PATCH] run-command.c: unset troublesome PERL env vars
+
+Unset troublesome PERL environment variables before exec'ing
+a sub-process.  In particular, PERL5LIB, PERLLIB, PERL5OPT and
+PERLIO are unset.  This avoids, for example, having a PERL5LIB
+variable set to libraries that would override and be incompatible
+with the version of Perl the Git perl-based utilities were built
+to use.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ run-command.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/run-command.c b/run-command.c
+index 35a3ebf0..d968d8e5 100644
+--- a/run-command.c
++++ b/run-command.c
+@@ -410,6 +410,10 @@ fail_pipe:
+ 					unsetenv(*cmd->env);
+ 			}
+ 		}
++		unsetenv("PERL5LIB");
++		unsetenv("PERLLIB");
++		unsetenv("PERL5OPT");
++		unsetenv("PERLIO");
+ 		if (cmd->git_cmd)
+ 			execv_git_cmd(cmd->argv);
+ 		else if (cmd->use_shell)

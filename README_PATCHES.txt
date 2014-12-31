@@ -57,6 +57,13 @@ Git Patches
   My own patch to make git-gui actually work with Tcl 8.4 which is all
   it's supposed to require.  Has not been posted elsewhere but is trivial.
 
+* Support auto threads detection on older OS X
+
+  - patches/km/thread-utils-osx.txt
+
+  My own patch to make thread-utils.c online_cpus function return the
+  correct value on older Mac OS X versions.  Has not been posted elsewhere.
+
 * Allow notes refs to be anywhere if given in full
 
   - `patches/sc/any-notes-ref.txt`

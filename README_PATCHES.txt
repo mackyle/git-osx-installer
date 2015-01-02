@@ -59,14 +59,14 @@ Git Patches
 
 * Support auto threads detection on older OS X
 
-  - patches/km/thread-utils-osx.txt
+  - `patches/km/thread-utils-osx.txt`
 
   My own patch to make thread-utils.c online_cpus function return the
   correct value on older Mac OS X versions.  Has not been posted elsewhere.
 
 * Use a different pack.windowmemory default setting instead of 0
 
-  - patches/km/window-memory-default.txt
+  - `patches/km/window-memory-default.txt`
 
   My own patch to change the pack.windowmemory default from 0 (meaning
   unlimited) to a sane default that should avoid memory thrashing especially
@@ -75,7 +75,7 @@ Git Patches
 
 * Avoid PERL5LIB etc. variable conflicts
 
-  - patches/km/no-perl-vars.txt
+  - `patches/km/no-perl-vars.txt`
 
   My own patch to unset troublesome Perl environment variables before running
   subcommands.  This prevents incompatible PERL5LIB libraries from being picked
@@ -98,7 +98,7 @@ Git Patches
 
 * Read reflog correctly with newlines at BUFSIZ-1 locations
 
-  - patches/jk/reflog-backwards-fix.txt
+  - `patches/jk/reflog-backwards-fix.txt`
 
   Available from the list and picked up to hopefully be in a maint update.
   <http://article.gmane.org/gmane.comp.version-control.git/260849>.

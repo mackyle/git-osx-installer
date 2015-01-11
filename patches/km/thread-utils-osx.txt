@@ -1,6 +1,6 @@
-From fed159f8d0324f1e6ac930a284d139dfddbe1165 Mon Sep 17 00:00:00 2001
+From 6ddfc83d594b777bbeb0b2889c2e8fb4d97e40b0 Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Wed, 31 Dec 2014 08:55:20 -0800
+Date: Sat, 10 Jan 2015 21:22:05 -0800
 Subject: [PATCH] thread-utils.c: support auto threads detection on older OS X
 
 The sysconf _SC_NPROCESSORS_ONLN option to retrieve the number
@@ -16,29 +16,30 @@ use on older systems.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- thread-utils.c | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
+ thread-utils.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
 
 diff --git a/thread-utils.c b/thread-utils.c
-index 97396a75..ed956761 100644
+index 97396a75..130ea28a 100644
 --- a/thread-utils.c
 +++ b/thread-utils.c
-@@ -4,6 +4,10 @@
+@@ -4,6 +4,11 @@
  #if defined(hpux) || defined(__hpux) || defined(_hpux)
  #  include <sys/pstat.h>
  #endif
 +#if defined(__APPLE__)
 +#  include <sys/types.h>
 +#  include <sys/sysctl.h>
++#  include <AvailabilityMacros.h>
 +#endif
  
  /*
   * By doing this in two steps we can at least get
-@@ -35,6 +39,16 @@ int online_cpus(void)
+@@ -35,6 +40,16 @@ int online_cpus(void)
  
  	if (!pstat_getdynamic(&psd, sizeof(psd), (size_t)1, 0))
  		return (int)psd.psd_proc_cnt;
-+#elif defined(__APPLE__)
++#elif defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 1020
 +	int mib[2];
 +	size_t len;
 +	int availcpu;

@@ -27,13 +27,6 @@ Git Patches
   - `patches/git-sh-i18n-sh-git_gettext.diff`
   - `patches/git-gettext-failures.diff`
 
-* Add 2 missing translations to complete de.po
-
-  - `patches/ps/git-missing-de-translations.txt`
-
-  From the list at:
-  <http://article.gmane.org/gmane.comp.version-control.git/259788>.
-
 * Use libcurl for imap send
 
   - `patches/br/git-imap-send_use_libcurl.txt`
@@ -41,7 +34,10 @@ Git Patches
   This is a backport of v1 of the patch from the mailing list at:
   <http://article.gmane.org/gmane.comp.version-control.git/255954>.
   Additionally it has the strbuf leak fixes suggested on the list at:
-  <http://article.gmane.org/gmane.comp.version-control.git/259120>.
+  <http://article.gmane.org/gmane.comp.version-control.git/259120>
+  and the GIT_CURL_VERBOSE and CURLUSESSL_TRY fixes posted to the list at:
+  <http://thread.gmane.org/gmane.comp.version-control.git/262057>
+  <http://thread.gmane.org/gmane.comp.version-control.git/262058>.
 
 * Use libcurl for send email
 
@@ -55,7 +51,8 @@ Git Patches
   - `patches/km/git-gui-tcl-8_4.txt`
 
   My own patch to make git-gui actually work with Tcl 8.4 which is all
-  it's supposed to require.  Has not been posted elsewhere but is trivial.
+  it's supposed to require.  Posted to the list and picked up at:
+  <http://thread.gmane.org/gmane.comp.version-control.git/262055>.
 
 * Support auto threads detection on older OS X
 
@@ -89,19 +86,12 @@ Git Patches
   Both patches included in the thread and discussion at:
   <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
 
-* Do not create config files that are executable
+* Create update-server-info files with correct permissions
 
-  - `patches/mh/git-no-config-executable.txt`
-
-  Available from the list and picked up to hopefully be in a maint update.
-  <http://article.gmane.org/gmane.comp.version-control.git/259773>.
-
-* Read reflog correctly with newlines at BUFSIZ-1 locations
-
-  - `patches/jk/reflog-backwards-fix.txt`
+  - `patches/jk/update-server-info-fix.txt`
 
   Available from the list and picked up to hopefully be in a maint update.
-  <http://article.gmane.org/gmane.comp.version-control.git/260849>.
+  <http://thread.gmane.org/gmane.comp.version-control.git/262026>.
 
 
 Curl Patches

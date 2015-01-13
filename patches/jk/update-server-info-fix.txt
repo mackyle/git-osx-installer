@@ -1,0 +1,67 @@
+From ce0eed82707e4251aaf56b87e62da3c968503a71 Mon Sep 17 00:00:00 2001
+From: Jeff King <peff@peff.net>
+Date: Mon, 5 Jan 2015 22:50:49 -0500
+Subject: [PATCH] update-server-info: create info/* with mode 0666
+
+Prior to d38379e (make update-server-info more robust, 2014-09-13),
+we used a straight "fopen" to create the info/refs and
+objects/info/packs files, which creates the file using mode 0666
+(less the default umask).
+
+In d38379e, we switched to creating the file with mkstemp to get a
+unique filename. But mkstemp also uses the more restrictive 0600
+mode to create the file. This was an unintended side effect that we
+did not want, and causes problems when the repository is served by a
+different user than the one running update-server-info (it is not
+readable by a dumb http server running as `www`, for example).
+
+We can fix this by using git_mkstemp_mode and specifying 0666 to
+make sure that the umask is honored.
+
+Note that we could also say "just use core.sharedrepository", as we
+do call adjust_shared_perm on the result before renaming it into
+place.  But that should not be necessary as long as everybody
+involved is using permissive umask to allow HTTP server to read
+necessary files.
+
+Signed-off-by: Jeff King <peff@peff.net>
+Signed-off-by: Junio C Hamano <gitster@pobox.com>
+---
+ server-info.c          |  2 +-
+ t/t1301-shared-repo.sh | 10 ++++++++++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/server-info.c b/server-info.c
+index 31f4a749..34b02531 100644
+--- a/server-info.c
++++ b/server-info.c
+@@ -17,7 +17,7 @@ static int update_info_file(char *path, int (*generate)(FILE *))
+ 	FILE *fp = NULL;
+ 
+ 	safe_create_leading_directories(path);
+-	fd = mkstemp(tmp);
++	fd = git_mkstemp_mode(tmp, 0666);
+ 	if (fd < 0)
+ 		goto out;
+ 	fp = fdopen(fd, "w");
+diff --git a/t/t1301-shared-repo.sh b/t/t1301-shared-repo.sh
+index de42d21c..8a2794b5 100755
+--- a/t/t1301-shared-repo.sh
++++ b/t/t1301-shared-repo.sh
+@@ -111,6 +111,16 @@ do
+ 
+ done
+ 
++test_expect_success POSIXPERM 'info/refs respects umask in unshared repo' '
++	rm -f .git/info/refs &&
++	test_unconfig core.sharedrepository &&
++	umask 002 &&
++	git update-server-info &&
++	echo "-rw-rw-r--" >expect &&
++	modebits .git/info/refs >actual &&
++	test_cmp expect actual
++'
++
+ test_expect_success POSIXPERM 'git reflog expire honors core.sharedRepository' '
+ 	git config core.sharedRepository group &&
+ 	git reflog expire --all &&

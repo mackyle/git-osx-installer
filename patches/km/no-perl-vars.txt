@@ -1,4 +1,4 @@
-From 3b1e8dc08ed55211a017cfa4f195f4ffc0e8f753 Mon Sep 17 00:00:00 2001
+From ea691384a582de3525acdaec5a95e3ca57a0f9da Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Wed, 31 Dec 2014 10:23:21 -0800
 Subject: [PATCH] run-command.c: unset troublesome PERL env vars
@@ -16,10 +16,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 4 insertions(+)
 
 diff --git a/run-command.c b/run-command.c
-index 35a3ebf0..d968d8e5 100644
+index a4769996..fca0f3fd 100644
 --- a/run-command.c
 +++ b/run-command.c
-@@ -410,6 +410,10 @@ fail_pipe:
+@@ -420,6 +420,10 @@ fail_pipe:
  					unsetenv(*cmd->env);
  			}
  		}

@@ -1,0 +1,42 @@
+=============================
+Git OS X Installer Change Log
+=============================
+
+-----------------------------------------
+Git 2.1.4 Installer - released 2015-01-02
+-----------------------------------------
+
+* Git v2.1.4
+  - with backport of config file a+x fix
+  - with backport of reflog reading fix
+  - with backport of git-imap-send via libcurl
+  - with backport of Tcl 8.4 git-gui fix
+  - with git-send-email via libcurl
+  - with OS X native translation support
+  
+* cURL/libcURL 7.38
+  - with backport of SSLv3 is off by default from 7.39
+  - with backport of IPv6 scope name parsing fix from 7.40
+  - with much improved darwinssl SecureTransport backend
+
+* GnuPG 1.4.18
+  - with support for creating RSA keys > 4096 bits in length
+  - WITHOUT USB smartcard support
+
+* TopGit 0.12
+
+* lighttpd 1.4.35
+  - the bare minimum to support git instaweb
+
+* libexpat 2.1.0
+  - supports git-http-push
+
+* libpcre 8.35
+  - supports Git --perl-regexp / grep.patternType=perl
+
+* libidn 1.29
+  - used by libcURL
+
+* zlib 1.2.8
+  - the latest for optimum speed
+  - used by Git, libcURL and gpg

@@ -93,6 +93,13 @@ Git Patches
   Available from the list and picked up to hopefully be in a maint update.
   <http://thread.gmane.org/gmane.comp.version-control.git/262026>.
 
+* Make git-http-push work with cURL >= 7.40
+
+  - `patches/jk/curl-740-fix.txt`
+
+  Available from the list and picked up to hopefully be in a maint update.
+  <http://thread.gmane.org/gmane.comp.version-control.git/262323>.
+
 
 Curl Patches
 ------------

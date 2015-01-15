@@ -1,4 +1,4 @@
-From a8f01971b08b0ba2ad481c06e52f86da25ece184 Mon Sep 17 00:00:00 2001
+From 2d220835b95ad33ee7e6bdf2da52abc19a31da8e Mon Sep 17 00:00:00 2001
 From: Bernhard Reiter <ockham@raz.or.at>
 Date: Wed, 27 Aug 2014 00:40:17 +0200
 Subject: [PATCH] git-imap-send: use libcurl for implementation
@@ -29,11 +29,11 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  INSTALL                         |  15 ++--
  Makefile                        |  16 +++-
  git.spec.in                     |   5 +-
- imap-send.c                     | 167 +++++++++++++++++++++++++++++++++-------
- 5 files changed, 169 insertions(+), 37 deletions(-)
+ imap-send.c                     | 193 ++++++++++++++++++++++++++++++++--------
+ 5 files changed, 187 insertions(+), 45 deletions(-)
 
 diff --git a/Documentation/git-imap-send.txt b/Documentation/git-imap-send.txt
-index c7c0d214..6da5bc66 100644
+index c7c0d214..0259a09b 100644
 --- a/Documentation/git-imap-send.txt
 +++ b/Documentation/git-imap-send.txt
 @@ -75,7 +75,8 @@ imap.preformattedHTML::
@@ -47,7 +47,7 @@ index c7c0d214..6da5bc66 100644
  
  Examples
 diff --git a/INSTALL b/INSTALL
-index 6ec7a24e..e2770a03 100644
+index 6ec7a24e..b00aa800 100644
 --- a/INSTALL
 +++ b/INSTALL
 @@ -108,18 +108,21 @@ Issues of note:
@@ -79,7 +79,7 @@ index 6ec7a24e..e2770a03 100644
  	- "expat" library; git-http-push uses it for remote lock
  	  management over DAV.  Similar to "curl" above, this is optional
 diff --git a/Makefile b/Makefile
-index 7482a4db..7016cd58 100644
+index 7482a4db..cf13f4b3 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -995,6 +995,9 @@ ifdef HAVE_ALLOCA_H
@@ -121,7 +121,7 @@ index 7482a4db..7016cd58 100644
  git-http-fetch$X: http.o http-walker.o http-fetch.o GIT-LDFLAGS $(GITLIBS)
  	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) \
 diff --git a/git.spec.in b/git.spec.in
-index d61d537e..9535cc35 100644
+index d61d537e..ee81fe11 100644
 --- a/git.spec.in
 +++ b/git.spec.in
 @@ -8,7 +8,7 @@ License: 	GPL
@@ -144,7 +144,7 @@ index d61d537e..9535cc35 100644
  - Add gitweb manpages to 'gitweb' subpackage
  
 diff --git a/imap-send.c b/imap-send.c
-index 70bcc7a4..3312d9d2 100644
+index 70bcc7a4..0f1b5e39 100644
 --- a/imap-send.c
 +++ b/imap-send.c
 @@ -29,6 +29,9 @@
@@ -157,7 +157,84 @@ index 70bcc7a4..3312d9d2 100644
  
  static const char imap_send_usage[] = "git imap-send < <mbox>";
  
-@@ -1338,14 +1341,140 @@ static void git_imap_config(void)
+@@ -166,7 +169,7 @@ static const char *cap_list[] = {
+ static int get_cmd_result(struct imap_store *ctx, struct imap_cmd *tcmd);
+ 
+ 
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ static void ssl_socket_perror(const char *func)
+ {
+ 	fprintf(stderr, "%s: %s\n", func, ERR_error_string(ERR_get_error(), NULL));
+@@ -175,7 +178,7 @@ static void ssl_socket_perror(const char *func)
+ 
+ static void socket_perror(const char *func, struct imap_socket *sock, int ret)
+ {
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl) {
+ 		int sslerr = SSL_get_error(sock->ssl, ret);
+ 		switch (sslerr) {
+@@ -198,7 +201,7 @@ static void socket_perror(const char *func, struct imap_socket *sock, int ret)
+ 	}
+ }
+ 
+-#ifdef NO_OPENSSL
++#if defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP)
+ static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int verify)
+ {
+ 	fprintf(stderr, "SSL requested but SSL support not compiled in\n");
+@@ -334,7 +337,7 @@ static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int ve
+ static int socket_read(struct imap_socket *sock, char *buf, int len)
+ {
+ 	ssize_t n;
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl)
+ 		n = SSL_read(sock->ssl, buf, len);
+ 	else
+@@ -352,7 +355,7 @@ static int socket_read(struct imap_socket *sock, char *buf, int len)
+ static int socket_write(struct imap_socket *sock, const char *buf, int len)
+ {
+ 	int n;
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl)
+ 		n = SSL_write(sock->ssl, buf, len);
+ 	else
+@@ -369,7 +372,7 @@ static int socket_write(struct imap_socket *sock, const char *buf, int len)
+ 
+ static void socket_shutdown(struct imap_socket *sock)
+ {
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 	if (sock->ssl) {
+ 		SSL_shutdown(sock->ssl);
+ 		SSL_free(sock->ssl);
+@@ -828,7 +831,12 @@ static void imap_close_store(struct imap_store *ctx)
+ 	free(ctx);
+ }
+ 
+-#ifndef NO_OPENSSL
++/* If NO_OPENSSL is defined then no tunnel CRAM-MD5 support.  Period.
++ * If NO_OPENSSL_IMAP is defined then no tunnel CRAM-MD5 support
++ * UNLESS BOTH APPLE_COMMON_CRYPTO AND EVP_DecodeBlock are defined
++ */
++#if !defined(NO_OPENSSL) && \
++    (!defined(NO_OPENSSL_IMAP) || (defined(APPLE_COMMON_CRYPTO) && defined(EVP_DecodeBlock)))
+ 
+ /*
+  * hexchar() and cram() functions are based on the code from the isync
+@@ -1048,7 +1056,7 @@ static struct imap_store *imap_open_store(struct imap_server_conf *srvc, char *f
+ 		goto bail;
+ 
+ 	if (!preauth) {
+-#ifndef NO_OPENSSL
++#if !(defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP))
+ 		if (!srvc->use_ssl && CAP(STARTTLS)) {
+ 			if (imap_exec(ctx, NULL, "STARTTLS") != RESP_OK)
+ 				goto bail;
+@@ -1338,14 +1346,140 @@ static void git_imap_config(void)
  	git_config_get_string("imap.authmethod", &server.auth_method);
  }
  
@@ -302,7 +379,19 @@ index 70bcc7a4..3312d9d2 100644
  	int nongit_ok;
  
  	git_extract_argv0_path(argv[0]);
-@@ -1391,29 +1520,13 @@ int main(int argc, char **argv)
+@@ -1358,6 +1492,11 @@ int main(int argc, char **argv)
+ 	setup_git_directory_gently(&nongit_ok);
+ 	git_imap_config();
+ 
++#if defined(NO_OPENSSL) || defined(NO_OPENSSL_IMAP)
++	if (server.tunnel)
++		server.use_ssl = 0;
++#endif
++
+ 	if (!server.port)
+ 		server.port = server.use_ssl ? 993 : 143;
+ 
+@@ -1391,29 +1530,13 @@ int main(int argc, char **argv)
  	}
  
  	/* write it to the imap server */

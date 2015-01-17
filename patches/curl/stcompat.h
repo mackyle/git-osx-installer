@@ -1,7 +1,7 @@
 /*
 
 stcompat.h -- SecureTransport compatibility header
-Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
+Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
 
 If this software is included as part of a build of
 the cURL library, it may be used under the same license
@@ -24,13 +24,23 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #include <stdarg.h>
 
 #undef noErr
-#define noErr 0
+#define noErr 0 /* from MacTypes.h */
+#undef errSecSuccess
+#define errSecSuccess 0 /* from SecBase.h */
 #undef unimpErr
 #define unimpErr -4 /* from MacErrors.h */
+#undef errSecUnimplemented
+#define errSecUnimplemented -4 /* from SecBase.h */
 #undef ioErr
 #define ioErr -36 /* from MacErrors.h */
 #undef paramErr
 #define paramErr -50 /* from MacErrors.h */
+#undef errSecParam
+#define errSecParam -50 /* from SecBase.h */
+#undef memFullErr
+#define memFullErr -108 /* from MacErrors.h */
+#undef errSecAllocate
+#define errSecAllocate -108 /* from SecBase.h */
 
 #ifndef TARGET_OS_EMBEDDED
 #define TARGET_OS_EMBEDDED 0
@@ -54,6 +64,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #define errSecTrustSettingDeny          -67654
 #undef errSecNotTrusted
 #define errSecNotTrusted                -67843
+
+/* Custom error defines -- see Technical Q&A QA1499 */
+#undef errSecPinnedKeyMismatch
+#define errSecPinnedKeyMismatch 200001 /* user-defined error code */
 
 /* Some missing session option defines */
 #undef kSSLSessionOptionBreakOnServerAuth
@@ -456,8 +470,12 @@ typedef struct {
 } errinfo_t;
 
 CFDataRef CFDataCreateWithContentsOfFile(CFAllocatorRef a, const char *f);
+/* Never returns a 0-element array, returns NULL instead */
 CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e);
 Boolean CheckCertOkay(SecCertificateRef cert);
+/* Never returns a 0-element array, returns NULL instead */
+CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e);
+Boolean CheckPubKeyOkay(CFDataRef pubkey);
 /* caller must free() result unless NULL.  If s is NULL will return NULL.
  * if s is not NULL and release is true will CFRelease(s) before return */
 char *CFStringCreateUTF8String(CFStringRef s, Boolean release);
@@ -501,7 +519,7 @@ OSStatus cSecTrustGetResult(
   CFArrayRef *certChain,
   CSSM_TP_APPLE_EVIDENCE_INFO **statusChain);
 /* If customRootsOrNull is not null, the root of the chain MUST be in
-   customRootsOrNull.  If explicitCertsOnly is 0x01 then all certs in the
+   customRootsOrNull.  If certFlags & 0x01 then all certs in the
    chain EXCEPT the root must come from the peer -- no magically appearing
    intermediate certs from who-knows-where are allowed.  The trust will
    automatically be evaluated if it has not already been.  If the chain is
@@ -510,13 +528,29 @@ OSStatus cSecTrustGetResult(
    kSecTrustResultDeny) or errSecNotTrusted (other codes) will be returned.
    Flags are CSSM_APPLE_TP_ACTION_FLAGS, pass 0 for normal behavior, only
    bits 0x1, 0x2 and 0x8 are checked in any case.  If peername is not NULL
-   and not the empty string then it must match the leaf certificate. */
+   and not the empty string then it must match the leaf certificate.
+   If pinnedKeySetOrNull is not NULL then the peer certificate's public key
+   MUST be found in pinnedKeySetOrNull or errSecPinnedKeyMismatch will be
+   returned.  This check is done last and only if no other error occurs.
+   Setting certFlags & 0x02 causes ALL other checks to be skipped making
+   it a pinned-key-check-only call.  If certFlags & 0x02 is set then
+   pinnedKeySetOrNull MUST NOT be NULL.  If pinnedKeySetOrNull is not NULL
+   it MUST have at least one element in it.  If certFlags & 0x04 is set
+   then certificate chain validation errors are ignored (but host name
+   matching will still be done if certFlags & 0x02 is NOT set).  If
+   certFlags & 0x04 is set AND certFlags & 0x02 is NOT set then peername
+   MUST NOT be NULL or the empty string.  */
 OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
-             unsigned explicitCertsOnly, unsigned flags, const char *peername);
+                          unsigned certFlags, unsigned flags,
+                          const char *peername, CFArrayRef pinnedKeySetOrNull);
 /* returns true iff both certs are not NULL AND are DER byte-wise identical */
 Boolean SecCertsEqual(SecCertificateRef c1, SecCertificateRef c2);
 /* returns true iff at least one cert in a is SecCertsEqual to c */
 Boolean SecCertInArray(SecCertificateRef c, CFArrayRef a);
+/* returns true iff both items are not NULL AND are bite-wise identical */
+Boolean BlobsEqual(CFDataRef b1, CFDataRef b2);
+/* returns true iff at least one item in a is BlobsEqual to b */
+Boolean BlobInArray(CFDataRef b, CFArrayRef a);
 
 #elif TARGET_OS_EMBEDDED || TARGET_OS_IPHONE
 

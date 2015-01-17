@@ -2,6 +2,26 @@
 Git OS X Installer Change Log
 =============================
 
+
+-----------------------------------------
+Git 2.2.2 Installer - released 2015-01-??
+-----------------------------------------
+
+* Git v2.2.2
+  - updated from version 2.1.4
+  - dropped config file a+x fix (included in v2.2.2)
+  - dropped reflog reading fix (included in v2.2.2)
+  - added update-server-info correct file permissions fix (backport)
+  - added git-http-push for cURL >= 7.40 fix (backport)
+
+* cURL/libcURL 7.40
+  - updated from version 7.38
+  - dropped IPv6 scope name parsing fix as it's included in 7.40
+  - further improved darwinssl backend to support pub key certificate pinning
+    ~ if PEM format public keys are used more than one may be included in the
+      pinning file by concatenation to create a pin set instead of just the one
+
+
 -----------------------------------------
 Git 2.1.4 Installer - released 2015-01-02
 -----------------------------------------
@@ -18,6 +38,13 @@ Git 2.1.4 Installer - released 2015-01-02
   - with backport of SSLv3 is off by default from 7.39
   - with backport of IPv6 scope name parsing fix from 7.40
   - with much improved darwinssl SecureTransport backend
+    ~ CURLOPT_CAINFO/--cacert, CURLOPT_SSLCERT/--cert and CURLOPT_SSLKEY/--key
+      arguments are handled just like the OpenSSL backend and expect the same
+      format certificates/private keys -- no more .p12!
+    ~ library is OS X version agnostic and automatically adapts at runtime so
+      when run on OS X 10.8 or later it automatically supports TLS 1.2.
+    ~ certificate diagnostic output is much improved showing the entire
+      certificate chain when the verbose option is set.
 
 * GnuPG 1.4.18
   - with support for creating RSA keys > 4096 bits in length

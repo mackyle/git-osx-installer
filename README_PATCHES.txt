@@ -127,10 +127,6 @@ support Mac OS X 10.4 at all as released.
   - `patches/curl/stcompat.h`
   - `patches/curl/urldata_add_khra_patch.txt`
 
-* Curl IPv6 scope address parsing fix
-
-  - `patches/curl/url_scopename_patch.txt`
-
 * Curl mk-ca-bundle script improvements
 
   - `patches/curl/mk-ca-bundle_improvements.txt`

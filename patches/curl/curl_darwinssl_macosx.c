@@ -6,8 +6,10 @@
  *                             \___|\___/|_| \_\_____|
  *
  * Copyright (C) 2012 - 2014, Nick Zitzmann, <nickzman@gmail.com>.
- * Copyright (C) 2012 - 2014, Daniel Stenberg, <daniel@haxx.se>, et al.
- * MacOSX modifications copyright (C) 2014 Kyle J. McKay.  All rights reserved.
+ * Copyright (C) 2012 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
+ *
+ * MacOSX modifications copyright (C) 2014,2015 Kyle J. McKay.
+ * All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -25,6 +27,42 @@
 /*
  * Source file for all iOS and Mac OS X SecureTransport-specific code for the
  * TLS/SSL layer. No code but vtls.c should ever call or use these functions.
+ */
+
+/*
+ * CURLOPT_SSL_VERIFYPEER and CURLOPT_SSL_VERIFYHOST have various interactions
+ * with SSLSetPeerDomainName and TLS SNI.  TLS SNI is only available under
+ * SecureTransport when running on OS X 10.5.6 or later and
+ * SSLSetPeerDomainName has been called.  Note that RFC 6066 section 3 forbids
+ * sending a literal IPv4 or IPv6 address in SNI, so SSLSetPeerDomainName is
+ * never called in that case, otherwise it is ALWAYS called if a non-empty host
+ * name is given -- otherwise we could get back the wrong server certificate!
+ * And calling SSLSetPeerDomainName causes host name verification to occur.
+ * (The host name should always be non-empty otherwise we wouldn't have
+ * anything to connect to.)
+ *
+ * So in practice this means it's not possible to verify the peer without also
+ * verifying the host name, because if you ignore the errSSLHostNameMismatch
+ * error, you don't know if there would have been a subsequent error or not so
+ * you can't just turn that into no error.
+ *
+ * It is possible, however, to do the reverse and ignore any SecureTransport
+ * certificate validation errors and as long as we get at least one certificate
+ * from the peer we can verify the host name matches even if something's wrong
+ * with the certificate chain validation.
+ *
+ * VERIFYPEER  VERIFYHOST  Result
+ * ----------  ----------  ----------------------------------------------------
+ * disabled    disabled    SNI still sent for DNS host names
+ * disabled    enabled     Peer's first cert must match the host DNS or IP name
+ * enabled     disabled    DNS host name matching still occurs, IP does not
+ * enabled     enabled     Peer's first cert must match the host DNS or IP name
+ *
+ * The certificate chain is ALWAYS checked if VERIFYPEER is enabled.
+ *
+ * Note that CURLOPT_PINNEDPUBLICKEY matching ALWAYS takes place if the option
+ * is set.  It's done as the final step and requires the peer to send at least
+ * one certificate.
  */
 
 #include "curl_setup.h"
@@ -48,8 +86,8 @@
    versions, and we will try to support as many of them as we can (back to
    Tiger) by using a compatibility layer.
 
-   IMPORTANT: If TLS 1.1 and 1.2 support are important for you on OS X, then
-   you must run the built project on 10.8 or later. */
+   IMPORTANT: TLS 1.1 and 1.2 support are detected at runtime, and
+   will automatically activate if run on 10.8 or later. */
 
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE))
 
@@ -504,6 +542,10 @@ static void cleanup_mem(struct ssl_connect_data *connssl)
     CFRelease((CFTypeRef)connssl->ra);
     connssl->ra = NULL;
   }
+  if(connssl->pa) {
+    CFRelease((CFTypeRef)connssl->pa);
+    connssl->pa = NULL;
+  }
 }
 
 static CURLcode darwinssl_connect_step1(struct connectdata *conn,
@@ -731,7 +773,8 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
      * with an array containing at least 1 element */
     if(data->set.str[STRING_SSL_CAPATH]) {
       failf(data, "SSL: CURLOPT_CAPATH is not supported by Secure Transport");
-      return CURLE_SSL_CACERT;
+      /* same error cURL would give without -Dhave_curlssl_ca_path */
+      return CURLE_NOT_BUILT_IN;
     }
     if(data->set.str[STRING_SSL_CAFILE]) {
       errinfo_t e;
@@ -773,14 +816,47 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     }
   }
 
+#if LIBCURL_VERSION_NUM >= 0x072700
+  /* Collect public key pinning key(s). */
+  if(data->set.str[STRING_SSL_PINNEDPUBLICKEY]) {
+    errinfo_t e;
+    CFArrayRef pubkeys;
+    CFDataRef pindata = CFDataCreateWithContentsOfFile(kCFAllocatorDefault,
+                                    data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+
+    if(!pindata) {
+      failf(data, "SSL: can't read pinned public key file %s",
+            data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+      return CURLE_READ_ERROR;
+    }
+    e.f = (errinfo_func_t)failf;
+    e.u = data;
+    if(connssl->pa) {
+      CFRelease((CFTypeRef)connssl->pa);
+      connssl->pa = NULL;
+    }
+    pubkeys = CreatePubKeyArrayWithData(pindata, &e);
+    CFRelease(pindata);
+    if(!pubkeys) {
+      failf(data, "SSL: can't load pinned public key file %s",
+            data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+      return CURLE_SSL_CACERT_BADFILE; /* no really good choice here */
+    }
+    connssl->pa = (void *)pubkeys;
+  }
+#endif
+
   /* Configure hostname for SNI.
    * SNI requires SSLSetPeerDomainName().
    * RFC 6066 section 3 forbids IPv4 and IPv6 literal addresses in SNI.
    */
+  connssl->vh = data->set.ssl.verifyhost ? true : false;
   if(conn->host.name && conn->host.name[0] && !strchr(conn->host.name, ':')) {
     size_t hnl = strlen(conn->host.name);
 
     if(!IsIPv4Name(conn->host.name, hnl)) {
+      if(data->set.ssl.verifypeer)
+        connssl->vh = true;
       err = SSLSetPeerDomainName(connssl->ssl_ctx, conn->host.name,
                                  strlen(conn->host.name));
 
@@ -897,7 +973,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 
   /* Check if there's a cached ID we can/should use here! */
   if(!Curl_ssl_getsessionid(conn, (void **)&ssl_sessionid,
-    &ssl_sessionid_len)) {
+                            &ssl_sessionid_len)) {
     /* we got a session id, use it! */
     err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
     if(err != noErr) {
@@ -910,20 +986,31 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   /* If there isn't one, then let's make one up! This has to be done prior
      to starting the handshake. */
   else {
-    CURLcode retcode;
+    CURLcode result;
+#if LIBCURL_VERSION_NUM >= 0x072700
+#define PKSTR data->set.str[STRING_SSL_PINNEDPUBLICKEY]
+#else
+#define PKSTR NULL
+#endif
+#define NSTR(s) ((s)?(s):"")
+    ssl_sessionid =
+      aprintf("%s:%s:%d:%d:%s:%hu", NSTR(data->set.str[STRING_SSL_CAFILE]),
+              NSTR(PKSTR), data->set.ssl.verifypeer, data->set.ssl.verifyhost,
+              NSTR(conn->host.name), conn->remote_port);
+    ssl_sessionid_len = strlen(ssl_sessionid);
+#undef NSTR
+#undef PKSTR
 
-    ssl_sessionid = malloc(256*sizeof(char));
-    ssl_sessionid_len = snprintf(ssl_sessionid, 256, "curl:%s:%hu",
-      conn->host.name, conn->remote_port);
     err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
     if(err != noErr) {
       failf(data, "SSL: SSLSetPeerID() failed: OSStatus %d", err);
       return CURLE_SSL_CONNECT_ERROR;
     }
-    retcode = Curl_ssl_addsessionid(conn, ssl_sessionid, ssl_sessionid_len);
-    if(retcode!= CURLE_OK) {
+
+    result = Curl_ssl_addsessionid(conn, ssl_sessionid, ssl_sessionid_len);
+    if(result) {
       failf(data, "failed to store ssl session");
-      return retcode;
+      return result;
     }
   }
 
@@ -956,6 +1043,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
   OSStatus err;
   SSLCipherSuite cipher;
   SSLProtocol protocol = 0;
+  unsigned vflags = 0;
 
   DEBUGASSERT(ssl_connect_2 == connssl->connecting_state
               || ssl_connect_2_reading == connssl->connecting_state
@@ -964,15 +1052,23 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
   /* Here goes nothing: */
   err = SSLHandshake(connssl->ssl_ctx);
 
+  /* set up the verify flags now */
+  if(data->set.ssl.verifyhost && !data->set.ssl.verifypeer && conn->host.name
+     && conn->host.name[0])
+    vflags |= 0x04;
+  if(connssl->pa && !data->set.ssl.verifypeer && !vflags)
+    vflags |= 0x02;
+
   if(err == errSSLServerAuthCompleted) {
-    if(data->set.ssl.verifypeer) {
+    if(data->set.ssl.verifypeer || vflags) {
       SecTrustRef trust;
       err = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
       if(err) {
         failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
         return CURLE_SSL_CONNECT_ERROR;
       }
-      err = VerifyTrustChain(trust, connssl->ra, 0, 0, conn->host.name);
+      err = VerifyTrustChain(trust, connssl->ra, vflags, 0,
+        connssl->vh ? conn->host.name : NULL, (CFArrayRef)connssl->pa);
       CFRelease(trust);
     }
     else {
@@ -1002,12 +1098,13 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     CFArrayRef certChain = NULL;
 
     err2 = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
-    if(!err && data->set.ssl.verifypeer) {
+    if(!err && (data->set.ssl.verifypeer || vflags)) {
       if(err2) {
         failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
         return CURLE_SSL_CONNECT_ERROR;
       }
-      err = VerifyTrustChain(trust, connssl->ra, 0, 0, conn->host.name);
+      err = VerifyTrustChain(trust, connssl->ra, vflags, 0,
+        connssl->vh ? conn->host.name : NULL, (CFArrayRef)connssl->pa);
     }
 
     /* Try to show the peer certificates unless we've connected successfully
@@ -1026,8 +1123,9 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     if(!err2)
       err2 = cSecTrustGetResult(trust, &result, &certChain, &evidence);
     if(!err2)
-      show_certs_array(data, (err ? "Candidate/partial certificate chain" :
-                              "Certificate chain"), certChain, 0x05, evidence);
+      show_certs_array(data, (err || vflags) ?
+        "Candidate/partial certificate chain" :
+        "Certificate chain", certChain, 0x05, evidence);
     if(certChain)
       CFRelease(certChain);
     if(trust)
@@ -1094,6 +1192,15 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
         failf(data, "SSL certificate peer verification failed, the server's "
               "certificate did not match \"%s\"", conn->host.dispname);
         return CURLE_PEER_FAILED_VERIFICATION;
+
+#if LIBCURL_VERSION_NUM >= 0x072700
+      /* This error is raised if public key pinning is enabled and the
+         server certificate's public key does not match: */
+      case errSecPinnedKeyMismatch:
+        failf(data, "SSL certificate public key does not match pinned public "
+              "key(s)");
+        return CURLE_SSL_PINNEDPUBKEYNOTMATCH;
+#endif
 
       /* Generic handshake errors: */
       case errSSLConnectionRefused:
@@ -1184,7 +1291,7 @@ darwinssl_connect_common(struct connectdata *conn,
                          bool nonblocking,
                          bool *done)
 {
-  CURLcode retcode;
+  CURLcode result;
   struct SessionHandle *data = conn->data;
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
   curl_socket_t sockfd = conn->sock[sockindex];
@@ -1206,10 +1313,11 @@ darwinssl_connect_common(struct connectdata *conn,
       failf(data, "SSL connection timeout");
       return CURLE_OPERATION_TIMEDOUT;
     }
-    retcode = darwinssl_connect_step1(conn, sockindex);
-    if(retcode) {
+
+    result = darwinssl_connect_step1(conn, sockindex);
+    if(result) {
       cleanup_mem(connssl);
-      return retcode;
+      return result;
     }
   }
 
@@ -1227,8 +1335,8 @@ darwinssl_connect_common(struct connectdata *conn,
     }
 
     /* if ssl is expecting something, check if it's available. */
-    if(connssl->connecting_state == ssl_connect_2_reading
-       || connssl->connecting_state == ssl_connect_2_writing) {
+    if(connssl->connecting_state == ssl_connect_2_reading ||
+       connssl->connecting_state == ssl_connect_2_writing) {
 
       curl_socket_t writefd = ssl_connect_2_writing ==
       connssl->connecting_state?sockfd:CURL_SOCKET_BAD;
@@ -1261,27 +1369,27 @@ darwinssl_connect_common(struct connectdata *conn,
      * before step2 has completed while ensuring that a client using select()
      * or epoll() will always have a valid fdset to wait on.
      */
-    retcode = darwinssl_connect_step2(conn, sockindex);
-    if(retcode)
+    result = darwinssl_connect_step2(conn, sockindex);
+    if(result)
       cleanup_mem(connssl);
-    if(retcode || (nonblocking &&
-                   (ssl_connect_2 == connssl->connecting_state ||
-                    ssl_connect_2_reading == connssl->connecting_state ||
-                    ssl_connect_2_writing == connssl->connecting_state)))
-      return retcode;
+    if(result || (nonblocking &&
+                  (ssl_connect_2 == connssl->connecting_state ||
+                   ssl_connect_2_reading == connssl->connecting_state ||
+                   ssl_connect_2_writing == connssl->connecting_state)))
+      return result;
 
   } /* repeat step2 until all transactions are done. */
 
 
-  if(ssl_connect_3==connssl->connecting_state) {
-    retcode = darwinssl_connect_step3(conn, sockindex);
-    if(retcode) {
+  if(ssl_connect_3 == connssl->connecting_state) {
+    result = darwinssl_connect_step3(conn, sockindex);
+    if(result) {
       cleanup_mem(connssl);
-      return retcode;
+      return result;
     }
   }
 
-  if(ssl_connect_done==connssl->connecting_state) {
+  if(ssl_connect_done == connssl->connecting_state) {
     connssl->state = ssl_connection_complete;
     conn->recv[sockindex] = darwinssl_recv;
     conn->send[sockindex] = darwinssl_send;
@@ -1308,13 +1416,13 @@ CURLcode
 Curl_darwinssl_connect(struct connectdata *conn,
                        int sockindex)
 {
-  CURLcode retcode;
+  CURLcode result;
   bool done = FALSE;
 
-  retcode = darwinssl_connect_common(conn, sockindex, FALSE, &done);
+  result = darwinssl_connect_common(conn, sockindex, FALSE, &done);
 
-  if(retcode)
-    return retcode;
+  if(result)
+    return result;
 
   DEBUGASSERT(done);
 

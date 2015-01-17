@@ -1,7 +1,7 @@
 /*
 
 stcompat.c -- SecureTransport compatibility implementation
-Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
+Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
 
 If this software is included as part of a build of
 the cURL library, it may be used under the same license
@@ -92,6 +92,23 @@ char *CFStringCreateUTF8String(CFStringRef s, Boolean release)
   }
   if (release) CFRelease(s);
   return c;
+}
+
+static CFStringRef MakeVisibleString(CFStringRef in)
+{
+  CFStringRef nullbyte;
+  CFMutableStringRef m;
+  if (!in) return in;
+  nullbyte = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, (UInt8 *)"\0",
+    1, kCFStringEncodingASCII, false, kCFAllocatorNull);
+  if (!nullbyte) return in;
+  m = CFStringCreateMutableCopy(kCFAllocatorDefault, 0, in);
+  if (!m) return in;
+  CFRelease(in);
+  CFStringFindAndReplace(m, nullbyte, CFSTR("\\000"),
+    CFRangeMake(0, CFStringGetLength(m)), 0);
+  CFRelease(nullbyte);
+  return m;
 }
 
 CFDataRef CFDataCreateWithContentsOfFile(CFAllocatorRef a, const char *f)
@@ -366,8 +383,7 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
     if (!readcnt && p == certs) {
       /* assume it's a DER cert */
       SecCertificateRef cert;
-      CFDataRef der = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault,
-                                   (UInt8 *)certs, certslen, kCFAllocatorNull);
+      CFDataRef der = CFDataCreate(kCFAllocatorDefault, (UInt8 *)certs, certslen);
       if (!der) {
         CFRelease(a);
         return NULL;
@@ -410,6 +426,75 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
       }
       CFArrayAppendValue(a, cert);
       CFRelease(cert);
+      ++cnt;
+    } else if (!readcnt) break;
+    plen -= (pem.start + pem.len) - p;
+    p = pem.start + pem.len;
+  }
+  if (!CFArrayGetCount(a)) {
+    CFRelease(a);
+    a = NULL;
+  }
+  return a;
+}
+
+CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
+{
+  const char *keys, *p;
+  size_t keyslen, plen, cnt = 1;
+  CFMutableArrayRef a;
+  if (!d) return NULL;
+  keys = (char *)CFDataGetBytePtr(d);
+  keyslen = (size_t)CFDataGetLength(d);
+  a = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+  if (!a) return NULL;
+  p = keys;
+  plen = keyslen;
+  while (plen) {
+    peminfo_t pem;
+    int readcnt = nextpem(p, plen, &pem);
+    if (!readcnt && p == keys) {
+      /* assume it's a DER public key */
+      CFDataRef der = CFDataCreate(kCFAllocatorDefault, (UInt8 *)keys, keyslen);
+      if (!der) {
+        CFRelease(a);
+        return NULL;
+      }
+      if (!CheckPubKeyOkay(der)) {
+        CFRelease(der);
+        if (e)
+          e->f(e->u, "Invalid public key bad DER data");
+        CFRelease(a);
+        return NULL;
+      }
+      CFArrayAppendValue(a, der);
+      CFRelease(der);
+      return a;
+    } else if (readcnt == -1) {
+      if (e)
+        e->f(e->u, "Invalid public key #%u (offset %u) in bundle",
+                   (unsigned)cnt, (unsigned)(p-keys));
+      CFRelease(a);
+      return NULL;
+    } else if (readcnt && pem.type == pemtype_publickey) {
+      CFDataRef der = CFDataCreateFromBase64(kCFAllocatorDefault, pem.body, pem.bodylen);
+      if (!der) {
+        if (e)
+          e->f(e->u, "Invalid public key #%u (offset %u) bad base 64 in bundle",
+                     (unsigned)cnt, (unsigned)(pem.start-keys));
+        CFRelease(a);
+        return NULL;
+      }
+      if (!CheckPubKeyOkay(der)) {
+        CFRelease(der);
+        if (e)
+          e->f(e->u, "Invalid public key #%u (offset %u) bad public key data in bundle",
+                     (unsigned)cnt, (unsigned)(pem.start-keys));
+        CFRelease(a);
+        return NULL;
+      }
+      CFArrayAppendValue(a, der);
+      CFRelease(der);
       ++cnt;
     } else if (!readcnt) break;
     plen -= (pem.start + pem.len) - p;
@@ -980,10 +1065,26 @@ CFDataRef cSecCertificateCopyData(SecCertificateRef c)
   return NULL;
 }
 
+Boolean BlobsEqual(CFDataRef d1, CFDataRef d2)
+{
+  size_t l1, l2;
+  Boolean ans = false;
+
+  if (!d1 || !d2)
+    return false;
+  l1 = CFDataGetLength(d1);
+  l2 = CFDataGetLength(d2);
+  if (l1 == l2) {
+    const void *p1 = (void *)CFDataGetBytePtr(d1);
+    const void *p2 = (void *)CFDataGetBytePtr(d2);
+    ans = memcmp(p1, p2, l1) == 0;
+  }
+  return ans;
+}
+
 Boolean SecCertsEqual(SecCertificateRef c1, SecCertificateRef c2)
 {
   CFDataRef d1, d2;
-  size_t l1, l2;
   Boolean ans = false;
   d1 = cSecCertificateCopyData(c1);
   if (!d1) return false;
@@ -992,16 +1093,22 @@ Boolean SecCertsEqual(SecCertificateRef c1, SecCertificateRef c2)
     CFRelease(d1);
     return false;
   }
-  l1 = CFDataGetLength(d1);
-  l2 = CFDataGetLength(d2);
-  if (l1 == l2) {
-    const void *p1 = (void *)CFDataGetBytePtr(d1);
-    const void *p2 = (void *)CFDataGetBytePtr(d2);
-    ans = memcmp(p1, p2, l1) == 0;
-  }
+  ans = BlobsEqual(d1, d2);
   CFRelease(d1);
   CFRelease(d2);
   return ans;
+}
+
+Boolean BlobInArray(CFDataRef d, CFArrayRef a)
+{
+  size_t i, cnt;
+  if (!d || !a || !CFArrayGetCount(a)) return false;
+  cnt = CFArrayGetCount(a);
+  for (i = 0; i < cnt; ++i) {
+    if (BlobsEqual(d, (CFDataRef)CFArrayGetValueAtIndex(a, i)))
+      return true;
+  }
+  return false;
 }
 
 Boolean SecCertInArray(SecCertificateRef c, CFArrayRef a)
@@ -1168,17 +1275,22 @@ CF_INLINE bool matchicase(const char *p1, const char *p2, size_t l)
   return true;
 }
 
-static bool peername_matches_id(const char *peername, const char *idname)
+static bool peername_matches_id(const char *peername, CFDataRef idrawname)
 {
   size_t pl, il, idx;
-  if (!peername || !idname) return false;
+  const char *idname;
+  if (!peername || !idrawname) return false;
+  idname = (const char *)CFDataGetBytePtr(idrawname);
+  if (!idname) return false;
   pl = strlen(peername);
-  il = strlen(idname);
+  il = (size_t)CFDataGetLength(idrawname);
   if (!is_dns_name(peername, pl, false) || !is_dns_name(idname, il, true))
     return false;
   idx = 0;
   if (peername[pl - 1] == '.') --pl;
   if (idname[il - 1] == '.') --il;
+  if (pl > 255 || il > 255)
+    return false;
   while (pl && il) {
     size_t pll = get_label_len(peername, pl);
     size_t ill = get_label_len(idname, il);
@@ -1310,6 +1422,7 @@ typedef struct {
   char notBefore[16]; /* Not before date either 13 chars or 15 chars plus Nul */
   char notAfter[16];  /* Not after date see notBefore for format */
   data_t subject; /* points to sequence */
+  data_t subjectPubKey; /* points to subjectPublicKeyInfo sequence */
   data_t subjectAltNames; /* null unless v3 extension present, points to sequence */
   data_t subjectKeyId; /* null unless v3 extension present, points to raw bytes */
   data_t issuer; /* points to sequence */
@@ -1356,8 +1469,13 @@ static bool read_der_atom(const data_t *d, der_atom_t *o)
   return true;
 }
 
+/* return true if _d->d points at a valid DER atom that is _d->l bytes long
+ * or less.  If exact_length_match_only is set the DER atom MUST be exactly
+ * _d->l bytes long.  If the atom at _d->d is a set or sequence, then its
+ * elements are also examined recursively to make sure they are also valid. */
 static bool is_der(const data_t *_d, bool exact_length_match_only)
 {
+  bool first = true;
   data_t d;
   if (!_d || !_d->d || !_d->l) return false;
   d.d = _d->d;
@@ -1370,9 +1488,47 @@ static bool is_der(const data_t *_d, bool exact_length_match_only)
     if ((atom.rawtag & 0xfe) != 0x30) {
       d.l -= atom.dl;
       d.d += atom.dl;
+      if (first) break;
+    } else if (first) {
+      d.l = atom.dl;
     }
+    first = false;
   } while (d.l);
-  return d.d == _d->d + _d->l || !exact_length_match_only;
+  return !d.l && (d.d == _d->d + _d->l || !exact_length_match_only);
+}
+
+/* true is returned if data is not NULL and matches:
+ * SEQUENCE {
+ *   SEQUENCE {
+ *      OBJECT ID,
+ *      optional...
+ *   },
+ *   BIT STRING {
+ *      whatever...
+ *   },
+ * } == length of data
+ */
+static bool check_der_pubkey(const data_t *_d)
+{
+  data_t d;
+  der_atom_t atom;
+
+  if (!_d || !_d->d || !_d->l) return false;
+  if (!is_der(_d, true)) return false;
+  d.d = _d->d;
+  d.l = _d->l;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  d.l = atom.dl;
+  d.d += atom.hl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x30) return false;
+  if (!atom.dl || d.d[atom.hl] != 0x06) return false;
+  d.l -= atom.hl + atom.dl;
+  d.d += atom.hl + atom.dl;
+  if (!read_der_atom(&d, &atom)) return false;
+  if (atom.rawtag != 0x03) return false;
+  return true;
 }
 
 static int data_matches(const data_t *o1, const data_t *o2)
@@ -1458,7 +1614,9 @@ static bool read_der_cert(const data_t *_d, der_cert_t *o)
   d.d += atom.hl + atom.dl;
   if (!read_der_atom(&d, &atom)) return false;
   if (atom.rawtag != 0x30) return false;
-  /* skip subjectPublicKeyInfo */
+  o->subjectPubKey.d = d.d;
+  o->subjectPubKey.l = atom.hl + atom.dl;
+  if (!check_der_pubkey(&o->subjectPubKey)) return false;
   d.l -= atom.hl + atom.dl;
   d.d += atom.hl + atom.dl;
   do {
@@ -1576,6 +1734,18 @@ Boolean CheckCertOkay(SecCertificateRef _cert)
   data.l = CFDataGetLength(d);
   ans = read_der_cert(&data, &cert);
   CFRelease(d);
+  return ans;
+}
+
+Boolean CheckPubKeyOkay(CFDataRef d)
+{
+  data_t data;
+  Boolean ans;
+
+  if (!d) return false;
+  data.d = CFDataGetBytePtr(d);
+  data.l = CFDataGetLength(d);
+  ans = check_der_pubkey(&data);
   return ans;
 }
 
@@ -1806,8 +1976,8 @@ static bool append_attr_value(CFMutableStringRef *s, const void *_d,
   }
   if (flags & 0x04 && !is_dns_name(d+a->hl, a->dl, !!(flags & 0x08)))
     return false;
-  temp = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, d+a->hl, a->dl,
-                                       encoding, true, kCFAllocatorNull);
+  temp = CFStringCreateWithBytes(kCFAllocatorDefault, d+a->hl, a->dl,
+                                 encoding, true);
   if (temp) {
     if (flags & 0x10)
       *s = CFStringCreateMutable(kCFAllocatorDefault, 0);
@@ -1836,10 +2006,10 @@ static void append_year_string(CFMutableStringRef cfstr, const char *vstr)
       int yr2 = (vstr[0] - '0') * 10 + (vstr[1] - '0');
       if (yr2 >= 50) {
         uc[0] = '1';
-	uc[1] = '9';
+        uc[1] = '9';
       } else {
         uc[0] = '2';
-	uc[1] = '0';
+        uc[1] = '0';
       }
       uc[2] = (unsigned char)vstr[0];
       uc[3] = (unsigned char)vstr[1];
@@ -1973,7 +2143,7 @@ static CFStringRef CopyCertName(SecCertificateRef _cert, bool issuer)
   }
   if (d) CFRelease(d);
   if (!good && ans) {CFRelease(ans); ans=NULL;}
-  return ans;
+  return MakeVisibleString(ans);
 }
 
 CFStringRef CopyCertSubject(SecCertificateRef _cert)
@@ -2028,8 +2198,8 @@ static CFTypeRef CopyCertSubjectAltNamesInt(const der_cert_t *cert, bool arr, un
         CFStringRef temp;
         if (!arr && CFStringGetLength((CFStringRef)ans))
           CFStringAppendCString((CFMutableStringRef)ans, ",", kCFStringEncodingASCII);
-        temp = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, data.d+atom.hl,
-          atom.dl, kCFStringEncodingASCII, true, kCFAllocatorNull);
+        temp = CFStringCreateWithBytes(kCFAllocatorDefault, data.d+atom.hl,
+                                       atom.dl, kCFStringEncodingASCII, true);
         if (!temp) break;
         if (arr)
           CFArrayAppendValue((CFMutableArrayRef)ans, temp);
@@ -2145,7 +2315,7 @@ CFStringRef CopyCertSubjectAltNamesString(SecCertificateRef _cert)
   if (read_der_cert(&data, &cert))
       ans = (CFStringRef)CopyCertSubjectAltNamesInt(&cert, false, 0x0f);
   CFRelease(d);
-  return ans;
+  return MakeVisibleString(ans);
 }
 
 /* mode:
@@ -2176,13 +2346,22 @@ static CFArrayRef CopyCertSubjectIds(der_cert_t *c, unsigned mode)
 }
 
 OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
-              unsigned explicitCertsOnly, unsigned flags, const char *peername)
+              unsigned certFlags, unsigned flags, const char *peername,
+              CFArrayRef pinnedKeySet)
 {
   SecTrustResultType result;
   CFArrayRef chain = NULL;
   CSSM_TP_APPLE_EVIDENCE_INFO *evidence;
-  OSStatus err = cSecTrustGetResult(trust, &result, &chain, &evidence);
+  bool pkonly = (certFlags & 0x02) ? true : false;
+  bool explicitCertsOnly = (certFlags & 0x01) ? true : false;
+  bool nameonly = (certFlags & 0x04) ? true : false;
+  OSStatus err;
   size_t i, cnt;
+  if ((pinnedKeySet && !CFArrayGetCount(pinnedKeySet)) || (pkonly && !pinnedKeySet))
+    return paramErr;
+  if (nameonly && !pkonly && (!peername || !*peername))
+    return paramErr;
+  err = cSecTrustGetResult(trust, &result, &chain, &evidence);
   if (err == errSecTrustNotAvailable) {
     /* We need to evaluate first */
     CFArrayRef anchors = customRootsOrNull;
@@ -2199,7 +2378,7 @@ OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
     err = cSecTrustSetAnchorCertificatesOnly(trust, customRootsOrNull ? true : false);
     if (err && err != unimpErr) return err;
     err = SecTrustEvaluate(trust, &result);
-    if (err) return err;
+    if (err && !pkonly && !nameonly) return err;
     chain = NULL;
     err = cSecTrustGetResult(trust, &result, &chain, &evidence);
   }
@@ -2211,6 +2390,7 @@ OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
     if (chain) CFRelease(chain);
     return errSSLXCertChainInvalid;
   }
+  if (pkonly) goto pinned_key_check;
   cnt = (size_t)CFArrayGetCount(chain);
   if ((peername && *peername) ||
       (!(flags & CSSM_TP_ACTION_LEAF_IS_CA) &&
@@ -2268,15 +2448,17 @@ OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
                 break;
               }
             } else {
-              char dnsname[256];
+              CFDataRef dnsname;
               if (CFStringGetTypeID() != CFGetTypeID(oneid)) continue;
-              if (!CFStringGetCString((CFStringRef)oneid, dnsname,
-                                      sizeof(dnsname), kCFStringEncodingASCII))
-                continue;
-              if (peername_matches_id(peername, dnsname)) {
+              dnsname = CFStringCreateExternalRepresentation(
+                kCFAllocatorDefault, (CFStringRef)oneid,
+                kCFStringEncodingASCII, 0);
+              if (!dnsname) continue;
+              if (peername_matches_id(peername, dnsname))
                 matched = true;
+              CFRelease(dnsname);
+              if (matched)
                 break;
-              }
             }
           }
           CFRelease(ids);
@@ -2290,14 +2472,15 @@ OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
      * valid chain), but again SecureTransport should have already checked that
      * for us.  CSSM_TP_ACTION_LEAF_IS_CA overrides.  Also we never check the
      * root certificate even if it's also the leaf. */
-    if (!err && !(flags & CSSM_TP_ACTION_LEAF_IS_CA) &&
+    if (!nameonly && !err && !(flags & CSSM_TP_ACTION_LEAF_IS_CA) &&
         !(evidence[0].StatusBits & CSSM_CERT_STATUS_IS_ROOT) && cert.isCA)
       err = errSSLXCertChainInvalid;
 
     CFRelease(certder);
     if (err) return err;
   }
-  if (explicitCertsOnly & 0x01) {
+  if (nameonly) goto pinned_key_check;
+  if (explicitCertsOnly) {
     /* Check all but root */
     for (i = 0; i < cnt; ++i) {
       if (!(evidence[i].StatusBits & CSSM_CERT_STATUS_IS_IN_INPUT_CERTS) &&
@@ -2348,21 +2531,51 @@ OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
       return errSSLNoRootCert;
     }
   }
-  CFRelease(chain);
   /* everything looks good, so check the trust result code now */
   switch (result) {
     case kSecTrustResultProceed:
     case kSecTrustResultUnspecified:
       /* good result */
-      return noErr;
+      break;
     case kSecTrustResultDeny:
       /* DENIED! */
+      CFRelease(chain);
       return errSecTrustSettingDeny;
     default:
-      /* drop out */;
+      /* everything else (confirm, invalid, recoverable, fatal, other) */
+      CFRelease(chain);
+      return errSecNotTrusted;
   }
-  /* everything else (confirm, invalid, recoverable, fatal, other) */
-  return errSecNotTrusted;
+  pinned_key_check:
+  if (pinnedKeySet) {
+    CFDataRef certder = cSecCertificateCopyData(
+                          (SecCertificateRef)CFArrayGetValueAtIndex(chain, 0));
+    data_t der;
+    der_cert_t cert;
+    CFDataRef peerPubKey;
+    bool pinok;
+    if (!certder)
+      return errSSLBadCert;
+    der.d = CFDataGetBytePtr(certder);
+    der.l = CFDataGetLength(certder);
+    if (!read_der_cert(&der, &cert)) {
+      CFRelease(certder);
+      return errSSLBadCert;
+    }
+    peerPubKey = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault,
+      cert.subjectPubKey.d, cert.subjectPubKey.l, kCFAllocatorNull);
+    if (!peerPubKey) {
+      CFRelease(certder);
+      return memFullErr;
+    }
+    pinok = BlobInArray(peerPubKey, pinnedKeySet);
+    CFRelease(peerPubKey);
+    CFRelease(certder);
+    if (!pinok)
+      return errSecPinnedKeyMismatch;
+  }
+  CFRelease(chain);
+  return noErr;
 }
 
 #elif TARGET_OS_EMBEDDED || TARGET_OS_IPHONE

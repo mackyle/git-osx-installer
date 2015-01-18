@@ -13,6 +13,7 @@ Git 2.2.2 Installer - released 2015-01-??
   - dropped reflog reading fix (included in v2.2.2)
   - added update-server-info correct file permissions fix (backport)
   - added git-http-push for cURL >= 7.40 fix (backport)
+  - added git apply memory overrun fix (backport)
 
 * cURL/libcURL 7.40
   - updated from version 7.38

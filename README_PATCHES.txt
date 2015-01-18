@@ -100,6 +100,15 @@ Git Patches
   Available from the list and picked up to hopefully be in a maint update.
   <http://thread.gmane.org/gmane.comp.version-control.git/262323>.
 
+* Fix memory overrun in builtin/apply.c
+
+  - `patches/jh/detect-postlen-overflow.txt`
+  - `patches/jh/apply-correct-count.txt`
+  - `patches/km/apply-ws-tests.txt`
+
+  Available from the list and picked up to hopefully be in a maint update.
+  <http://thread.gmane.org/gmane.comp.version-control.git/262404>.
+
 
 Curl Patches
 ------------

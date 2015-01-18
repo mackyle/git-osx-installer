@@ -1,0 +1,106 @@
+Received: by 10.52.8.42 with SMTP id o10csp415081vda;
+        Fri, 16 Jan 2015 11:58:58 -0800 (PST)
+X-Received: by 10.140.85.231 with SMTP id n94mr25934090qgd.63.1421438337859;
+        Fri, 16 Jan 2015 11:58:57 -0800 (PST)
+Return-Path: <junio@pobox.com>
+Received: from sasl.smtp.pobox.com (pb-smtp1.int.icgroup.com. [208.72.237.35])
+        by mx.google.com with ESMTP id d2si7228608qaf.109.2015.01.16.11.58.57;
+        Fri, 16 Jan 2015 11:58:57 -0800 (PST)
+Received-SPF: pass (google.com: domain of junio@pobox.com designates 208.72.237.35 as permitted sender) client-ip=208.72.237.35;
+Authentication-Results: mx.google.com;
+       spf=pass (google.com: domain of junio@pobox.com designates 208.72.237.35 as permitted sender) smtp.mail=junio@pobox.com;
+       dkim=pass header.i=@pobox.com
+Received: from sasl.smtp.pobox.com (unknown [127.0.0.1])
+	by pb-smtp1.pobox.com (Postfix) with ESMTP id 8AD9C30F20;
+	Fri, 16 Jan 2015 14:58:57 -0500 (EST)
+DKIM-Signature: v=1; a=rsa-sha1; c=relaxed; d=pobox.com; h=from:to:cc
+	:subject:references:date:in-reply-to:message-id:mime-version
+	:content-type; s=sasl; bh=PVoWVxiJJHygFQ0k//5k5rNYQ9Q=; b=lExXyu
+	xVG5LjegwOJt8ZJ+8S7mrQ4u/N2S+yTR2qU5RkpVavwXogfMJ+G5x4zTOZjh4nNb
+	gQgO6C9mZdFaaiADsDXL/9Yc9OOws8h5JUoRSHTAkx1RT0G8aobJfaUSQQuTGrJo
+	AkN6FoQp1kOJxJYRdEZLqSX9bJZ4LlYn8N2Vc=
+DomainKey-Signature: a=rsa-sha1; c=nofws; d=pobox.com; h=from:to:cc
+	:subject:references:date:in-reply-to:message-id:mime-version
+	:content-type; q=dns; s=sasl; b=EodTs6DVC2apjQfNX4zE62gHjg/Gp72R
+	gojEEdoBDlM5UaeW6azo39Car2gU53K/LmURYIjL8g7Ap0EyN+p/5JbVKoMPna3w
+	VtvOsTB4hHhIEHGeAvPuer+7XO7MMzSqzzeRBjhBNlQ5eI1gScaQ2qKJWJN4C4Sq
+	se4Jb+Jzg+A=
+Received: from pb-smtp1.int.icgroup.com (unknown [127.0.0.1])
+	by pb-smtp1.pobox.com (Postfix) with ESMTP id 789E130F17;
+	Fri, 16 Jan 2015 14:58:57 -0500 (EST)
+Received: from pobox.com (unknown [72.14.226.9])
+	(using TLSv1.2 with cipher DHE-RSA-AES128-SHA (128/128 bits))
+	(No client certificate requested)
+	by pb-smtp1.pobox.com (Postfix) with ESMTPSA id EC35F30F0E;
+	Fri, 16 Jan 2015 14:58:56 -0500 (EST)
+From: Junio C Hamano <gitster@pobox.com>
+Cc: Git List <git@vger.kernel.org>
+Subject: Re: Segmentation fault in git apply
+References: <CAO2U3QjGUfnTRO_poS+=-MfE4aYGuWpVJTe20H-u=FgkVy-RYg@mail.gmail.com>
+	<CAO2U3Qjn9o_eYayEMCC3S6DBr9kVH7mPL00QGrXAnV2iYRP-=A@mail.gmail.com>
+	<CAO2U3Qj-Hg2tb72NgO6wb-aqAxFG7aga2ZDeZNDCPJzGtmHTAA@mail.gmail.com>
+	<CAO2U3Qhd_DPP09BUyMr6NKUtOe4EQQ7G83BRg7MbtQXFPjKv8w@mail.gmail.com>
+	<CAO2U3Qje-YwcV1d5BK_zZqrTki4AU=emdkUZzEEieRjmoQdmGg@mail.gmail.com>
+	<CAO2U3Qi4TWZiNoOQVSW=Ycvp3bpBySZrCGmRLCbRJJes_n2Wkw@mail.gmail.com>
+	<99579252-EF8A-4DAF-A49D-2AC5627ED9E3@gmail.com>
+	<4157F6B0-DDF4-4F71-A09B-EE216537CA89@gmail.com>
+Date: Fri, 16 Jan 2015 11:58:55 -0800
+In-Reply-To: <4157F6B0-DDF4-4F71-A09B-EE216537CA89@gmail.com> (Kyle J. McKay's
+	message of "Thu, 15 Jan 2015 01:10:20 -0800")
+Message-ID: <xmqqbnly1oqo.fsf@gitster.dls.corp.google.com>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/24.3 (gnu/linux)
+MIME-Version: 1.0
+Content-Type: text/plain
+X-Pobox-Relay-ID:
+ 1AF61898-9DBA-11E4-94D0-42529F42C9D4-77302942!pb-smtp1.pobox.com
+
+"Kyle J. McKay" <mackyle@gmail.com> writes:
+
+> If I make this change on top of 250b3c6c:
+>
+> diff --git a/builtin/apply.c b/builtin/apply.c
+> index df773c75..8795e830 100644
+> --- a/builtin/apply.c
+> +++ b/builtin/apply.c
+> @@ -2390,6 +2390,8 @@ static int match_fragment(struct image *img,
+>  	fixed_buf = strbuf_detach(&fixed, &fixed_len);
+>  	if (postlen < postimage->len)
+>  		postlen = 0;
+> +	if (postlen)
+> +		postlen = 2 * postimage->len;
+>  	update_pre_post_images(preimage, postimage,
+>  			       fixed_buf, fixed_len, postlen);
+>  	return 1;
+>
+> Then the problem goes away.  That seems to suggest that postlen is
+> being computed incorrectly, but someone more familiar with
+> bulitin/apply.c is going to need to look at it.
+
+Indeed, with this, the test case detects under-counting in the
+caller (the caller counts 262 bytes but the expansion consumes 273
+bytes).
+
+-- >8 --
+Subject: apply: make update_pre_post_images() sanity check the given postlen
+
+---
+ builtin/apply.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/builtin/apply.c b/builtin/apply.c
+index 622ee16..18b7997 100644
+--- a/builtin/apply.c
++++ b/builtin/apply.c
+@@ -2238,6 +2238,10 @@ static void update_pre_post_images(struct image *preimage,
+ 	/* Fix the length of the whole thing */
+ 	postimage->len = new - postimage->buf;
+ 	postimage->nr -= reduced;
++
++	if (postlen && postlen < (new - postimage->buf))
++		die("BUG: postlen = %d, used = %d",
++		    (int)postlen, (int)(new - postimage->buf));
+ }
+ 
+ static int match_fragment(struct image *img,
+-- 
+2.3.0-rc0-149-g0286818

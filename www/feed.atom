@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title>Git OS X Installer Updates</title>
+  <link href="/git-osx-installer/feed.atom" rel="self"/>
+  <link href="/git-osx-installer/"/>
+  <id>urn:uuid:8c3cdd92-11f4-44d4-a90b-ae20c7f2a963</id>
+  <updated>2015-01-19T10:00:50-08:00</updated>
+
+  <entry>
+    <title>Git 2.2.2 OS X Installer</title>
+    <link href="./#gitosx-v2.2.2_in"/>
+    <link rel="alternate" type="text/html" href="./"/>
+    <id>urn:uuid:ddd21a38-a066-46d5-bfab-b8b45124e413</id>
+    <updated>2015-01-19T10:00:50-08:00</updated>
+    <summary>Mac OS X 10.4+ universal installer for Git version 2.2.2</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.2.2</p>
+        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.2.2-osx-installer.dmg">git-2.2.2-osx-installer.dmg</a><br/>
+        <span>MD5: </span><tt>72fc64f7d64518b5d4f622d6b9756d01</tt><br/>
+        <span>SHA1: </span><tt>a7ddc8c95c913ea42a1290ead2bb81b9afcf67f0</tt><br/>
+        <span>SHA256: </span><tt>8f88ffdb134a2eedd9f16ad7c10ff45fe23ca89026e3a3eba8376ded07f8a2ca</tt><br/>
+      </div>
+    </content>
+  </entry>
+
+  <entry>
+    <title>Git 2.1.4 OS X Installer</title>
+    <link href="./#gitosx-v2.1.4_in"/>
+    <link rel="alternate" type="text/html" href="./"/>
+    <id>urn:uuid:59064c03-3fde-41f2-9fb1-eeaf5bad4dd9</id>
+    <updated>2015-01-02T02:48:59-08:00</updated>
+    <summary>Mac OS X 10.4+ universal installer for Git version 2.1.4</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.1.4</p>
+        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.1.4-osx-installer.dmg">git-2.1.4-osx-installer.dmg</a><br/>
+        <span>MD5: </span><tt>3608f85b7b2c6a855d4f7906db0e7f3f</tt><br/>
+        <span>SHA1: </span><tt>152447ea9b2086275a0d4e56a7d97455a8cbae56</tt><br/>
+        <span>SHA256: </span><tt>dacf300a3d4e7821ae0db947c8498b6ce14f96d91ffc1a7c4107a61a95294836</tt><br/>
+      </div>
+    </content>
+  </entry>
+
+</feed>

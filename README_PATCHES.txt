@@ -135,6 +135,7 @@ support Mac OS X 10.4 at all as released.
   - `patches/curl/stcompat.c`
   - `patches/curl/stcompat.h`
   - `patches/curl/urldata_add_khra_patch.txt`
+  - `patches/curl/enable_darwinssl_pinning_tests_patch.txt`
 
 * Curl mk-ca-bundle script improvements
 

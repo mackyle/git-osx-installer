@@ -21,6 +21,9 @@ Git 2.2.2 Installer - released 2015-01-??
   - further improved darwinssl backend to support pub key certificate pinning
     ~ if PEM format public keys are used more than one may be included in the
       pinning file by concatenation to create a pin set instead of just the one
+    ~ as a convenience, certificate(s) may be passed in place of or in addition
+      to public key(s) and their public key(s) will be automatically extracted
+      and used as though they had been passed instead.
 
 
 -----------------------------------------

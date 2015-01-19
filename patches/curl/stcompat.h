@@ -473,7 +473,9 @@ CFDataRef CFDataCreateWithContentsOfFile(CFAllocatorRef a, const char *f);
 /* Never returns a 0-element array, returns NULL instead */
 CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e);
 Boolean CheckCertOkay(SecCertificateRef cert);
-/* Never returns a 0-element array, returns NULL instead */
+/* Never returns a 0-element array, returns NULL instead.  As a convenience
+ * certificates may be used in place of or in addition to public keys and their
+ * public keys will be automatically extracted and added to the pinning set.  */
 CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e);
 Boolean CheckPubKeyOkay(CFDataRef pubkey);
 /* caller must free() result unless NULL.  If s is NULL will return NULL.

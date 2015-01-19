@@ -38,6 +38,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 __attribute__((constructor,used)) static void stcompat_initialize(void);
 #endif /* (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE)) */
 
+typedef struct data_s {
+  const uint8_t *d;
+  size_t l;
+} data_t;
+
 extern CFStringRef CFStringCreateWithBytesNoCopy(
   CFAllocatorRef alloc,
   const UInt8 *bytes,
@@ -46,6 +51,7 @@ extern CFStringRef CFStringCreateWithBytesNoCopy(
   Boolean isExternalRepresentation,
   CFAllocatorRef contentsDeallocator); /* available 10.4 but not in header */
 extern CFStringRef NSTemporaryDirectory(void);
+static Boolean CheckPubKeyOkayInt(CFDataRef d, data_t *pubkey, int flags);
 
 static CFStringRef CFCopyTemporaryDirectory(void)
 {
@@ -244,14 +250,14 @@ static const char *find_be(const void *_m, size_t l, size_t *ol, int *ot, int e)
   return NULL;
 }
 
-typedef enum {
+typedef enum pemtype_e {
   pemtype_unknown,
   pemtype_certificate, /* "CERTIFICATE" or "TRUSTED CERTIFICATE" */
   pemtype_publickey, /* "PUBLIC KEY" */
   pemtype_privatekey_rsa /* "RSA PRIVATE KEY" */
 } pemtype_t;
 
-typedef struct {
+typedef struct peminfo_s {
   const char *start;  /* Armour start "-----BEGIN XXXXX-----\n" */
   size_t len; /* Length through armour end "-----END XXXXX-----\n" */
   /* Body starts after "-----BEGIN XXXXX-----\n" */
@@ -438,6 +444,17 @@ CFArrayRef CreateCertsArrayWithData(CFDataRef d, const errinfo_t *e)
   return a;
 }
 
+static void CFArrayAppendValue_data(CFMutableArrayRef a, const data_t *d)
+{
+  if (d && d->d && d->l) {
+    CFDataRef data = CFDataCreate(kCFAllocatorDefault, (UInt8 *)d->d, d->l);
+    if (data) {
+      CFArrayAppendValue(a, data);
+      CFRelease(data);
+    }
+  }
+}
+
 CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
 {
   const char *keys, *p;
@@ -452,6 +469,7 @@ CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
   plen = keyslen;
   while (plen) {
     peminfo_t pem;
+    data_t pubkey;
     int readcnt = nextpem(p, plen, &pem);
     if (!readcnt && p == keys) {
       /* assume it's a DER public key */
@@ -460,14 +478,14 @@ CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
         CFRelease(a);
         return NULL;
       }
-      if (!CheckPubKeyOkay(der)) {
+      if (!CheckPubKeyOkayInt(der, &pubkey, 0x01)) {
         CFRelease(der);
         if (e)
           e->f(e->u, "Invalid public key bad DER data");
         CFRelease(a);
         return NULL;
       }
-      CFArrayAppendValue(a, der);
+      CFArrayAppendValue_data(a, &pubkey);
       CFRelease(der);
       return a;
     } else if (readcnt == -1) {
@@ -476,7 +494,8 @@ CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
                    (unsigned)cnt, (unsigned)(p-keys));
       CFRelease(a);
       return NULL;
-    } else if (readcnt && pem.type == pemtype_publickey) {
+    } else if (readcnt && (pem.type == pemtype_publickey ||
+                           pem.type == pemtype_certificate)) {
       CFDataRef der = CFDataCreateFromBase64(kCFAllocatorDefault, pem.body, pem.bodylen);
       if (!der) {
         if (e)
@@ -485,7 +504,7 @@ CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
         CFRelease(a);
         return NULL;
       }
-      if (!CheckPubKeyOkay(der)) {
+      if (!CheckPubKeyOkayInt(der, &pubkey, 0x01)) {
         CFRelease(der);
         if (e)
           e->f(e->u, "Invalid public key #%u (offset %u) bad public key data in bundle",
@@ -493,7 +512,7 @@ CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
         CFRelease(a);
         return NULL;
       }
-      CFArrayAppendValue(a, der);
+      CFArrayAppendValue_data(a, &pubkey);
       CFRelease(der);
       ++cnt;
     } else if (!readcnt) break;
@@ -507,7 +526,7 @@ CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
   return a;
 }
 
-typedef struct {
+typedef struct homedirs_s {
   /* note that we use geteuid and not getuid because any created files will
    * end up being owned by geteuid and therefore using geteuid()'s HOME wil
    * end up being the least disruptive and also if geteuid() != getuid() then
@@ -549,7 +568,7 @@ static void free_home_dirs(homedirs_t *dirs)
     free(dirs->home);
 }
 
-typedef struct {
+typedef struct tempch_s {
   SecKeychainRef ref;
   homedirs_t dirs;
   char pw[16]; /* random 15-character (0x20-0x7e), NULL terminated password */
@@ -1392,11 +1411,6 @@ static bool parse_ipv6_name(const void *_p, size_t l, uint8_t ipv6[16])
   return inet_pton(AF_INET6, ipv6str, ipv6) == 1;
 }
 
-typedef struct {
-  const uint8_t *d;
-  size_t l;
-} data_t;
-
 #define U(x) ((const uint8_t *)(x))
 static const data_t OID_BasicConstraints = {U("\006\003\125\035\023"), 5};
 static const data_t OID_SubjectAltName = {U("\006\003\125\035\021"), 5};
@@ -1405,7 +1419,7 @@ static const data_t OID_AuthorityKeyIdentifier = {U("\006\003\125\035\043"), 5};
 static const data_t OID_CommonName = {U("\006\003\125\004\003"), 5};
 #undef U
 
-typedef struct {
+typedef struct der_atom_s {
   uint8_t clas; /* 0, 1, 2, or 3 */
   uint8_t cons; /* 0 or 1 */
   uint8_t rawtag; /* raw value of first byte of tag */
@@ -1414,7 +1428,7 @@ typedef struct {
   size_t dl; /* length of actual data */
 } der_atom_t;
 
-typedef struct {
+typedef struct der_cert_s {
   uint8_t vers; /* 0 => v1, 1 => v2, 2 => v3 */
   uint8_t caFlag; /* 0 unless basic constraints present then 0x80=critial 0x01=value */
   uint8_t isCA; /* true if caFlag==0x81 or subject==issuer && vers < 2 */
@@ -1737,16 +1751,32 @@ Boolean CheckCertOkay(SecCertificateRef _cert)
   return ans;
 }
 
+/* flags & 0x01 to extract pub keys from certificates */
+static Boolean CheckPubKeyOkayInt(CFDataRef d, data_t *pubkey, int flags)
+{
+  data_t data;
+
+  if (!d || !pubkey) return false;
+  data.d = CFDataGetBytePtr(d);
+  data.l = CFDataGetLength(d);
+  if (check_der_pubkey(&data)) {
+    *pubkey = data;
+    return true;
+  }
+  if (flags & 0x01) {
+    der_cert_t cert;
+    if (read_der_cert(&data, &cert)) {
+      *pubkey = cert.subjectPubKey;
+      return true;
+    }
+  }
+  return false;
+}
+
 Boolean CheckPubKeyOkay(CFDataRef d)
 {
   data_t data;
-  Boolean ans;
-
-  if (!d) return false;
-  data.d = CFDataGetBytePtr(d);
-  data.l = CFDataGetLength(d);
-  ans = check_der_pubkey(&data);
-  return ans;
+  return CheckPubKeyOkayInt(d, &data, 0);
 }
 
 static void append_hex_dump(CFMutableStringRef s, const void *_d, size_t l)
@@ -1792,7 +1822,7 @@ static CFStringRef CopyCertKeyId(SecCertificateRef _cert, bool issuer)
   return ans;
 }
 
-typedef struct {
+typedef struct oid_entry_s {
   size_t l;
   const char *oid;
   const char *name;

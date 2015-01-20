@@ -4,7 +4,7 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
-Git 2.2.2 Installer - released 2015-01-??
+Git 2.2.2 Installer - released 2015-01-20
 -----------------------------------------
 
 * Git v2.2.2
@@ -22,8 +22,12 @@ Git 2.2.2 Installer - released 2015-01-??
     ~ if PEM format public keys are used more than one may be included in the
       pinning file by concatenation to create a pin set instead of just the one
     ~ as a convenience, certificate(s) may be passed in place of or in addition
-      to public key(s) and their public key(s) will be automatically extracted
-      and used as though they had been passed instead.
+      to public key(s) and their public key will be automatically extracted and
+      used as though it had been passed instead.
+
+* GnuPG 1.4.18
+  - added launchd GPG_AGENT_INFO compatibility patch
+    ~ makes the trailing ":pid:protocol" part of GPG_AGENT_INFO optional
 
 
 -----------------------------------------

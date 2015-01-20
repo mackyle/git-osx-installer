@@ -5,22 +5,22 @@
   <link href="/git-osx-installer/feed.atom" rel="self"/>
   <link href="/git-osx-installer/"/>
   <id>urn:uuid:8c3cdd92-11f4-44d4-a90b-ae20c7f2a963</id>
-  <updated>2015-01-19T10:00:50-08:00</updated>
+  <updated>2015-01-20T00:00:00-08:00</updated>
 
   <entry>
     <title>Git 2.2.2 OS X Installer</title>
     <link href="./#gitosx-v2.2.2_in"/>
     <link rel="alternate" type="text/html" href="./"/>
     <id>urn:uuid:ddd21a38-a066-46d5-bfab-b8b45124e413</id>
-    <updated>2015-01-19T10:00:50-08:00</updated>
+    <updated>2015-01-20T00:00:00-08:00</updated>
     <summary>Mac OS X 10.4+ universal installer for Git version 2.2.2</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
         <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.2.2</p>
         <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.2.2-osx-installer.dmg">git-2.2.2-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>72fc64f7d64518b5d4f622d6b9756d01</tt><br/>
-        <span>SHA1: </span><tt>a7ddc8c95c913ea42a1290ead2bb81b9afcf67f0</tt><br/>
-        <span>SHA256: </span><tt>8f88ffdb134a2eedd9f16ad7c10ff45fe23ca89026e3a3eba8376ded07f8a2ca</tt><br/>
+        <span>MD5: </span><tt>4d818156d6f67b0189f56c453e7deec3</tt><br/>
+        <span>SHA1: </span><tt>67ea4e2fda289e5cbcb293d2879f7aeefb76cf97</tt><br/>
+        <span>SHA256: </span><tt>713ca9cad446c4cb93465fd7eaaa382b6ffcd9502ea358563e6b8cc83daa22aa</tt><br/>
       </div>
     </content>
   </entry>

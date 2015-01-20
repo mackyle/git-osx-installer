@@ -1,0 +1,35 @@
+diff --git a/g10/passphrase.c b/g10/passphrase.c
+index 9003ea4d..18c29665 100644
+--- a/g10/passphrase.c
++++ b/g10/passphrase.c
+@@ -317,6 +317,7 @@ agent_open (int try, const char *orig_codeset)
+ 
+   if ( !(p = strchr (infostr, PATHSEP_C)) || p == infostr)
+     {
++#ifndef __APPLE__
+       if (!try)
+         {
+ #ifdef ENABLE_NLS
+@@ -328,12 +329,22 @@ agent_open (int try, const char *orig_codeset)
+         }
+       xfree (infostr);
+       return NULL;
++#else
++      pid = 0;
++      prot = 1;
++#endif
+     }
++#ifdef __APPLE__
++  else {
++#endif
+   *p++ = 0;
+   pid = atoi (p);
+   while (*p && *p != PATHSEP_C)
+     p++;
+   prot = *p? atoi (p+1) : 0;
++#ifdef __APPLE__
++  }
++#endif
+   if (prot != 1)
+     {
+       if (!try)

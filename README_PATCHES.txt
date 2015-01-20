@@ -158,6 +158,10 @@ the gpg patch to permit creation of such keys.
 
   - `patches/gnupg/allow_longer_keys.txt`
 
+* Make trailing ":pid:protocol" part of GPG_AGENT_INFO optional (launchd)
+
+  - `patches/gnupg/launchd_agent_compat.txt`
+
 
 Compatibility Patches
 ---------------------

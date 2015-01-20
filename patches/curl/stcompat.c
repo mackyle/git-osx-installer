@@ -252,7 +252,8 @@ static const char *find_be(const void *_m, size_t l, size_t *ol, int *ot, int e)
 
 typedef enum pemtype_e {
   pemtype_unknown,
-  pemtype_certificate, /* "CERTIFICATE" or "TRUSTED CERTIFICATE" */
+  pemtype_certificate, /* "CERTIFICATE" or "TRUSTED CERTIFICATE" or "X509 CERTIFICATE" */
+  pemtype_crl, /* "X509 CRL" */
   pemtype_publickey, /* "PUBLIC KEY" */
   pemtype_privatekey_rsa /* "RSA PRIVATE KEY" */
 } pemtype_t;
@@ -287,10 +288,14 @@ static int nextpem(const char *p, size_t l, peminfo_t *o)
     o->type = pemtype_certificate;
   } else if (begtype == 19 && !memcmp(beg + 11, "TRUSTED CERTIFICATE", 19)) {
     o->type = pemtype_certificate;
+  } else if (begtype == 16 && !memcmp(beg + 11, "X509 CERTIFICATE", 16)) {
+    o->type = pemtype_certificate;
   } else if (begtype == 15 && !memcmp(beg + 11, "RSA PRIVATE KEY", 15)) {
     o->type = pemtype_privatekey_rsa;
   } else if (begtype == 10 && !memcmp(beg + 11, "PUBLIC KEY", 10)) {
     o->type = pemtype_publickey;
+  } else if (begtype == 8 && !memcmp(beg + 11, "X509 CRL", 8)) {
+    o->type = pemtype_crl;
   } else {
     o->type = pemtype_unknown;
   }

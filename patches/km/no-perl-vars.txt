@@ -1,6 +1,6 @@
-From ea691384a582de3525acdaec5a95e3ca57a0f9da Mon Sep 17 00:00:00 2001
+From 2c84bfc662e26c0fd132599f911b6b6e7f452a80 Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Wed, 31 Dec 2014 10:23:21 -0800
+Date: Thu, 22 Jan 2015 13:20:20 -0800
 Subject: [PATCH] run-command.c: unset troublesome PERL env vars
 
 Unset troublesome PERL environment variables before exec'ing
@@ -10,23 +10,31 @@ variable set to libraries that would override and be incompatible
 with the version of Perl the Git perl-based utilities were built
 to use.
 
+But don't do this if we're running the git svn subcommand as it
+uses the perl found in the current PATH rather than the compile-
+time perl.
+
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- run-command.c | 4 ++++
- 1 file changed, 4 insertions(+)
+ run-command.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/run-command.c b/run-command.c
-index a4769996..fca0f3fd 100644
+index a4769996..bb86d737 100644
 --- a/run-command.c
 +++ b/run-command.c
-@@ -420,6 +420,10 @@ fail_pipe:
+@@ -420,6 +420,13 @@ fail_pipe:
  					unsetenv(*cmd->env);
  			}
  		}
-+		unsetenv("PERL5LIB");
-+		unsetenv("PERLLIB");
-+		unsetenv("PERL5OPT");
-+		unsetenv("PERLIO");
++		if (cmd->git_cmd || cmd->use_shell || !cmd->argv ||
++		    !cmd->argv[0] || strcmp(cmd->argv[0], "git-svn")) {
++			unsetenv("PERL5LIB");
++			unsetenv("PERLLIB");
++			unsetenv("PERL5OPT");
++			unsetenv("PERLIO");
++		}
  		if (cmd->git_cmd)
  			execv_git_cmd(cmd->argv);
  		else if (cmd->use_shell)
+--

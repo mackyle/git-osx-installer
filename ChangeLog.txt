@@ -9,6 +9,7 @@ Git 2.?.? Installer - released 2015-??-??
 
 * Git v?.?.?
   - updated from version 2.2.2
+  - improved compatibility with arbitrary svn installations
 
 * GnuPG 1.4.18
   - enabled smart card support

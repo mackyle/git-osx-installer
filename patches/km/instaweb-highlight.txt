@@ -1,0 +1,32 @@
+From 99e136e41c140b7a2b1b2bc53088e04e342e7acf Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Sun, 8 Feb 2015 04:30:34 -0800
+Subject: [PATCH] git-instaweb: enable source highlighting if available
+
+If the correct highlight executable is available, then configure
+gitweb to use it for highlighting the source code.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ git-instaweb.sh | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 513efa66..71c3d65e 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -599,6 +599,13 @@ our \$projects_list = \$projectroot;
+ 
+ \$feature{'remote_heads'}{'default'} = [1];
+ EOF
++	hlbin="$(command -v highlight 2>/dev/null)"
++	if [ -x "$hlbin" ] && "$hlbin" --version | grep -q 'Andre Simon'; then
++		cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
++our \$highlight_bin = "$hlbin";
++\$feature{'highlight'}{'default'} = [1];
++EOF
++	fi
+ }
+ 
+ configure_httpd() {
+--

@@ -1,0 +1,43 @@
+From d0464ec2266d16935f4552f09e76b27cb9d587c2 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Sun, 8 Feb 2015 14:19:45 -0800
+Subject: [PATCH] sha1_file.c: make sure open_sha1_file does not open a
+ directory
+
+Since "sha1_file: fix iterating loose alternate objects", it's possible
+for the base member of the alt_odb_list structure to be NUL terminated
+rather than ending with a '/' when open_sha1_file is called.
+
+Unfortunately this causes a directory to be passed to git_open_noatime
+instead of a file which it happily opens and returns whereupon this
+open directory file handle is then passed to mmap.
+
+mmap does not like this and fails with an invalid argument error
+at which point the pack-objects process dies prematurely.
+
+To avoid this we preserve the last character of the base member,
+set it to '/', make the git_open_noatime call and then restore
+it to its previous value which allows pack-objects to function properly.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ sha1_file.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/sha1_file.c b/sha1_file.c
+index f575b3cf..235f6ad8 100644
+--- a/sha1_file.c
++++ b/sha1_file.c
+@@ -1491,8 +1491,11 @@ static int open_sha1_file(const unsigned char *sha1)
+ 
+ 	prepare_alt_odb();
+ 	for (alt = alt_odb_list; alt; alt = alt->next) {
++		char c = alt->name[-1];
++		alt->name[-1] = '/';
+ 		fill_sha1_path(alt->name, sha1);
+ 		fd = git_open_noatime(alt->base);
++		alt->name[-1] = c;
+ 		if (fd >= 0)
+ 			return fd;
+ 		if (most_interesting_errno == ENOENT)
+--

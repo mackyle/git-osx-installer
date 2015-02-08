@@ -14,6 +14,7 @@ Git 2.?.? Installer - released 2015-??-??
   - allow git instaweb to find submodules with .git gitdir: links
   - added git-browser graphiclog to git instaweb
   - added loose alternates fix (backport)
+  - added another required loose alternates fix
 
 * GnuPG 1.4.18
   - enabled smart card support

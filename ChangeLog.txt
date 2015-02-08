@@ -12,6 +12,7 @@ Git 2.?.? Installer - released 2015-??-??
   - improved compatibility with arbitrary svn installations
   - enable source highlighting when running git instaweb
   - allow git instaweb to find submodules with .git gitdir: links
+  - added loose alternates fix (backport)
 
 * GnuPG 1.4.18
   - enabled smart card support

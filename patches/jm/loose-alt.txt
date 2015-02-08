@@ -1,0 +1,68 @@
+From a1b47246adf5a44b5fdae857a6727982fcc0a411 Mon Sep 17 00:00:00 2001
+From: Jonathon Mah <me@jonathonmah.com>
+Date: Mon, 2 Feb 2015 10:48:12 -0800
+Subject: [PATCH] sha1_file: fix iterating loose alternate objects
+
+The string in 'base' contains a path suffix to a specific object;
+when its value is used, the suffix must either be filled (as in
+stat_sha1_file, open_sha1_file, check_and_freshen_nonlocal) or
+cleared (as in prepare_packed_git) to avoid junk at the end.
+
+660c889e (sha1_file: add for_each iterators for loose and packed
+objects, 2014-10-15) introduced loose_from_alt_odb(), but this did
+neither and treated 'base' as a complete path to the "base" object
+directory, instead of a pointer to the "base" of the full path
+string.
+
+The trailing path after 'base' is still initialized to NUL, hiding
+the bug in some common cases.  Additionally the descendent
+for_each_file_in_obj_subdir() function swallows ENOENT, so an error
+only shows if the alternate's path was last filled with a valid
+object (where statting /path/to/existing/00/0bjectfile/00 fails).
+
+Signed-off-by: Jonathon Mah <me@JonathonMah.com>
+Signed-off-by: Junio C Hamano <gitster@pobox.com>
+---
+ sha1_file.c      | 10 +++++++---
+ t/t5304-prune.sh |  8 ++++++++
+ 2 files changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/sha1_file.c b/sha1_file.c
+index c6326419..9e0c2712 100644
+--- a/sha1_file.c
++++ b/sha1_file.c
+@@ -3396,9 +3396,13 @@ static int loose_from_alt_odb(struct alternate_object_database *alt,
+ 			      void *vdata)
+ {
+ 	struct loose_alt_odb_data *data = vdata;
+-	return for_each_loose_file_in_objdir(alt->base,
+-					     data->cb, NULL, NULL,
+-					     data->data);
++	int r;
++	alt->name[-1] = 0;
++	r = for_each_loose_file_in_objdir(alt->base,
++					  data->cb, NULL, NULL,
++					  data->data);
++	alt->name[-1] = '/';
++	return r;
+ }
+ 
+ int for_each_loose_object(each_loose_object_fn cb, void *data)
+diff --git a/t/t5304-prune.sh b/t/t5304-prune.sh
+index e32e46de..0794d33d 100755
+--- a/t/t5304-prune.sh
++++ b/t/t5304-prune.sh
+@@ -253,4 +253,12 @@ test_expect_success 'prune .git/shallow' '
+ 	test_path_is_missing .git/shallow
+ '
+ 
++test_expect_success 'prune: handle alternate object database' '
++	test_create_repo A &&
++	git -C A commit --allow-empty -m "initial commit" &&
++	git clone --shared A B &&
++	git -C B commit --allow-empty -m "next commit" &&
++	git -C B prune
++'
++
+ test_done
+--

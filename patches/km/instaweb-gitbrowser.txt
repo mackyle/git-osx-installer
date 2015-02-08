@@ -1,0 +1,73 @@
+From 0392dcd026a0ee3f7401d2918d8624e55c68875c Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Sun, 8 Feb 2015 12:18:36 -0800
+Subject: [PATCH] git-instaweb: add git-browser graphiclog link
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ git-instaweb.sh | 17 +++++++++++++++--
+ 1 file changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 71c3d65e..2c1d35c3 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -105,6 +105,7 @@ start_httpd () {
+ 
+ 	# generate correct config file if it doesn't exist
+ 	test -f "$conf" || configure_httpd
++	test -f "$fqgitdir/gitweb/git-browser.conf" || gitbrowser_conf
+ 	test -f "$fqgitdir/gitweb/gitweb_config.perl" || gitweb_conf
+ 
+ 	# don't quote $full_httpd, there can be arguments to it (-f)
+@@ -196,7 +197,8 @@ mkdir -p "$GIT_DIR/gitweb/tmp"
+ GIT_EXEC_PATH="$(git --exec-path)"
+ GIT_DIR="$fqgitdir"
+ GITWEB_CONFIG="$fqgitdir/gitweb/gitweb_config.perl"
+-export GIT_EXEC_PATH GIT_DIR GITWEB_CONFIG
++GITBROWSER_CONFIG="$fqgitdir/gitweb/git-browser.conf"
++export GIT_EXEC_PATH GIT_DIR GITWEB_CONFIG GITBROWSER_CONFIG
+ 
+ webrick_conf () {
+ 	# webrick seems to have no way of passing arbitrary environment
+@@ -261,7 +263,7 @@ server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
+ # variable above and uncomment this
+ #accesslog.filename = "$fqgitdir/gitweb/$httpd_only/access.log"
+ 
+-setenv.add-environment = ( "PATH" => env.PATH, "GITWEB_CONFIG" => env.GITWEB_CONFIG )
++setenv.add-environment = ( "PATH" => env.PATH, "GITWEB_CONFIG" => env.GITWEB_CONFIG, "GITBROWSER_CONFIG" => env.GITBROWSER_CONFIG )
+ 
+ cgi.assign = ( ".cgi" => "" )
+ 
+@@ -590,12 +592,22 @@ EOF
+ 	rm -f "$conf"
+ }
+ 
++gitbrowser_conf() {
++	cat > "$fqgitdir/gitweb/git-browser.conf" <<EOF
++gitbin: $(command -v git)
++warehouse: $(dirname "$fqgitdir")
++EOF
++}
++
+ gitweb_conf() {
+ 	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
+ #!@@PERL@@
+ our \$projectroot = "$(dirname "$fqgitdir")";
+ our \$git_temp = "$fqgitdir/gitweb/tmp";
+ our \$projects_list = \$projectroot;
++\$feature{'actions'}{'default'}=[
++	('graphiclog', "/git-browser/by-commit.html?r=%n", 'log')
++];
+ 
+ \$feature{'remote_heads'}{'default'} = [1];
+ EOF
+@@ -648,6 +660,7 @@ restart)
+ 	;;
+ esac
+ 
++gitbrowser_conf
+ gitweb_conf
+ 
+ resolve_full_httpd
+--

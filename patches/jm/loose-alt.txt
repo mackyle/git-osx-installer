@@ -1,7 +1,34 @@
-From a1b47246adf5a44b5fdae857a6727982fcc0a411 Mon Sep 17 00:00:00 2001
+Received: by 10.52.145.72 with SMTP id ss8csp2567437vdb;
+        Sun, 8 Feb 2015 17:15:42 -0800 (PST)
+X-Received: by 10.202.111.131 with SMTP id v3mr9541156oik.133.1423444541789;
+        Sun, 08 Feb 2015 17:15:41 -0800 (PST)
+Return-Path: <peff@peff.net>
+Received: from cloud.peff.net (cloud.peff.net. [50.56.180.127])
+        by mx.google.com with SMTP id h10si4957717obt.93.2015.02.08.17.15.41
+        Sun, 08 Feb 2015 17:15:41 -0800 (PST)
+Received-SPF: pass (google.com: domain of peff@peff.net designates 50.56.180.127 as permitted sender) client-ip=50.56.180.127;
+Authentication-Results: mx.google.com;
+       spf=pass (google.com: domain of peff@peff.net designates 50.56.180.127 as permitted sender) smtp.mail=peff@peff.net
+Received: (qmail 16384 invoked by uid 102); 9 Feb 2015 01:15:41 -0000
+Received: from Unknown (HELO peff.net) (10.0.1.1)
+    by cloud.peff.net (qpsmtpd/0.84) with SMTP; Sun, 08 Feb 2015 19:15:41 -0600
+Received: (qmail 26863 invoked by uid 107); 9 Feb 2015 01:15:43 -0000
+Received: from sigill.intra.peff.net (HELO sigill.intra.peff.net) (10.0.0.7)
+    by peff.net (qpsmtpd/0.84) with SMTP; Sun, 08 Feb 2015 20:15:43 -0500
+Received: by sigill.intra.peff.net (sSMTP sendmail emulation); Sun, 08 Feb 2015 20:15:39 -0500
+Date: Sun, 8 Feb 2015 20:15:39 -0500
+From: Jeff King <peff@peff.net>
+Cc: Jonathon Mah <me@jonathonmah.com>, Junio C Hamano <gitster@pobox.com>,
+	Git mailing list <git@vger.kernel.org>
+Subject: [PATCH 2/2] sha1_file: fix iterating loose alternate objects
+Message-ID: <20150209011538.GB21123@peff.net>
+References: <20150209011159.GA21072@peff.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <20150209011159.GA21072@peff.net>
+
 From: Jonathon Mah <me@jonathonmah.com>
-Date: Mon, 2 Feb 2015 10:48:12 -0800
-Subject: [PATCH] sha1_file: fix iterating loose alternate objects
 
 The string in 'base' contains a path suffix to a specific object;
 when its value is used, the suffix must either be filled (as in
@@ -21,35 +48,46 @@ only shows if the alternate's path was last filled with a valid
 object (where statting /path/to/existing/00/0bjectfile/00 fails).
 
 Signed-off-by: Jonathon Mah <me@JonathonMah.com>
-Signed-off-by: Junio C Hamano <gitster@pobox.com>
+Helped-by: Kyle J. McKay <mackyle@gmail.com>
+Signed-off-by: Jeff King <peff@peff.net>
 ---
- sha1_file.c      | 10 +++++++---
+I think the S-O-B should still stand, as the code is now a mix of our
+work, and the tests are still Jonathon's. But let me know if you do not
+want your name attached to this. ;)
+
+I am also happy to build it as a patch on top of the original if that is
+simpler.
+
+ sha1_file.c      | 13 ++++++++++---
  t/t5304-prune.sh |  8 ++++++++
- 2 files changed, 15 insertions(+), 3 deletions(-)
+ 2 files changed, 18 insertions(+), 3 deletions(-)
 
 diff --git a/sha1_file.c b/sha1_file.c
-index c6326419..9e0c2712 100644
+index 725de7f..a41cc4f 100644
 --- a/sha1_file.c
 +++ b/sha1_file.c
-@@ -3396,9 +3396,13 @@ static int loose_from_alt_odb(struct alternate_object_database *alt,
+@@ -3406,9 +3406,16 @@ static int loose_from_alt_odb(struct alternate_object_database *alt,
  			      void *vdata)
  {
  	struct loose_alt_odb_data *data = vdata;
 -	return for_each_loose_file_in_objdir(alt->base,
 -					     data->cb, NULL, NULL,
 -					     data->data);
++	struct strbuf buf = STRBUF_INIT;
 +	int r;
-+	alt->name[-1] = 0;
-+	r = for_each_loose_file_in_objdir(alt->base,
-+					  data->cb, NULL, NULL,
-+					  data->data);
-+	alt->name[-1] = '/';
++
++	/* copy base not including trailing '/' */
++	strbuf_add(&buf, alt->base, alt->name - alt->base - 1);
++	r = for_each_loose_file_in_objdir_buf(&buf,
++					      data->cb, NULL, NULL,
++					      data->data);
++	strbuf_release(&buf);
 +	return r;
  }
  
  int for_each_loose_object(each_loose_object_fn cb, void *data)
 diff --git a/t/t5304-prune.sh b/t/t5304-prune.sh
-index e32e46de..0794d33d 100755
+index e32e46d..0794d33 100755
 --- a/t/t5304-prune.sh
 +++ b/t/t5304-prune.sh
 @@ -253,4 +253,12 @@ test_expect_success 'prune .git/shallow' '
@@ -65,4 +103,5 @@ index e32e46de..0794d33d 100755
 +'
 +
  test_done
---
+-- 
+2.3.0.rc1.287.g761fd19

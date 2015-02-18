@@ -1,0 +1,41 @@
+From d720932961bd52257bc5dd11a02422f61e229a49 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Tue, 17 Feb 2015 21:03:31 -0800
+Subject: [PATCH] git-instaweb: enable blame, pathinfo and set default charset
+ to utf-8
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ git-instaweb.sh | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 91dea5c2..3b2eda65 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -256,6 +256,7 @@ server.modules = ( "mod_setenv", "mod_cgi" )
+ server.indexfiles = ( "gitweb.cgi" )
+ server.pid-file = "$fqgitdir/pid"
+ server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
++server.force-lowercase-filenames = "disable"
+ 
+ # to enable, add "mod_access", "mod_accesslog" to server.modules
+ # variable above and uncomment this
+@@ -596,8 +597,16 @@ gitweb_conf() {
+ our \$projectroot = "$(dirname "$fqgitdir")";
+ our \$git_temp = "$fqgitdir/gitweb/tmp";
+ our \$projects_list = \$projectroot;
++our \$default_text_plain_charset = 'utf-8';
++our \$my_uri = "/gitweb.cgi";
++our @stylesheets = ("/static/gitweb.css");
++our \$logo = "/static/git-logo.png";
++our \$favicon = "/static/git-favicon.png";
++our \$gitwebjs = "/static/gitweb.js";
+ 
+ \$feature{'remote_heads'}{'default'} = [1];
++\$feature{'blame'}{'default'} = [1];
++\$feature{'pathinfo'}{'default'} = [1];
+ EOF
+ 	hlbin="$(command -v highlight 2>/dev/null)"
+ 	if [ -x "$hlbin" ] && "$hlbin" --version | grep -q 'Andre Simon'; then
+--

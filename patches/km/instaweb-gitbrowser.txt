@@ -1,4 +1,4 @@
-From 0392dcd026a0ee3f7401d2918d8624e55c68875c Mon Sep 17 00:00:00 2001
+From b35dc517f8b0eda33775e567406d1446f616392f Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Sun, 8 Feb 2015 12:18:36 -0800
 Subject: [PATCH] git-instaweb: add git-browser graphiclog link
@@ -9,7 +9,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 15 insertions(+), 2 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 71c3d65e..2c1d35c3 100755
+index 3b2eda65..9b797315 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -105,6 +105,7 @@ start_httpd () {
@@ -30,7 +30,7 @@ index 71c3d65e..2c1d35c3 100755
  
  webrick_conf () {
  	# webrick seems to have no way of passing arbitrary environment
-@@ -261,7 +263,7 @@ server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
+@@ -262,7 +264,7 @@ server.force-lowercase-filenames = "disable"
  # variable above and uncomment this
  #accesslog.filename = "$fqgitdir/gitweb/$httpd_only/access.log"
  
@@ -39,7 +39,7 @@ index 71c3d65e..2c1d35c3 100755
  
  cgi.assign = ( ".cgi" => "" )
  
-@@ -590,12 +592,22 @@ EOF
+@@ -591,6 +593,13 @@ EOF
  	rm -f "$conf"
  }
  
@@ -53,16 +53,17 @@ index 71c3d65e..2c1d35c3 100755
  gitweb_conf() {
  	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
  #!@@PERL@@
- our \$projectroot = "$(dirname "$fqgitdir")";
- our \$git_temp = "$fqgitdir/gitweb/tmp";
- our \$projects_list = \$projectroot;
+@@ -604,6 +613,9 @@ our \$logo = "/static/git-logo.png";
+ our \$favicon = "/static/git-favicon.png";
+ our \$gitwebjs = "/static/gitweb.js";
+ 
 +\$feature{'actions'}{'default'}=[
 +	('graphiclog', "/git-browser/by-commit.html?r=%n", 'log')
 +];
- 
  \$feature{'remote_heads'}{'default'} = [1];
- EOF
-@@ -648,6 +660,7 @@ restart)
+ \$feature{'blame'}{'default'} = [1];
+ \$feature{'pathinfo'}{'default'} = [1];
+@@ -663,6 +675,7 @@ restart)
  	;;
  esac
  

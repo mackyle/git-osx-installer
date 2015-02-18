@@ -1,4 +1,4 @@
-From 99e136e41c140b7a2b1b2bc53088e04e342e7acf Mon Sep 17 00:00:00 2001
+From 7e4317c4da5ed06cf6391b338ce620b6aab12558 Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Sun, 8 Feb 2015 04:30:34 -0800
 Subject: [PATCH] git-instaweb: enable source highlighting if available

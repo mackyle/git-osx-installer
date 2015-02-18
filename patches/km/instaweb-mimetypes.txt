@@ -1,0 +1,31 @@
+From ddc3aca1183a4bd8361a13442febb71909d988f5 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Tue, 17 Feb 2015 20:48:14 -0800
+Subject: [PATCH] git-instaweb: configure $mimetypes_file if found
+
+If `git --exec-dir`/../../etc/mime.types exists then configure
+gitweb to use it for the mime types file.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ git-instaweb.sh | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 71c3d65e..91dea5c2 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -606,6 +606,12 @@ our \$highlight_bin = "$hlbin";
+ \$feature{'highlight'}{'default'} = [1];
+ EOF
+ 	fi
++	etcdir="$(cd "$GIT_EXEC_PATH/../../etc" 2>/dev/null && pwd -P)"
++	if [ -n "$etcdir" -a -d "$etcdir" -a -f "$etcdir/mime.types" ]; then
++	cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
++our \$mimetypes_file = "$etcdir/mime.types";
++EOF
++	fi
+ }
+ 
+ configure_httpd() {
+--

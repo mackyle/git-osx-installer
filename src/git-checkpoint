@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# git-checkpoint -- save a stash of current work in progress
+# Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
+# License GPLv2.
+
+# Usage: git checkpoint [<stash message>]
+# Optional: git config --global alias.cp checkpoint
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+	echo "usage: git checkpoint [<stash message>]"
+	exit 0
+fi
+
+# By avoiding git stash store we support Git 1.5.4 and later
+
+# If run as "git checkpoint" then GIT_DIR would already be set,
+# but just in case we're run directly, set it.
+[ -n "$GIT_DIR" ] || GIT_DIR="$(git rev-parse --git-dir)" || exit 1
+id="$(git stash create "$@")" || exit 1
+[ -n "$id" ] || { echo "No local changes to save" >&2; exit 1; }
+mkdir -p "$GIT_DIR/logs/refs" && \
+>> "$GIT_DIR/logs/refs/stash" && \
+git update-ref -m "$(git log -1 --pretty='format:%s' "$id")" refs/stash "$id" && \
+git --no-pager log -g --pretty=oneline --abbrev-commit --no-decorate -1 stash

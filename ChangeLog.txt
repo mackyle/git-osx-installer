@@ -13,7 +13,7 @@ Git 2.?.? Installer - released 2015-??-??
   - enable source highlighting when running git instaweb
   - allow git instaweb to find submodules with .git gitdir: links
   - enable correct blob_plain mime types with git instaweb
-  - enable blame, pathinfo and utf-8 default in git instaweb
+  - enable blame, pathinfo, better diff and utf-8 default in git instaweb
   - added git-browser graphiclog to git instaweb
   - added loose alternates fix (backport)
   - added another required loose alternates fix

@@ -1,4 +1,4 @@
-From 7e4317c4da5ed06cf6391b338ce620b6aab12558 Mon Sep 17 00:00:00 2001
+From f50a7c82452e603556b35a27d24bb4c23fb9dbbd Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Sun, 8 Feb 2015 04:30:34 -0800
 Subject: [PATCH] git-instaweb: enable source highlighting if available
@@ -12,10 +12,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 7 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 513efa66..71c3d65e 100755
+index 4c0af04f..a8542fb2 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -599,6 +599,13 @@ our \$projects_list = \$projectroot;
+@@ -600,6 +600,13 @@ our \$projects_list = \$projectroot;
  
  \$feature{'remote_heads'}{'default'} = [1];
  EOF

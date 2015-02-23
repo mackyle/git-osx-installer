@@ -1,0 +1,23 @@
+From f08bd53ed5a7b5f84210ea9af367f03ff46503b3 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Sun, 22 Feb 2015 21:51:51 -0800
+Subject: [PATCH] git-instaweb: allow running in subdir
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ git-instaweb.sh | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 513efa66..4c0af04f 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -20,6 +20,7 @@ start          start the web server
+ restart        restart the web server
+ "
+ 
++SUBDIRECTORY_OK=Yes
+ . git-sh-setup
+ 
+ fqgitdir="$GIT_DIR"
+--

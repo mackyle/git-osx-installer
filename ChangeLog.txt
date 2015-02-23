@@ -11,6 +11,7 @@ Git 2.?.? Installer - released 2015-??-??
   - updated from version 2.2.2
   - improved compatibility with arbitrary svn installations
   - enable source highlighting when running git instaweb
+  - allow git instaweb to be run from a non-toplevel working tree dir
   - allow git instaweb to find submodules with .git gitdir: links
   - enable correct blob_plain mime types with git instaweb
   - enable blame, pathinfo, better diff and utf-8 default in git instaweb

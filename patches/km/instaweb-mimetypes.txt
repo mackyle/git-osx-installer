@@ -1,4 +1,4 @@
-From ddc3aca1183a4bd8361a13442febb71909d988f5 Mon Sep 17 00:00:00 2001
+From 3845f962987108ace1d441528ad151c01d2a9062 Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Tue, 17 Feb 2015 20:48:14 -0800
 Subject: [PATCH] git-instaweb: configure $mimetypes_file if found
@@ -12,10 +12,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 71c3d65e..91dea5c2 100755
+index a8542fb2..b9366a56 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -606,6 +606,12 @@ our \$highlight_bin = "$hlbin";
+@@ -607,6 +607,12 @@ our \$highlight_bin = "$hlbin";
  \$feature{'highlight'}{'default'} = [1];
  EOF
  	fi

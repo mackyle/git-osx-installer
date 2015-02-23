@@ -1,4 +1,4 @@
-From bef967b79c01a60912b93c7f9557423c74bef9c2 Mon Sep 17 00:00:00 2001
+From 2b19e78a78ad37b5609d81aab9a6bdb796d476bd Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Tue, 17 Feb 2015 21:03:31 -0800
 Subject: [PATCH] git-instaweb: enable blame, pathinfo, better diff and set
@@ -10,10 +10,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 10 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 91dea5c2..2231670c 100755
+index b9366a56..dc4dc3b8 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -256,6 +256,7 @@ server.modules = ( "mod_setenv", "mod_cgi" )
+@@ -257,6 +257,7 @@ server.modules = ( "mod_setenv", "mod_cgi" )
  server.indexfiles = ( "gitweb.cgi" )
  server.pid-file = "$fqgitdir/pid"
  server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
@@ -21,7 +21,7 @@ index 91dea5c2..2231670c 100755
  
  # to enable, add "mod_access", "mod_accesslog" to server.modules
  # variable above and uncomment this
-@@ -596,8 +597,17 @@ gitweb_conf() {
+@@ -597,8 +598,17 @@ gitweb_conf() {
  our \$projectroot = "$(dirname "$fqgitdir")";
  our \$git_temp = "$fqgitdir/gitweb/tmp";
  our \$projects_list = \$projectroot;

@@ -1,4 +1,4 @@
-From 19c051eab05ab0b826f3ca45346610a73a95d738 Mon Sep 17 00:00:00 2001
+From 88642f79ceb8b5f0035b8ca5107c5732c2413c19 Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Sun, 8 Feb 2015 12:18:36 -0800
 Subject: [PATCH] git-instaweb: add git-browser graphiclog link
@@ -9,10 +9,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 15 insertions(+), 2 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 2231670c..cdaef50b 100755
+index dc4dc3b8..484fc929 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -105,6 +105,7 @@ start_httpd () {
+@@ -106,6 +106,7 @@ start_httpd () {
  
  	# generate correct config file if it doesn't exist
  	test -f "$conf" || configure_httpd
@@ -20,7 +20,7 @@ index 2231670c..cdaef50b 100755
  	test -f "$fqgitdir/gitweb/gitweb_config.perl" || gitweb_conf
  
  	# don't quote $full_httpd, there can be arguments to it (-f)
-@@ -196,7 +197,8 @@ mkdir -p "$GIT_DIR/gitweb/tmp"
+@@ -197,7 +198,8 @@ mkdir -p "$GIT_DIR/gitweb/tmp"
  GIT_EXEC_PATH="$(git --exec-path)"
  GIT_DIR="$fqgitdir"
  GITWEB_CONFIG="$fqgitdir/gitweb/gitweb_config.perl"
@@ -30,7 +30,7 @@ index 2231670c..cdaef50b 100755
  
  webrick_conf () {
  	# webrick seems to have no way of passing arbitrary environment
-@@ -262,7 +264,7 @@ server.force-lowercase-filenames = "disable"
+@@ -263,7 +265,7 @@ server.force-lowercase-filenames = "disable"
  # variable above and uncomment this
  #accesslog.filename = "$fqgitdir/gitweb/$httpd_only/access.log"
  
@@ -39,7 +39,7 @@ index 2231670c..cdaef50b 100755
  
  cgi.assign = ( ".cgi" => "" )
  
-@@ -591,6 +593,13 @@ EOF
+@@ -592,6 +594,13 @@ EOF
  	rm -f "$conf"
  }
  
@@ -53,7 +53,7 @@ index 2231670c..cdaef50b 100755
  gitweb_conf() {
  	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
  #!@@PERL@@
-@@ -605,6 +614,9 @@ our \$favicon = "/static/git-favicon.png";
+@@ -606,6 +615,9 @@ our \$favicon = "/static/git-favicon.png";
  our \$gitwebjs = "/static/gitweb.js";
  our @diff_opts = ('-B', '-C');
  
@@ -63,7 +63,7 @@ index 2231670c..cdaef50b 100755
  \$feature{'remote_heads'}{'default'} = [1];
  \$feature{'blame'}{'default'} = [1];
  \$feature{'pathinfo'}{'default'} = [1];
-@@ -664,6 +676,7 @@ restart)
+@@ -665,6 +677,7 @@ restart)
  	;;
  esac
  

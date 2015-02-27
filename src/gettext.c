@@ -318,3 +318,5 @@ char *gettext(const char *msgid)
 	}
 	return (char *)msgid;
 }
+
+#include "gettext-culled.c"

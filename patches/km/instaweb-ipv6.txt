@@ -1,0 +1,42 @@
+From 0f51c544cb97da614256368c19af4177a138e0e2 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Thu, 26 Feb 2015 21:23:10 -0800
+Subject: [PATCH] git-instaweb: bind to IPv4 and IPv6 host addresses
+
+Note that gitweb.cgi does not properly handle literal IPv6
+addresses, but at least with this change connecting to
+localhost (or the host's actual name) will work properly
+regardless of whether or not the connection is IPv4 or IPv6.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ git-instaweb.sh | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 484fc929..50559c9c 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -252,9 +252,13 @@ EOF
+ }
+ 
+ lighttpd_conf () {
++	host4="0.0.0.0"; host6="[::]"
++	test x"$local" = xtrue && { host4="127.0.0.1"; host6="[::1]"; }
+ 	cat > "$conf" <<EOF
+ server.document-root = "$root"
+ server.port = $port
++server.bind = "$host4"
++\$SERVER["socket"] == "$host6:$port" {}
+ server.modules = ( "mod_setenv", "mod_cgi" )
+ server.indexfiles = ( "gitweb.cgi" )
+ server.pid-file = "$fqgitdir/pid"
+@@ -325,7 +329,6 @@ mimetype.assign             = (
+   ""              =>      "text/plain"
+  )
+ EOF
+-	test x"$local" = xtrue && echo 'server.bind = "127.0.0.1"' >> "$conf"
+ }
+ 
+ apache2_conf () {
+--

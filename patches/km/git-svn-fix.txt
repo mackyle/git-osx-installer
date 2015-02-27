@@ -1,0 +1,86 @@
+Subject: [PATCH v2] Git::SVN::*: avoid premature FileHandle closure
+
+Since b19138b (git-svn: Make it incrementally faster by minimizing temp
+files, v1.6.0), git-svn has been using the Git.pm temp_acquire and
+temp_release mechanism to avoid unnecessary temp file churn and provide
+a speed boost.
+
+However, that change introduced a call to temp_acquire inside the
+Git::SVN::Fetcher::close_file function for an 'svn_hash' temp file.
+Because an SVN::Pool is active at the time this function is called, if
+the Git::temp_acquire function ends up actually creating a new
+FileHandle for the temp file (which it will the first time it's called
+with the name 'svn_hash') that FileHandle will end up in the SVN::Pool
+and should that pool have SVN::Pool::clear called on it that FileHandle
+will be closed out from under Git::temp_acquire.
+
+Since the only call site to Git::temp_acquire with the name 'svn_hash'
+is inside the close_file function, if an 'svn_hash' temp file is ever
+created its FileHandle is guaranteed to be created in the active
+SVN::Pool.
+
+This has not been a problem in the past because the SVN::Pool was not
+being cleared.  However, since dfa72fdb (git-svn: reload RA every
+log-window-size, v2.2.0) the pool has been getting cleared periodically
+at which point the FileHandle for the 'svn_hash' temp file gets closed.
+Any subsequent calls to Git::temp_acquire for 'svn_hash', however,
+succeed without creating/opening a new temporary file since it still has
+the now invalid FileHandle in its cache.  Callers that then attempt to
+use that FileHandle fail with an error.
+
+We avoid this problem by making sure the 'svn_hash' temp file is created
+in the same place the 'svn_delta_...' and 'git_blob_...' temp files are
+(and then temp_release'd) so that it can be safely used inside the
+close_file function without having its FileHandle end up in an SVN::Pool
+that gets cleared.
+
+Additionally the Git.pm cat_blob function creates a bidirectional pipe
+FileHandle using the IPC::Open2::open2 function.  If that handle is
+created too late, it also gets caught up in the SVN::Pool and incorrectly
+closed by the SVN::Pool::clear call.  But this only seems to happen with
+more recent versions of Perl and svn.
+
+To avoid this problem we add an explicit call to _open_cat_blob_if_needed
+before the first call to SVN::Pool->new_default to make sure the open2
+handle does not end up in the SVN::Pool.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ perl/Git/SVN/Fetcher.pm | 8 ++++++++
+ perl/Git/SVN/Ra.pm      | 3 +++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/perl/Git/SVN/Fetcher.pm b/perl/Git/SVN/Fetcher.pm
+index 10edb277..613055a3 100644
+--- a/perl/Git/SVN/Fetcher.pm
++++ b/perl/Git/SVN/Fetcher.pm
+@@ -322,6 +322,14 @@ sub apply_textdelta {
+ 	# (but $base does not,) so dup() it for reading in close_file
+ 	open my $dup, '<&', $fh or croak $!;
+ 	my $base = $::_repository->temp_acquire("git_blob_${$}_$suffix");
++	# close_file may call temp_acquire on 'svn_hash', but because of the
++	# call chain, if the temp_acquire call from close_file ends up being the
++	# call that first creates the 'svn_hash' temp file, then the FileHandle
++	# that's created as a result will end up in an SVN::Pool that we clear
++	# in SVN::Ra::gs_fetch_loop_common.  Avoid that by making sure the
++	# 'svn_hash' FileHandle is already created before close_file is called.
++	my $tmp_fh = $::_repository->temp_acquire('svn_hash');
++	$::_repository->temp_release($tmp_fh, 1);
+ 
+ 	if ($fb->{blob}) {
+ 		my ($base_is_link, $size);
+diff --git a/perl/Git/SVN/Ra.pm b/perl/Git/SVN/Ra.pm
+index 622535e2..32e2f19e 100644
+--- a/perl/Git/SVN/Ra.pm
++++ b/perl/Git/SVN/Ra.pm
+@@ -391,6 +391,9 @@ sub longest_common_path {
+ sub gs_fetch_loop_common {
+ 	my ($self, $base, $head, $gsv, $globs) = @_;
+ 	return if ($base > $head);
++	# Make sure the cat_blob open2 FileHandle is created before calling
++	# SVN::Pool::new_default so that it does not incorrectly end up in the pool.
++	$::_repository->_open_cat_blob_if_needed;
+ 	my $gpool = SVN::Pool->new_default;
+ 	my $ra_url = $self->url;
+ 	my $reload_ra = sub {
+--

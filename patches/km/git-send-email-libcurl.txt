@@ -1,4 +1,4 @@
-From 05efa7c96932918f729613b38d4aa9d3a29026a9 Mon Sep 17 00:00:00 2001
+From 63ea46bebd12199755c4c786ceb942b26e4d4f46 Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Sat, 22 Nov 2014 08:07:05 -0800
 Subject: [PATCH] git-send-email: use libcurl for implementation
@@ -45,23 +45,23 @@ value to render it opaque.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  git-send-email--libcurl.pl | 218 +++++++++++++++++++++++++
- git-send-email.perl        | 157 +++++++++---------
+ git-send-email.perl        | 160 +++++++++---------
  send-email--libcurl.c      | 393 +++++++++++++++++++++++++++++++++++++++++++++
  t/t9001-send-email.sh      |  10 --
- 4 files changed, 684 insertions(+), 94 deletions(-)
+ 4 files changed, 686 insertions(+), 95 deletions(-)
  create mode 100644 git-send-email--libcurl.pl
  create mode 100644 send-email--libcurl.c
 
 diff --git a/git-send-email--libcurl.pl b/git-send-email--libcurl.pl
 new file mode 100644
-index 00000000..533d2173
+index 00000000..31a78b63
 --- /dev/null
 +++ b/git-send-email--libcurl.pl
 @@ -0,0 +1,218 @@
 +=comment
 +
 +send-email--libcurl.pl -- libcURL helper for git-send-email.perl
-+Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
++Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
 +
 +This program is free software; you can redistribute it and/or
 +modify it under the terms of the GNU General Public License
@@ -277,7 +277,7 @@ index 00000000..533d2173
 +
 +1;
 diff --git a/git-send-email.perl b/git-send-email.perl
-index 9949db01..aaddcaad 100755
+index a18a7959..9414f416 100755
 --- a/git-send-email.perl
 +++ b/git-send-email.perl
 @@ -26,8 +26,12 @@ use Data::Dumper;
@@ -293,7 +293,25 @@ index 9949db01..aaddcaad 100755
  
  Getopt::Long::Configure qw/ pass_through /;
  
-@@ -293,6 +297,7 @@ my $rc = GetOptions("h" => \$help,
+@@ -54,7 +58,7 @@ git send-email [options] <file | directory | rev-list options >
+     --[no-]bcc              <str>  * Email Bcc:
+     --subject               <str>  * Email "Subject:"
+     --in-reply-to           <str>  * Email "In-Reply-To:"
+-    --[no-]xmailer                 * Add "X-Mailer:" header (default).
++    --[no-]xmailer                 * Add "X-Mailer:" header (default is off).
+     --[no-]annotate                * Review each patch that will be sent in an editor.
+     --compose                      * Open an editor for introduction.
+     --compose-encoding      <str>  * Encoding to assume for introduction.
+@@ -228,7 +232,7 @@ my %config_bool_settings = (
+     "validate" => [\$validate, 1],
+     "multiedit" => [\$multiedit, undef],
+     "annotate" => [\$annotate, undef],
+-    "xmailer" => [\$use_xmailer, 1]
++    "xmailer" => [\$use_xmailer, 0]
+ );
+ 
+ my %config_settings = (
+@@ -304,6 +308,7 @@ my $rc = GetOptions("h" => \$help,
  		    "smtp-server-option=s" => \@smtp_server_options,
  		    "smtp-server-port=s" => \$smtp_server_port,
  		    "smtp-user=s" => \$smtp_authuser,
@@ -301,7 +319,7 @@ index 9949db01..aaddcaad 100755
  		    "smtp-pass:s" => \$smtp_authpass,
  		    "smtp-ssl" => sub { $smtp_encryption = 'ssl' },
  		    "smtp-encryption=s" => \$smtp_encryption,
-@@ -902,8 +907,10 @@ sub make_message_id {
+@@ -924,8 +929,10 @@ sub make_message_id {
  		require Sys::Hostname;
  		$du_part = 'user@' . Sys::Hostname::hostname();
  	}
@@ -313,7 +331,7 @@ index 9949db01..aaddcaad 100755
  	#print "new message id = $message_id\n"; # Was useful for debugging
  }
  
-@@ -1058,12 +1065,12 @@ sub smtp_host_string {
+@@ -1089,12 +1096,12 @@ sub smtp_host_string {
  	}
  }
  
@@ -329,7 +347,7 @@ index 9949db01..aaddcaad 100755
  	}
  
  	# Workaround AUTH PLAIN/LOGIN interaction defect
-@@ -1076,47 +1083,36 @@ sub smtp_auth_maybe {
+@@ -1107,47 +1114,36 @@ sub smtp_auth_maybe {
  	# TODO: Authentication may fail not because credentials were
  	# invalid but due to other reasons, in which we should not
  	# reject credentials.
@@ -392,15 +410,7 @@ index 9949db01..aaddcaad 100755
  	}
  }
  
-@@ -1163,7 +1159,6 @@ To: $to${ccline}
- Subject: $subject
- Date: $date
- Message-Id: $message_id
--X-Mailer: git-send-email $gitversion
- ";
- 	if ($reply_to) {
- 
-@@ -1230,61 +1225,56 @@ X-Mailer: git-send-email $gitversion
+@@ -1263,61 +1259,56 @@ Message-Id: $message_id
  			die "The required SMTP server is not properly defined."
  		}
  
@@ -507,7 +517,7 @@ index 9949db01..aaddcaad 100755
  	}
  	if ($quiet) {
  		printf (($dry_run ? "Dry-" : "")."Sent %s\n", $subject);
-@@ -1301,8 +1291,7 @@ X-Mailer: git-send-email $gitversion
+@@ -1334,8 +1325,7 @@ Message-Id: $message_id
  		}
  		print $header, "\n";
  		if ($smtp) {
@@ -517,25 +527,25 @@ index 9949db01..aaddcaad 100755
  		} else {
  			print "Result: OK\n";
  		}
-@@ -1541,7 +1530,7 @@ sub cleanup_compose_files {
+@@ -1593,7 +1583,7 @@ sub cleanup_compose_files {
  	unlink($compose_filename, $compose_filename . ".final") if $compose;
  }
  
 -$smtp->quit if $smtp;
 +$smtp = undef;
  
- sub unique_email_list {
- 	my %seen;
+ sub apply_transfer_encoding {
+ 	my $message = shift;
 diff --git a/send-email--libcurl.c b/send-email--libcurl.c
 new file mode 100644
-index 00000000..94fd9dea
+index 00000000..9dabea3f
 --- /dev/null
 +++ b/send-email--libcurl.c
 @@ -0,0 +1,393 @@
 +/*
 +
 +send-email--libcurl.c -- libcURL helper for git-send-email.perl
-+Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
++Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
 +
 +This program is free software; you can redistribute it and/or
 +modify it under the terms of the GNU General Public License
@@ -926,10 +936,10 @@ index 00000000..94fd9dea
 +	return 0;
 +}
 diff --git a/t/t9001-send-email.sh b/t/t9001-send-email.sh
-index 19a3ced6..d7360ebd 100755
+index 05130554..79238967 100755
 --- a/t/t9001-send-email.sh
 +++ b/t/t9001-send-email.sh
-@@ -162,7 +162,6 @@ Cc: cc@example.com,
+@@ -164,7 +164,6 @@ Cc: cc@example.com,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -937,7 +947,7 @@ index 19a3ced6..d7360ebd 100755
  In-Reply-To: <unique-message-id@example.com>
  References: <unique-message-id@example.com>
  
-@@ -509,7 +508,6 @@ Cc: cc@example.com,
+@@ -513,7 +512,6 @@ Cc: cc@example.com,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -945,7 +955,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -556,7 +554,6 @@ Cc: A <author@example.com>,
+@@ -560,7 +558,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -953,7 +963,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -591,7 +588,6 @@ Cc: A <author@example.com>,
+@@ -595,7 +592,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -961,7 +971,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -616,7 +612,6 @@ To: to@example.com
+@@ -621,7 +617,6 @@ To: to@example.com
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -969,7 +979,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -650,7 +645,6 @@ Cc: A <author@example.com>,
+@@ -655,7 +650,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -977,7 +987,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -681,7 +675,6 @@ Cc: A <author@example.com>,
+@@ -686,7 +680,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -985,7 +995,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -712,7 +705,6 @@ Cc: A <author@example.com>,
+@@ -717,7 +710,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -993,7 +1003,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -747,7 +739,6 @@ Cc: A <author@example.com>,
+@@ -752,7 +744,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -1001,7 +1011,7 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
-@@ -775,7 +766,6 @@ Cc: A <author@example.com>,
+@@ -780,7 +771,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -1009,3 +1019,4 @@ index 19a3ced6..d7360ebd 100755
  
  Result: OK
  EOF
+--

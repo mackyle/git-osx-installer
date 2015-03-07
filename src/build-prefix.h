@@ -41,8 +41,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #undef _
 #define _(s) gettext(s)
 #undef N_
-/* N_(x) MUST NOT have any parenthesis around expansion! */
-#define N_(s) s
+/* N_(x) MUST NOT have any parenthesis around expansion before v2.3.0! */
+#define N_(s) (s)
 #undef Q_
 #define Q_(s,p,n) ngettext((s),(p),(n))
 extern void git_setup_gettext(void);

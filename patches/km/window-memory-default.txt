@@ -1,4 +1,4 @@
-From 87d807efb18c3b335057e584f49db3e8cb006f96 Mon Sep 17 00:00:00 2001
+From 8a6458035591dccd033b8e7a37102d9b203c05eb Mon Sep 17 00:00:00 2001
 From: "Kyle J. McKay" <mackyle@gmail.com>
 Date: Wed, 31 Dec 2014 10:07:44 -0800
 Subject: [PATCH] pack-objects.c: change pack.windowmemory default
@@ -22,7 +22,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 39 insertions(+), 2 deletions(-)
 
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index 3f9f5c77..37759259 100644
+index d8165878..b0e8eee7 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
 @@ -23,6 +23,11 @@
@@ -81,7 +81,7 @@ index 3f9f5c77..37759259 100644
  static int option_parse_index_version(const struct option *opt,
  				      const char *arg, int unset)
  {
-@@ -2743,9 +2776,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+@@ -2748,9 +2781,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
  		delta_search_threads = online_cpus();
  
  #ifdef NO_PTHREADS
@@ -96,3 +96,4 @@ index 3f9f5c77..37759259 100644
  	if (!pack_to_stdout && !pack_size_limit)
  		pack_size_limit = pack_size_limit_cfg;
  	if (pack_to_stdout && pack_size_limit)
+--

@@ -29,15 +29,10 @@ Git Patches
 
 * Use libcurl for imap send
 
-  - `patches/br/git-imap-send_use_libcurl.txt`
+  - `patches/km/git-imap-send_use_libcurl.txt`
 
-  This is a backport of v1 of the patch from the mailing list at:
-  <http://article.gmane.org/gmane.comp.version-control.git/255954>.
-  Additionally it has the strbuf leak fixes suggested on the list at:
-  <http://article.gmane.org/gmane.comp.version-control.git/259120>
-  and the GIT_CURL_VERBOSE and CURLUSESSL_TRY fixes posted to the list at:
-  <http://thread.gmane.org/gmane.comp.version-control.git/262057>
-  <http://thread.gmane.org/gmane.comp.version-control.git/262058>.
+  This makes libcurl the default without requiring --use-curl and also
+  enables using CRAM-MD5 in an imap tunnel.
 
 * Use libcurl for send email
 
@@ -86,28 +81,34 @@ Git Patches
   Both patches included in the thread and discussion at:
   <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
 
-* Create update-server-info files with correct permissions
+* Improve usability of git-instaweb:
 
-  - `patches/jk/update-server-info-fix.txt`
+  - `patches/km/instaweb-subdir.txt`
+  - `patches/km/instaweb-highlight.txt`
+  - `patches/km/instaweb-mimetypes.txt`
+  - `patches/km/instaweb-defaults.txt`
+  - `patches/km/instaweb-gitbrowser.txt`
+  - `patches/km/instaweb-ipv6.txt`
 
-  Available from the list and picked up to hopefully be in a maint update.
-  <http://thread.gmane.org/gmane.comp.version-control.git/262026>.
+  My own patches to improve the usability of git instaweb by making it run
+  from within a git checkout that is not at the top-level of the working tree,
+  enable source highlighting if highlight is available, use the installed copy
+  of mime.types (since there isn't such a file in OS X), enable pathinfo mode,
+  blame and better rename detection, add a 'graphiclog' link to the pages that
+  uses git-browser to show a graphic representation of commit ancestry and
+  finally to bind to both IPv4 and IPv6 addresses.  The ipv6 patch is only
+  effective when using lighttpd as the web server (which is the default).  Have
+  not been posted elsewhere.
 
-* Make git-http-push work with cURL >= 7.40
+* Add submodule support to gitweb:
 
-  - `patches/jk/curl-740-fix.txt`
+  - `patches/km/gitweb-gitdir.txt`
 
-  Available from the list and picked up to hopefully be in a maint update.
-  <http://thread.gmane.org/gmane.comp.version-control.git/262323>.
-
-* Fix memory overrun in builtin/apply.c
-
-  - `patches/jh/detect-postlen-overflow.txt`
-  - `patches/jh/apply-correct-count.txt`
-  - `patches/km/apply-ws-tests.txt`
-
-  Available from the list and picked up to hopefully be in a maint update.
-  <http://thread.gmane.org/gmane.comp.version-control.git/262404>.
+  My own patch to allow gitweb to find submodules that use gitdir links.  With
+  this patch using git instaweb in a working tree that contains checked-out
+  submodules makes it very easy to browse the submodules -- without the patch
+  they are not listed in the gitweb projects list.  Has not been posted
+  elsewhere.
 
 
 Curl Patches

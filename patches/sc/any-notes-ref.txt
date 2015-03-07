@@ -1,54 +1,7 @@
-Received: by 10.52.111.9 with SMTP id ie9csp381010vdb;
-        Fri, 19 Sep 2014 00:45:58 -0700 (PDT)
-X-Received: by 10.70.7.163 with SMTP id k3mr13718329pda.49.1411112757905;
-        Fri, 19 Sep 2014 00:45:57 -0700 (PDT)
-Return-Path: <git-owner@vger.kernel.org>
-Received: from vger.kernel.org (vger.kernel.org. [209.132.180.67])
-        by mx.google.com with ESMTP id v3si1570031pdm.127.2014.09.19.00.45.18
-        for <multiple recipients>;
-        Fri, 19 Sep 2014 00:45:57 -0700 (PDT)
-Received-SPF: none (google.com: git-owner@vger.kernel.org does not designate permitted sender hosts) client-ip=209.132.180.67;
-Authentication-Results: mx.google.com;
-       spf=neutral (google.com: git-owner@vger.kernel.org does not designate permitted sender hosts) smtp.mail=git-owner@vger.kernel.org;
-       dkim=neutral (body hash did not verify) header.i=@;
-       dmarc=fail (p=NONE dis=NONE) header.from=gmail.com
-Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-	id S1751617AbaISHj5 (ORCPT <rfc822;bamccaig@gmail.com> + 99 others);
-	Fri, 19 Sep 2014 03:39:57 -0400
-Received: from mail-wg0-f46.google.com ([74.125.82.46]:46869 "EHLO
-	mail-wg0-f46.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-	with ESMTP id S1751029AbaISHj4 (ORCPT <rfc822;git@vger.kernel.org>);
-	Fri, 19 Sep 2014 03:39:56 -0400
-Received: by mail-wg0-f46.google.com with SMTP id n12so1991059wgh.29
-        for <git@vger.kernel.org>; Fri, 19 Sep 2014 00:39:55 -0700 (PDT)
-DKIM-Signature:	v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20120113;
-        h=from:to:cc:subject:date:message-id;
-        bh=nlospyNH0odSH3FFqfjUiDsrNCaEatpprNxZQt/5818=;
-        b=egVps5BtxIbLoOpQ7aiRWrUawJKr6VazgFuvb6gdLacprifbuxUymnHMRvFGNaHDed
-         wS5PbKO/mo8je/TanOhTKSTURL1n/62QBE6Q2rxuqsiTlY8ZO4MtI2bKupYXdFuSTYb+
-         zbqBjbRkcCzIlppYrRsC6P/vOF9JtmPp6Jyq8OW9ZSCSm5F9Se2jL7rh+c08sgWfSK9h
-         GSrqy902XYh/wh4MKHJzHH/3n3Rp8qkOInDYZg83Ik1ztM6wl20gEx81+LIU/oKJiQTR
-         ZTogX7iJb/qb1wN+5+smLYR2QCf7WrXNhth4sC4SfArsqc4BPM8hOYqap7Sa/S0GKCsm
-         r3WA==
-X-Received: by 10.180.99.35 with SMTP id en3mr4610264wib.50.1411112395524;
-        Fri, 19 Sep 2014 00:39:55 -0700 (PDT)
-Received: from localhost.localdomain (85-168-227-34.rev.numericable.fr. [85.168.227.34])
-        by mx.google.com with ESMTPSA id cz3sm1295818wjb.23.2014.09.19.00.39.53
-        for <multiple recipients>
-        (version=TLSv1 cipher=RC4-SHA bits=128/128);
-        Fri, 19 Sep 2014 00:39:54 -0700 (PDT)
-From:	Scott Chacon <schacon@gmail.com>
-To:	git@vger.kernel.org
-Cc:	Scott Chacon <schacon@gmail.com>
+From 46a19a52d20e481345016b335d86a30ce97abedc Mon Sep 17 00:00:00 2001
+From: Scott Chacon <schacon@gmail.com>
+Date: Fri, 19 Sep 2014 09:39:45 +0200
 Subject: [PATCH] notes: accept any ref for merge
-Date:	Fri, 19 Sep 2014 09:39:45 +0200
-Message-Id: <1411112385-33479-1-git-send-email-schacon@gmail.com>
-X-Mailer: git-send-email 2.0.0
-Sender:	git-owner@vger.kernel.org
-Precedence: bulk
-List-ID: <git.vger.kernel.org>
-X-Mailing-List:	git@vger.kernel.org
 
 Currently if you try to merge notes, the notes code ensures that the
 reference is under the 'refs/notes' namespace. In order to do any sort
@@ -67,10 +20,10 @@ Signed-off-by: Scott Chacon <schacon@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/notes.c b/notes.c
-index 5fe691d..78d58af 100644
+index 2be4d7f3..ae96b99d 100644
 --- a/notes.c
 +++ b/notes.c
-@@ -1293,7 +1293,7 @@ int copy_note(struct notes_tree *t,
+@@ -1292,7 +1292,7 @@ int copy_note(struct notes_tree *t,
  
  void expand_notes_ref(struct strbuf *sb)
  {
@@ -79,10 +32,4 @@ index 5fe691d..78d58af 100644
  		return; /* we're happy */
  	else if (starts_with(sb->buf, "notes/"))
  		strbuf_insert(sb, 0, "refs/", 5);
--- 
-2.0.0
-
 --
-To unsubscribe from this list: send the line "unsubscribe git" in
-the body of a message to majordomo@vger.kernel.org
-More majordomo info at  http://vger.kernel.org/majordomo-info.html

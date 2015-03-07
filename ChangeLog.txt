@@ -4,27 +4,27 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
-Git 2.?.? Installer - released 2015-??-??
+Git 2.3.2 Installer - released 2015-03-??
 -----------------------------------------
 
-* Git v?.?.?
-  - updated from version 2.2.2
-  - improved compatibility with arbitrary svn installations
+* Git v2.3.2
+  - update from version 2.2.2
+  - drop update-server-info fix (included in v2.3.0)
+  - drop git-http-push for cURL >= 7.40 fix (included in v2.3.0)
+  - drop git apply memory overrun fix (included in v2.3.1)
+  - improve compatibility with arbitrary svn installations
   - enable source highlighting when running git instaweb
   - allow git instaweb to be run from a non-toplevel working tree dir
   - allow git instaweb to find submodules with .git gitdir: links
   - enable correct blob_plain mime types with git instaweb
   - enable blame, pathinfo, better diff and utf-8 default in git instaweb
-  - added git-browser graphiclog to git instaweb
-  - added loose alternates fix (backport)
-  - added another required loose alternates fix
-  - added git-svn fix (backport)
+  - add git-browser graphiclog to git instaweb
 
 * GnuPG 1.4.18
-  - enabled smart card support
+  - enable smart card support
 
 * highlight 2.16
-  - included to enable git instaweb source highlighting
+  - include to enable git instaweb source highlighting
 
 
 -----------------------------------------

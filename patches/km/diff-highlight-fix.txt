@@ -1,0 +1,61 @@
+From 433b046c23b67a0c7782dde32a5d1c23f1481a26 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Fri, 3 Apr 2015 14:43:41 -0700
+Subject: [PATCH] diff-highlight: do not split multibyte characters
+
+When the input is UTF-8 and Perl is operating on bytes instead of
+characters, a diff that changes one multibyte character to another
+that shares an initial byte sequence will result in a broken diff
+display as the common byte sequence prefix will be separated from
+the rest of the bytes in the multibyte character.
+
+For example, if a single line contains only the unicode character
+U+C9C4 (encoded as UTF-8 0xEC, 0xA7, 0x84) and that line is then
+changed to the unicode character U+C9C0 (encoded as UTF-8 0xEC,
+0xA7, 0x80), when operating on bytes diff-highlight will show only
+the single byte change from 0x84 to 0x80 thus creating invalid UTF-8
+and a broken diff display.
+
+Fix this by putting Perl into character mode when splitting the line
+and then back into byte mode after the split is finished.
+
+The utf8::xxx functions require Perl 5.8 so we require that as well.
+
+Also, since we are mucking with code in the split_line function, we
+change a '*' quantifier to a '+' quantifier when matching the $COLOR
+expression which has the side effect of speeding everything up while
+eliminating useless '' elements in the returned array.
+
+Reported-by: Yi EungJun <semtlenori@gmail.com>
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ contrib/diff-highlight/diff-highlight | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/contrib/diff-highlight/diff-highlight b/contrib/diff-highlight/diff-highlight
+index 08c88bbc..ffefc31a 100755
+--- a/contrib/diff-highlight/diff-highlight
++++ b/contrib/diff-highlight/diff-highlight
+@@ -1,5 +1,6 @@
+ #!/usr/bin/perl
+ 
++use 5.008;
+ use warnings FATAL => 'all';
+ use strict;
+ 
+@@ -164,8 +165,12 @@ sub highlight_pair {
+ 
+ sub split_line {
+ 	local $_ = shift;
+-	return map { /$COLOR/ ? $_ : (split //) }
+-	       split /($COLOR*)/;
++	return utf8::decode($_) ?
++		map { utf8::encode($_); $_ }
++			map { /$COLOR/ ? $_ : (split //) }
++			split /($COLOR+)/ :
++		map { /$COLOR/ ? $_ : (split //) }
++		split /($COLOR+)/;
+ }
+ 
+ sub highlight_line {
+---

@@ -152,6 +152,18 @@ support Mac OS X 10.4 at all as released.
   - `patches/curl/mk-ca-bundle_improvements.txt`
 
 
+Lighttpd Patches
+----------------
+
+* Allow the darwin sendfile function to be used
+
+  - `patches/lighttpd/darwin_sendfile.patch`
+
+* Avoid spurious testing failures on darwin
+
+  - `patches/lighttpd/darwin_shutdown.patch`
+
+
 GnuPG Patches
 -------------
 

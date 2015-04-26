@@ -1,0 +1,13 @@
+diff --git a/lighttpd-1.4.35/tests/LightyTest.pm b/source/tests/LightyTest.pm
+index b92af876..23362552 100755
+--- a/lighttpd-1.4.35/tests/LightyTest.pm
++++ b/source/tests/LightyTest.pm
+@@ -187,7 +187,7 @@ sub handle_http {
+ 			print $remote $_.$BLANK;
+ 			diag("\n<< ".$_) if $is_debug;
+ 		}
+-		shutdown($remote, 1); # I've stopped writing data
++		#shutdown($remote, 1); # I've stopped writing data
+ 	} else {
+ 		diag("\nsending request header to ".$host.":".$self->{PORT}) if $is_debug;
+ 		foreach(@request) {

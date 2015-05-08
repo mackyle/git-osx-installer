@@ -1,3 +1,50 @@
+Subject: [PATCH] gpg: allow larger RSA keys to be created
+
+According to NIST special publication 800-57 [1] the security
+bit strength of various RSA key sizes is as follows:
+
+  RSA BITS  SECURITY BIT STRENGTH
+  --------  ---------------------
+  1024      80
+  2048      112
+  3072      128
+  7680      192
+  15360     256
+
+That same publication states that starting in 2014, 80 bits is
+disallowed when applying new security.  It goes on to say that
+starting in 2031 112 bits is disallowed when applying new security.
+
+According to "National Policy on the Use of the Advanced Encryption
+Standard (AES) to Protect National Security Systems and National
+Security Information," [2], 128, 192 and 256 bit secruity strengths
+are acceptible for "SECRET" data but 192 or 256 must be used for
+"TOP SECRET" data.
+
+Historically GnuPG has stubbornly refused to allow key sizes larger
+than 4096 bits.  The most recent releases have added an option to
+enable larger sizes but it must be explicitly turned on.  It's not
+on by default.
+
+The standard GnuPG build is simply incapable of generating "TOP SECRET"
+quality keys by default.  (If they have somehow been generated it is,
+however, capable of using them.)
+
+This patch modifies GnuPG to always allow creation of up to 16384 bit
+RSA keys and changes the default RSA size to 3072 bits so that by
+default the generated keys will have a minimum security strength of
+128 bits.
+
+[1] http://csrc.nist.gov/publications/nistpubs/800-57/sp800-57_part1_rev3_general.pdf
+[2] http://csrc.nist.gov/groups/ST/toolkit/documents/aes/CNSS15FS.pdf
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ g10/gpg.c    |  2 +-
+ g10/keygen.c | 18 +++++++++---------
+ 2 files changed, 10 insertions(+), 10 deletions(-)
+
 diff --git a/g10/gpg.c b/g10/gpg.c
 index dbf2f40c..d437b257 100644
 --- a/g10/gpg.c
@@ -78,3 +125,5 @@ index 84f852f3..c3b6fe19 100644
        max=3072;
        break;
  
+-- 
+tg: (b350706e..) t/gnupg/longer-keys (depends on: release)

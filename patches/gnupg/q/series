@@ -1,0 +1,2 @@
+t_gnupg_longer-keys.diff -p1
+t_launchd_agent-compat.diff -p1

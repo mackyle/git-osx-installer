@@ -1,3 +1,23 @@
+Subject: [PATCH] passphrase.c: support launchd sockets
+
+Make the trailing ":pid:protocol" part of GPG_AGENT_INFO
+optional so that gpg-agent can be more easily started via
+launchd.
+
+Since launchd does not include the trailing ":pid:protocol"
+part, such a setting in GPG_AGENT_INFO will not work without
+this patch.
+
+Note that a trailing ":pid:protocol" is still allowed in
+GPG_AGENT_INFO and if it's present it undergoes the same
+validation as it did without this patch.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ g10/passphrase.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
 diff --git a/g10/passphrase.c b/g10/passphrase.c
 index 9003ea4d..18c29665 100644
 --- a/g10/passphrase.c
@@ -33,3 +53,5 @@ index 9003ea4d..18c29665 100644
    if (prot != 1)
      {
        if (!try)
+-- 
+tg: (b350706e..) t/launchd/agent-compat (depends on: release)

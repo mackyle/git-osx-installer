@@ -135,21 +135,22 @@ with an RSA private key all in PEM format.
 
 Additionally the as-released darwinssl backend doesn't really work on older
 Mac OS X versions as-is.  Oh it may compile on Mac OS X 10.5 without complaints
-but it immediately crashes and burns when you try to use it.  And it does not
+but it immediately crashes and burns when one tries to use it.  And it does not
 support Mac OS X 10.4 at all as released.
 
 * Curl darwinssl backend universal Mac OS X compatibility
 
   - `patches/curl/curl_darwinssl_macosx.c`
-  - `patches/curl/ntlm_core_no_oneshot_patch.txt`
   - `patches/curl/stcompat.c`
   - `patches/curl/stcompat.h`
-  - `patches/curl/urldata_add_khra_patch.txt`
-  - `patches/curl/enable_darwinssl_pinning_tests_patch.txt`
+  - `patches/curl/q/t_ntlm_no-one-shot.diff`
+  - `patches/curl/q/t_securetransport_extra-data.diff`
+  - `patches/curl/q/t_pinning_darwin.diff`
+  - `patches/curl/q/t_pinning_dummy-key.diff`
 
 * Curl mk-ca-bundle script improvements
 
-  - `patches/curl/mk-ca-bundle_improvements.txt`
+  - `patches/curl/q/t_mk-ca-bundle_improvements.diff`
 
 
 Lighttpd Patches
@@ -178,11 +179,11 @@ the gpg patch to permit creation of such keys.
 
 * Allow larger RSA keys to be created
 
-  - `patches/gnupg/allow_longer_keys.txt`
+  - `patches/gnupg/q/t_gnupg_longer-keys.diff`
 
 * Make trailing ":pid:protocol" part of GPG_AGENT_INFO optional (launchd)
 
-  - `patches/gnupg/launchd_agent_compat.txt`
+  - `patches/gnupg/q/t_launchd_agent-compat.diff`
 
 
 Compatibility Patches

@@ -4,6 +4,28 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
+Git 2.3.7 Installer - released 2015-05-??
+-----------------------------------------
+
+* Git v2.3.7
+  - update from version 2.3.3
+
+* TopGit 0.16
+  - update from version 0.13.2
+
+* cURL/libcURL 7.42.1
+  - updated from version 7.40
+
+* PCRE 8.37
+  - updated from version 8.35
+
+* libusb 1.0.19
+  - updated from version 1.0.18
+
+* libidn 1.30
+  - updated from version 1.29
+
+-----------------------------------------
 Git 2.3.3 Installer - released 2015-03-19
 -----------------------------------------
 

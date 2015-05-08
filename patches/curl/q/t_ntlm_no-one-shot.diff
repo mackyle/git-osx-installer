@@ -1,8 +1,20 @@
+Subject: [PATCH] curl_ntlm_core.c: do not use one-shot CC_MD4 macro
+
+The one-shot macros are not supported in older headers.  Instead
+just use the 3 separate steps (Init, Update and Final) to improve
+compatibility.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ lib/curl_ntlm_core.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
 diff --git a/lib/curl_ntlm_core.c b/lib/curl_ntlm_core.c
-index 2aaea4db..1ce2bc8e 100644
+index 2e5b573f..a227aa7b 100644
 --- a/lib/curl_ntlm_core.c
 +++ b/lib/curl_ntlm_core.c
-@@ -501,7 +501,10 @@ CURLcode Curl_ntlm_core_mk_nt_hash(struct SessionHandle *data,
+@@ -551,7 +551,10 @@ CURLcode Curl_ntlm_core_mk_nt_hash(struct SessionHandle *data,
  #elif defined(USE_NSS) || defined(USE_OS400CRYPTO)
      Curl_md4it(ntbuffer, pw, 2 * len);
  #elif defined(USE_DARWINSSL)
@@ -14,3 +26,5 @@ index 2aaea4db..1ce2bc8e 100644
  #elif defined(USE_WIN32_CRYPTO)
      HCRYPTPROV hprov;
      if(CryptAcquireContext(&hprov, NULL, NULL, PROV_RSA_FULL,
+-- 
+tg: (dbd7cf1d..) t/ntlm/no-one-shot (depends on: release)

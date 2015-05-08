@@ -8,7 +8,7 @@
  * Copyright (C) 2012 - 2014, Nick Zitzmann, <nickzman@gmail.com>.
  * Copyright (C) 2012 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
- * MacOSX modifications copyright (C) 2014,2015 Kyle J. McKay.
+ * MacOSX modifications copyright (C) 2014, 2015 Kyle J. McKay.
  * All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -121,7 +121,11 @@
 #include "connect.h"
 #include "select.h"
 #include "vtls.h"
+#if LIBCURL_VERSION_NUM >= 0x072900
+#include "darwinssl.h"
+#else
 #include "curl_darwinssl.h"
+#endif
 
 #define _MPRINTF_REPLACE /* use our functions only */
 #include <curl/mprintf.h>
@@ -969,6 +973,10 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
        specifically doesn't want us doing that: */
     cSSLSetSessionOption(connssl->ssl_ctx, kSSLSessionOptionSendOneByteRecord,
                          !data->set.ssl_enable_beast);
+#if LIBCURL_VERSION_NUM >= 0x072a00
+    cSSLSetSessionOption(connssl->ssl_ctx, kSSLSessionOptionFalseStart,
+                         data->set.ssl.falsestart); /* false start support */
+#endif
   }
 
   /* Check if there's a cached ID we can/should use here! */
@@ -1442,6 +1450,7 @@ void Curl_darwinssl_close(struct connectdata *conn, int sockindex)
   cleanup_mem(connssl);
 }
 
+void Curl_darwinssl_close_all(struct SessionHandle *data);
 void Curl_darwinssl_close_all(struct SessionHandle *data)
 {
   /* SecureTransport doesn't separate sessions from contexts, so... */
@@ -1590,6 +1599,11 @@ void Curl_darwinssl_md5sum(unsigned char *tmp, /* input */
   (void)CC_MD5_Init(&ctx);
   (void)CC_MD5_Update(&ctx, tmp, (CC_LONG)tmplen);
   (void)CC_MD5_Final(md5sum, &ctx);
+}
+
+bool Curl_darwinssl_false_start(void);
+bool Curl_darwinssl_false_start(void) {
+  return kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber10_9;
 }
 
 static ssize_t darwinssl_send(struct connectdata *conn,

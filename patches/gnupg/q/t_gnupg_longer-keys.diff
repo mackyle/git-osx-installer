@@ -41,28 +41,45 @@ default the generated keys will have a minimum security strength of
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- g10/gpg.c    |  2 +-
- g10/keygen.c | 18 +++++++++---------
- 2 files changed, 10 insertions(+), 10 deletions(-)
+ g10/gpg.c    |  5 +++--
+ g10/keygen.c | 16 ++++++++--------
+ 2 files changed, 11 insertions(+), 10 deletions(-)
 
 diff --git a/g10/gpg.c b/g10/gpg.c
-index dbf2f40c..d437b257 100644
+index 544c576d..e3d8ef20 100644
 --- a/g10/gpg.c
 +++ b/g10/gpg.c
-@@ -1995,7 +1995,7 @@ main (int argc, char **argv )
+@@ -1998,7 +1998,7 @@ main (int argc, char **argv )
      }
  #endif
      /* initialize the secure memory. */
--    got_secmem=secmem_init( 32768 );
-+    got_secmem=secmem_init( 131072 );
+-    got_secmem=secmem_init( SECMEM_BUFFER_SIZE );
++    got_secmem=secmem_init( /* SECMEM_BUFFER_SIZE */ 131072 );
      maybe_setuid = 0;
      /* Okay, we are now working under our real uid */
  
+@@ -2855,7 +2855,7 @@ main (int argc, char **argv )
+ 	    break;
+ 
+ 	  case oEnableLargeRSA:
+-#if SECMEM_BUFFER_SIZE >= 65536
++#if 1 /* SECMEM_BUFFER_SIZE >= 65536 */
+             opt.flags.large_rsa=1;
+ #else
+             if (configname)
+@@ -2887,6 +2887,7 @@ main (int argc, char **argv )
+ 	  default : pargs.err = configfp? 1:2; break;
+ 	  }
+       }
++    opt.flags.large_rsa=1;
+ 
+ 
+     if( configfp ) {
 diff --git a/g10/keygen.c b/g10/keygen.c
-index 84f852f3..c3b6fe19 100644
+index 76ee74e6..f739d299 100644
 --- a/g10/keygen.c
 +++ b/g10/keygen.c
-@@ -1040,7 +1040,7 @@ gen_elg(int algo, unsigned nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
+@@ -1038,7 +1038,7 @@ gen_elg(int algo, unsigned nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
      assert( is_ELGAMAL(algo) );
  
      if (nbits < 1024) {
@@ -71,7 +88,7 @@ index 84f852f3..c3b6fe19 100644
  	log_info(_("keysize invalid; using %u bits\n"), nbits );
      }
      else if (nbits > 4096) {
-@@ -1127,7 +1127,7 @@ gen_dsa(unsigned int nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
+@@ -1125,7 +1125,7 @@ gen_dsa(unsigned int nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
  
      if( nbits < 768)
        {
@@ -80,7 +97,13 @@ index 84f852f3..c3b6fe19 100644
  	log_info(_("keysize invalid; using %u bits\n"), nbits );
        }
      else if(nbits>3072)
-@@ -1257,11 +1257,11 @@ gen_rsa(int algo, unsigned nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
+@@ -1251,12 +1251,12 @@ gen_rsa(int algo, unsigned nbits, KBNODE pub_root, KBNODE sec_root, DEK *dek,
+     PKT_public_key *pk;
+     MPI skey[6];
+     MPI *factors;
+-    const unsigned maxsize = (opt.flags.large_rsa ? 8192 : 4096);
++    const unsigned maxsize = 16384;
+ 
      assert( is_RSA(algo) );
  
      if( nbits < 1024 ) {
@@ -88,14 +111,8 @@ index 84f852f3..c3b6fe19 100644
 +	nbits = 3072;
  	log_info(_("keysize invalid; using %u bits\n"), nbits );
      }
--    else if (nbits > 4096) {
--        nbits = 4096;
-+    else if (nbits > 16384) {
-+        nbits = 16384;
-         log_info(_("keysize invalid; using %u bits\n"), nbits );
-     }
- 
-@@ -1491,9 +1491,9 @@ ask_algo (int addmode, int *r_subkey_algo, unsigned int *r_usage)
+     else if (nbits > maxsize) {
+@@ -1490,9 +1490,9 @@ ask_algo (int addmode, int *r_subkey_algo, unsigned int *r_usage)
    if (!addmode)
      tty_printf (_("   (%d) RSA and RSA (default)\n"), 1 );
    if ( !addmode )
@@ -107,7 +124,7 @@ index 84f852f3..c3b6fe19 100644
    tty_printf(    _("   (%d) RSA (sign only)\n"), 4 );
  
    if (addmode)
-@@ -1577,7 +1577,7 @@ ask_algo (int addmode, int *r_subkey_algo, unsigned int *r_usage)
+@@ -1578,7 +1578,7 @@ ask_algo (int addmode, int *r_subkey_algo, unsigned int *r_usage)
  static unsigned int
  ask_keysize (int algo, unsigned int primary_keysize)
  {
@@ -116,7 +133,7 @@ index 84f852f3..c3b6fe19 100644
    int for_subkey = !!primary_keysize;
    int autocomp = 0;
  
-@@ -1603,7 +1603,7 @@ ask_keysize (int algo, unsigned int primary_keysize)
+@@ -1604,7 +1604,7 @@ ask_keysize (int algo, unsigned int primary_keysize)
    switch(algo)
      {
      case PUBKEY_ALGO_DSA:
@@ -126,4 +143,4 @@ index 84f852f3..c3b6fe19 100644
        break;
  
 -- 
-tg: (b350706e..) t/gnupg/longer-keys (depends on: release)
+tg: (8ef77d2f..) t/gnupg/longer-keys (depends on: release)

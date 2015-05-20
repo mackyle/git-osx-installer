@@ -111,16 +111,6 @@ Git Patches
   elsewhere.
 
 
-* Support UTF-8 with diff-highlight:
-
-  - `patches/km/diff-highlight-fix.txt`
-
-  My own patch to make diff-highlight avoid breaking a multibyte character.
-  Posted to the list at:
-  <http://thread.gmane.org/gmane.comp.version-control.git/266456/focus=266741>.
-  Included in Git 2.3.6 now.
-
-
 Curl Patches
 ------------
 

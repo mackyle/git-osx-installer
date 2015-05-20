@@ -31,8 +31,7 @@ Git Patches
 
   - `patches/km/git-imap-send_use_libcurl.txt`
 
-  This makes libcurl the default without requiring --use-curl and also
-  enables using CRAM-MD5 in an imap tunnel.
+  This enables using CRAM-MD5 in an imap tunnel without needing OpenSSL.
 
 * Use libcurl for send email
 
@@ -48,13 +47,14 @@ Git Patches
   My own patch to make git-gui actually work with Tcl 8.4 which is all
   it's supposed to require.  Posted to the list and picked up at:
   <http://thread.gmane.org/gmane.comp.version-control.git/262055>.
+  Included in Git 2.4.0 now.
 
 * Support auto threads detection on older OS X
 
   - `patches/km/thread-utils-osx.txt`
 
   My own patch to make thread-utils.c online_cpus function return the
-  correct value on older Mac OS X versions.  Has not been posted elsewhere.
+  correct value on older Mac OS X versions.  Included in Git 2.4.0 now.
 
 * Use a different pack.windowmemory default setting instead of 0
 
@@ -118,6 +118,7 @@ Git Patches
   My own patch to make diff-highlight avoid breaking a multibyte character.
   Posted to the list at:
   <http://thread.gmane.org/gmane.comp.version-control.git/266456/focus=266741>.
+  Included in Git 2.3.6 now.
 
 
 Curl Patches
@@ -177,7 +178,7 @@ meet the TOP SECRET requirements a security strength of at least 192 bits is
 required.  That necessitates an RSA key of 7680 bits (see NIST 800-57).  Hence
 the gpg patch to permit creation of such keys.
 
-* Allow larger RSA keys to be created
+* Always allow larger RSA keys up to 16384 bits to be created
 
   - `patches/gnupg/q/t_gnupg_longer-keys.diff`
 

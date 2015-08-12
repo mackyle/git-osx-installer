@@ -1,12 +1,10 @@
-From f50a7c82452e603556b35a27d24bb4c23fb9dbbd Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Sun, 8 Feb 2015 04:30:34 -0800
 Subject: [PATCH] git-instaweb: enable source highlighting if available
 
 If the correct highlight executable is available, then configure
 gitweb to use it for highlighting the source code.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
 ---
  git-instaweb.sh | 7 +++++++
  1 file changed, 7 insertions(+)
@@ -29,4 +27,5 @@ index 4c0af04f..a8542fb2 100755
  }
  
  configure_httpd() {
---
+-- 
+tg: (692c0996..) t/instaweb/highlight (depends on: t/instaweb/subdir)

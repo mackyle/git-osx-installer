@@ -1,15 +1,13 @@
-From 88642f79ceb8b5f0035b8ca5107c5732c2413c19 Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Sun, 8 Feb 2015 12:18:36 -0800
 Subject: [PATCH] git-instaweb: add git-browser graphiclog link
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
 ---
  git-instaweb.sh | 17 +++++++++++++++--
  1 file changed, 15 insertions(+), 2 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index dc4dc3b8..484fc929 100755
+index 5ac32127..f771a321 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -106,6 +106,7 @@ start_httpd () {
@@ -53,8 +51,8 @@ index dc4dc3b8..484fc929 100755
  gitweb_conf() {
  	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
  #!@@PERL@@
-@@ -606,6 +615,9 @@ our \$favicon = "/static/git-favicon.png";
- our \$gitwebjs = "/static/gitweb.js";
+@@ -607,6 +616,9 @@ our \$favicon = "/static/git-favicon.png";
+ our \$javascript = "/static/gitweb.js";
  our @diff_opts = ('-B', '-C');
  
 +\$feature{'actions'}{'default'}=[
@@ -63,7 +61,7 @@ index dc4dc3b8..484fc929 100755
  \$feature{'remote_heads'}{'default'} = [1];
  \$feature{'blame'}{'default'} = [1];
  \$feature{'pathinfo'}{'default'} = [1];
-@@ -665,6 +677,7 @@ restart)
+@@ -668,6 +680,7 @@ restart)
  	;;
  esac
  
@@ -71,4 +69,5 @@ index dc4dc3b8..484fc929 100755
  gitweb_conf
  
  resolve_full_httpd
---
+-- 
+tg: (f68f1c5f..) t/instaweb/git-browser (depends on: t/instaweb/defaults)

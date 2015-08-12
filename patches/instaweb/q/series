@@ -1,0 +1,7 @@
+t_instaweb_subdir.diff -p1
+t_instaweb_highlight.diff -p1
+t_instaweb_mimetypes.diff -p1
+t_instaweb_defaults.diff -p1
+t_instaweb_git-browser.diff -p1
+t_instaweb_ipv6.diff -p1
+t_instaweb_fcgi.diff -p1

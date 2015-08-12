@@ -1,0 +1,100 @@
+Subject: [PATCH] git-instaweb: enable gitweb FCGI if available
+
+The gitweb.cgi script has become rather large -- exceeding 275K
+now.  This means that even the simplest request via gitweb will
+require the entire script to be compiled unless there is some
+caching mechanism used.
+
+Since gitweb does support an FCGI mode, enable that when supported
+so that git instaweb performance will not suffer from recompiling
+the gitweeb.cgi script on every single request.
+
+Currently only a lighttpd configuration will run gitweb in FCGI
+mode provided the required Perl modules (FCGI and CGI::Fast) are
+present.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ git-instaweb.sh | 39 ++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 36 insertions(+), 3 deletions(-)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index ba23d5dd..26ffc003 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -44,6 +44,11 @@ test -z "$root" && root='@@GITWEBDIR@@'
+ # any untaken local port will do...
+ test -z "$port" && port=1234
+ 
++# check for Perl FCGI support
++hasfcgi=
++perlcmd="$(sed -ne 1p <"$root/gitweb.cgi" | sed -e 's,^[^/]*,,')"
++! eval "$perlcmd -MFCGI -MCGI::Fast -e 1 >/dev/null 2>&1" || hasfcgi=1
++
+ resolve_full_httpd () {
+ 	case "$httpd" in
+ 	*apache2*|*lighttpd*|*httpd*)
+@@ -254,12 +259,14 @@ EOF
+ lighttpd_conf () {
+ 	host4="0.0.0.0"; host6="[::]"
+ 	test x"$local" = xtrue && { host4="127.0.0.1"; host6="[::1]"; }
++	fcgimod=
++	! [ -n "$hasfcgi" ] || fcgimod=', "mod_fastcgi"'
+ 	cat > "$conf" <<EOF
+ server.document-root = "$root"
+ server.port = $port
+ server.bind = "$host4"
+ \$SERVER["socket"] == "$host6:$port" {}
+-server.modules = ( "mod_setenv", "mod_cgi" )
++server.modules = ( "mod_setenv", "mod_cgi"$fcgimod )
+ server.indexfiles = ( "gitweb.cgi" )
+ server.pid-file = "$fqgitdir/pid"
+ server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
+@@ -269,9 +276,33 @@ server.force-lowercase-filenames = "disable"
+ # variable above and uncomment this
+ #accesslog.filename = "$fqgitdir/gitweb/$httpd_only/access.log"
+ 
+-setenv.add-environment = ( "PATH" => env.PATH, "GITWEB_CONFIG" => env.GITWEB_CONFIG, "GITBROWSER_CONFIG" => env.GITBROWSER_CONFIG )
++setenv.add-environment = (
++  "PATH" => env.PATH,
++  "GITWEB_CONFIG" => env.GITWEB_CONFIG,
++  "GITBROWSER_CONFIG" => env.GITBROWSER_CONFIG
++)
+ 
+-cgi.assign = ( ".cgi" => "" )
++EOF
++	if [ -n "$hasfcgi" ]; then
++		cat >> "$conf" <<-EOF
++		fastcgi.server = ( "/gitweb.cgi" =>
++		  ((
++		    "socket" => "$fqgitdir/gitweb/$httpd_only/fastsock",
++		    "bin-path" => "$root/gitweb.cgi",
++		    "max-procs" => 1,
++		  ))
++		)
++
++		\$HTTP["url"] !~ "^/(\$|(gitweb.cgi(/|\$)))" {
++		  cgi.assign = ( ".cgi" => "" )
++		}
++		EOF
++	else
++		cat >> "$conf" <<-EOF
++		cgi.assign = ( ".cgi" => "" )
++		EOF
++	fi
++	cat >> "$conf" <<EOF
+ 
+ # mimetype mapping
+ mimetype.assign             = (
+@@ -607,6 +638,8 @@ EOF
+ gitweb_conf() {
+ 	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
+ #!@@PERL@@
++our \$per_request_config = 0;
++our \$auto_fcgi = 1;
+ our \$projectroot = "$(dirname "$fqgitdir")";
+ our \$git_temp = "$fqgitdir/gitweb/tmp";
+ our \$projects_list = \$projectroot;
+-- 
+tg: (f9978704..) t/instaweb/fcgi (depends on: t/instaweb/ipv6)

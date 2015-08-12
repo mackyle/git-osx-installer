@@ -83,12 +83,13 @@ Git Patches
 
 * Improve usability of git-instaweb:
 
-  - `patches/km/instaweb-subdir.txt`
-  - `patches/km/instaweb-highlight.txt`
-  - `patches/km/instaweb-mimetypes.txt`
-  - `patches/km/instaweb-defaults.txt`
-  - `patches/km/instaweb-gitbrowser.txt`
-  - `patches/km/instaweb-ipv6.txt`
+  - `patches/instaweb/q/t_instaweb_subdir.diff`
+  - `patches/instaweb/q/t_instaweb_highlight.diff`
+  - `patches/instaweb/q/t_instaweb_mimetypes.diff`
+  - `patches/instaweb/q/t_instaweb_defaults.diff`
+  - `patches/instaweb/q/t_instaweb_git-browser.diff`
+  - `patches/instaweb/q/t_instaweb_ipv6.diff`
+  - `patches/instaweb/q/t_instaweb_fcgi.diff`
 
   My own patches to improve the usability of git instaweb by making it run
   from within a git checkout that is not at the top-level of the working tree,
@@ -97,7 +98,8 @@ Git Patches
   blame and better rename detection, add a 'graphiclog' link to the pages that
   uses git-browser to show a graphic representation of commit ancestry and
   finally to bind to both IPv4 and IPv6 addresses.  The ipv6 patch is only
-  effective when using lighttpd as the web server (which is the default).  Have
+  effective when using lighttpd as the web server (which is the default).
+  The fcgi patch enables FCGI mode if the FCGI perl module is present.  Have
   not been posted elsewhere.
 
 * Add submodule support to gitweb:

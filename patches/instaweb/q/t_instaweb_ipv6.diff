@@ -1,6 +1,3 @@
-From 0f51c544cb97da614256368c19af4177a138e0e2 Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Thu, 26 Feb 2015 21:23:10 -0800
 Subject: [PATCH] git-instaweb: bind to IPv4 and IPv6 host addresses
 
 Note that gitweb.cgi does not properly handle literal IPv6
@@ -9,12 +6,13 @@ localhost (or the host's actual name) will work properly
 regardless of whether or not the connection is IPv4 or IPv6.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
 ---
  git-instaweb.sh | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 484fc929..50559c9c 100755
+index f771a321..ba23d5dd 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -252,9 +252,13 @@ EOF
@@ -39,4 +37,5 @@ index 484fc929..50559c9c 100755
  }
  
  apache2_conf () {
---
+-- 
+tg: (ea85a097..) t/instaweb/ipv6 (depends on: t/instaweb/git-browser)

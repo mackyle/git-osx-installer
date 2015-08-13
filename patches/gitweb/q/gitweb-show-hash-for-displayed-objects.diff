@@ -1,0 +1,117 @@
+Subject: [PATCH] gitweb: show hash for displayed objects
+
+If gitweb is displaying a tag, tree or blob via a ref
+name rather than a hash, it's impossible to actually see
+the hash of the item.
+
+Therefore always show the item type and hash id as the
+first line of data.  This means the commit hash will be
+moved to the top to be consistent with the others.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 25 ++++++++++++++++++++++++-
+1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index aa37972a..1beab540 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -7397,12 +7397,17 @@ sub git_tag {
+ 		die_error(404, "Unknown tag object");
+ 	}
+ 
++	my $fullhash;
++	$fullhash = $hash if $hash =~ m/^[0-9a-fA-F]{40}$/;
++	$fullhash = git_get_full_hash($project, $hash) unless $fullhash;
++
+ 	my $head = git_get_head_hash($project);
+ 	git_header_html();
+ 	git_print_page_nav('','', $head,undef,$head);
+ 	git_print_header_div('commit', esc_html($tag{'name'}), $hash);
+ 	print "<div class=\"title_text\">\n" .
+ 	      "<table class=\"object_header\">\n" .
++	      "<tr><td>tag</td><td class=\"sha1\">$fullhash</td></tr>\n" .
+ 	      "<tr>\n" .
+ 	      "<td>object</td>\n" .
+ 	      "<td>" . $cgi->a({-class => "list", -href => href(action=>$tag{'type'}, hash=>$tag{'object'})},
+@@ -7826,18 +7831,22 @@ sub git_blob_plain {
+ sub git_blob {
+ 	my $expires;
+ 
++	my $fullhash;
+ 	if (!defined $hash) {
+ 		if (defined $file_name) {
+ 			my $base = $hash_base || git_get_head_hash($project);
+ 			$hash = git_get_hash_by_path($base, $file_name, "blob")
+ 				or die_error(404, "Cannot find file");
++			$fullhash = $hash;
+ 		} else {
+ 			die_error(400, "No file name defined");
+ 		}
+ 	} elsif ($hash =~ m/^[0-9a-fA-F]{40}$/) {
+ 		# blobs defined by non-textual hash id's can be cached
+ 		$expires = "+1d";
++		$fullhash = $hash;
+ 	}
++	$fullhash = git_get_full_hash($project, $hash) unless $fullhash;
+ 
+ 	my $have_blame = gitweb_check_feature('blame');
+ 	defined(my $fd = git_cmd_pipe "cat-file", "blob", $hash)
+@@ -7891,6 +7900,11 @@ sub git_blob {
+ 		      "<div class=\"title\">".esc_html($hash)."</div>\n";
+ 	}
+ 	git_print_page_path($file_name, "blob", $hash_base);
++	print "<div class=\"title_text\">\n" .
++	      "<table class=\"object_header\">\n";
++	print "<tr><td>blob</td><td class=\"sha1\">$fullhash</td></tr>\n";
++	print "</table>".
++	      "</div>\n";
+ 	print "<div class=\"page_body\">\n";
+ 	if ($mimetype =~ m!^image/!) {
+ 		print qq!<img class="blob" type="!.esc_attr($mimetype).qq!"!;
+@@ -7919,17 +7933,21 @@ sub git_blob {
+ }
+ 
+ sub git_tree {
++	my $fullhash;
+ 	if (!defined $hash_base) {
+ 		$hash_base = "HEAD";
+ 	}
+ 	if (!defined $hash) {
+ 		if (defined $file_name) {
+ 			$hash = git_get_hash_by_path($hash_base, $file_name, "tree");
++			$fullhash = $hash;
+ 		} else {
+ 			$hash = $hash_base;
+ 		}
+ 	}
+ 	die_error(404, "No such tree") unless defined($hash);
++	$fullhash = $hash if !$fullhash && $hash =~ m/^[0-9a-fA-F]{40}$/;
++	$fullhash = git_get_full_hash($project, $hash) unless $fullhash;
+ 
+ 	my $show_sizes = gitweb_check_feature('show-sizes');
+ 	my $have_blame = gitweb_check_feature('blame');
+@@ -7980,6 +7998,11 @@ sub git_tree {
+ 		}
+ 		git_print_page_path($file_name, 'tree', $hash_base);
+ 	}
++	print "<div class=\"title_text\">\n" .
++	      "<table class=\"object_header\">\n";
++	print "<tr><td>tree</td><td class=\"sha1\">$fullhash</td></tr>\n";
++	print "</table>".
++	      "</div>\n";
+ 	print "<div class=\"page_body\">\n";
+ 	print "<table class=\"tree\">\n";
+ 	my $alternate = 1;
+@@ -8323,8 +8346,8 @@ sub git_commit {
+ 	}
+ 	print "<div class=\"title_text\">\n" .
+ 	      "<table class=\"object_header\">\n";
+-	git_print_authorship_rows(\%co);
+ 	print "<tr><td>commit</td><td class=\"sha1\">$co{'id'}</td></tr>\n";
++	git_print_authorship_rows(\%co);
+ 	print "<tr>" .
+ 	      "<td>tree</td>" .
+ 	      "<td class=\"sha1\">" .
+---

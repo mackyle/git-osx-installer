@@ -1,0 +1,130 @@
+Subject: [PATCH] gitweb: support lastactivity file
+
+Provide a new gitweb configuration value for $lastactivity_file
+which is the pathname relative to a $GIT_DIR for a file that if
+it exists and is non-empty and contains a date in iso, iso-strict
+or raw format will be read and used as the value returned by the
+git_get_last_activity function.
+
+This is most useful if a hooks/post-update script is present which
+contains something like this:
+
+git for-each-ref --sort=-committerdate --format='%(committerdate:iso8601)' \
+--count=1 refs/heads > info/lastactivity
+
+And then the gitweb_config.perl configuration contains this:
+
+our $lastactivity_file = "info/lastactivity";
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+Documentation/gitweb.conf.txt | 22 ++++++++++++++++++++++
+gitweb/gitweb.perl            | 43 ++++++++++++++++++++++++++++++++++++++++++-
+2 files changed, 64 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
+index dbbfc185..841e7dad 100644
+--- a/Documentation/gitweb.conf.txt
++++ b/Documentation/gitweb.conf.txt
+@@ -530,6 +530,28 @@ $omit_age_column::
+ 	If true, omit the column with date of the most current commit on the
+ 	projects list page. It can save a bit of I/O and a fork per repository.
+ 
++$lastactivity_file::
++	If this is set to a pathname (relative to `$GIT_DIR`) and the file
++	exists and contains a date in either iso, iso-strict or raw format,
++	it will be used to calculate the age which can save quite a bit of I/O
++	and a fork per repository.
+++
++This is most useful if a hooks/post-update script is present that contains
++these lines:
+++
++----------------------------------------------------------------------------
++    git for-each-ref --sort=-committerdate --format='%(committerdate:iso8601)' \
++                     --count=1 refs/heads > info/lastactivity
++----------------------------------------------------------------------------
+++
++Then `$lastactivity_file` can be set to `"info/lastactivity"` and the age
++column can be used without incurring the I/O penalty.
+++
++Note that if the `extra-branch-refs` feature is being used then the above
++script will need to be adjusted to take those additional refs into
++consideration otherwise they will not affect the value displayed in the age
++column when this feature is used.
++
+ $omit_owner::
+ 	If true prevents displaying information about repository owner.
+ 
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index f17d5dbc..76815232 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -18,6 +18,7 @@ use Fcntl ':mode';
+ use File::Find qw();
+ use File::Basename qw(basename);
+ use Time::HiRes qw(gettimeofday tv_interval);
++use Time::Local;
+ binmode STDOUT, ':utf8';
+ 
+ if (!defined($CGI::VERSION) || $CGI::VERSION < 4.08) {
+@@ -152,6 +153,10 @@ our $export_ok = "++GITWEB_EXPORT_OK++";
+ # don't generate age column on the projects list page
+ our $omit_age_column = 0;
+ 
++# use contents of this file (in iso, iso-strict or raw format) as
++# the last activity data if it exists and is a valid date
++our $lastactivity_file = undef;
++
+ # don't generate information about owners of repositories
+ our $omit_owner=0;
+ 
+@@ -3292,11 +3297,47 @@ sub git_get_project_owner {
+ 	return $owner;
+ }
+ 
++sub parse_activity_date {
++	my $dstr = shift;
++
++	if ($dstr =~ /^\s*([-+]?\d+)(?:\s+([-+]\d{4}))?\s*$/) {
++		# Unix timestamp
++		return 0 + $1;
++	}
++	if ($dstr =~ /^\s*(\d{4})-(\d{2})-(\d{2})[Tt _](\d{1,2}):(\d{2}):(\d{2})(?:[ _]?([Zz]|(?:[-+]\d{1,2}:?\d{2})))?\s*$/) {
++		my ($Y,$m,$d,$H,$M,$S,$z) = ($1,$2,$3,$4,$5,$6,$7||'');
++		my $seconds = timegm(0+$S, 0+$M, 0+$H, 0+$d, $m-1, $Y-1900);
++		defined($z) && $z ne '' or $z = 'Z';
++		$z =~ s/://;
++		substr($z,1,0) = '0' if length($z) == 4;
++		my $off = 0;
++		if (uc($z) ne 'Z') {
++			$off = 60 * (60 * (0+substr($z,1,2)) + (0+substr($z,3,2)));
++			$off = -$off if substr($z,0,1) eq '-';
++		}
++		return $seconds - $off;
++	}
++	return undef;
++}
++
++# If $quick is true only look at $lastactivity_file
+ sub git_get_last_activity {
+-	my ($path) = @_;
++	my ($path, $quick) = @_;
+ 	my $fd;
+ 
+ 	$git_dir = "$projectroot/$path";
++	if ($lastactivity_file && open($fd, "<", "$git_dir/$lastactivity_file")) {
++		my $activity = <$fd>;
++		close $fd;
++		return (undef, undef) unless defined $activity;
++		chomp $activity;
++		return (undef, undef) if $activity eq '';
++		if (my $timestamp = parse_activity_date($activity)) {
++			my $age = time - $timestamp;
++			return ($age, age_string($age));
++		}
++	}
++	return (undef, undef) if $quick;
+ 	open($fd, "-|", git_cmd(), 'for-each-ref',
+ 	     '--format=%(committer)',
+ 	     '--sort=-committerdate',
+---

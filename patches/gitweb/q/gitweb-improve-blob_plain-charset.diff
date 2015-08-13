@@ -1,0 +1,221 @@
+Subject: [PATCH] gitweb: improve blob_plain charset
+
+When gitweb returns blob_plain data it doesn't really
+do a very good job returning the correct charset value.
+
+Update the logic so that when returning a text/...
+type the charset will be set correctly in most
+cases based on the first portion of the content.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 132 +++++++++++++++++++++++++++++++++++++++++------------
+1 file changed, 103 insertions(+), 29 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 9ef5e796..af60c8bd 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -175,7 +175,7 @@ our $strict_export = "++GITWEB_STRICT_EXPORT++";
+ our @git_base_url_list = grep { $_ ne '' } ("++GITWEB_BASE_URL++");
+ 
+ # default blob_plain mimetype and default charset for text/plain blob
+-our $default_blob_plain_mimetype = 'text/plain';
++our $default_blob_plain_mimetype = 'application/octet-stream';
+ our $default_text_plain_charset  = undef;
+ 
+ # file to use for guessing MIME types before trying /etc/mime.types
+@@ -4180,6 +4180,7 @@ sub insert_file {
+ sub mimetype_guess_file {
+ 	my $filename = shift;
+ 	my $mimemap = shift;
++	my $rawmode = shift;
+ 	-r $mimemap or return undef;
+ 
+ 	my %mimemap;
+@@ -4193,12 +4194,25 @@ sub mimetype_guess_file {
+ 	}
+ 	close($mh);
+ 
+-	$filename =~ /\.([^.]*)$/;
+-	return $mimemap{$1};
++	my ($ext, $ans);
++	$ext = $1 if $filename =~ /\.([^.]*)$/;
++	$ans = $mimemap{$ext} if $ext;
++	if (defined $ans) {
++		my $l = lc($ans);
++		$ans = 'text/html' if $l eq 'application/xhtml+xml';
++		if (!$rawmode) {
++			$ans = 'text/xml' if $l =~ m!^application/[^\s:;,=]+\+xml$! ||
++					     $l eq 'image/svg+xml' ||
++					     $l eq 'application/xml-dtd' ||
++					     $l eq 'application/xml-external-parsed-entity';
++		}
++	}
++	return $ans;
+ }
+ 
+ sub mimetype_guess {
+ 	my $filename = shift;
++	my $rawmode = shift;
+ 	my $mime;
+ 	$filename =~ /\./ or return undef;
+ 
+@@ -4208,48 +4222,105 @@ sub mimetype_guess {
+ 			# it is relative to project
+ 			$file = "$projectroot/$project/$file";
+ 		}
+-		$mime = mimetype_guess_file($filename, $file);
++		$mime = mimetype_guess_file($filename, $file, $rawmode);
+ 	}
+-	$mime ||= mimetype_guess_file($filename, '/etc/mime.types');
++	$mime ||= mimetype_guess_file($filename, '/etc/mime.types', $rawmode);
+ 	return $mime;
+ }
+ 
+ sub blob_mimetype {
+ 	my $fd = shift;
+ 	my $filename = shift;
++	my $rawmode = shift;
++	my $mime;
+ 
+-	if ($filename) {
+-		my $mime = mimetype_guess($filename);
+-		$mime and return $mime;
++	# The -T/-B file operators produce the wrong result unless a perlio
++	# layer is present when the file handle is a pipe that delivers less
++	# than 512 bytes of data before reaching EOF.
++	#
++	# If we are running in a Perl that uses the stdio layer rather than the
++	# unix+perlio layers we will end up adding a perlio layer on top of the
++	# stdio layer and get a second level of buffering.  This is harmless
++	# and it makes the -T/-B file operators work properly in all cases.
++
++	binmode $fd, ":perlio" or die_error(500, "Adding perlio layer failed")
++		unless grep /^perlio$/, PerlIO::get_layers($fd);
++
++	$mime = mimetype_guess($filename, $rawmode) if defined $filename;
++
++	if (!$mime && $filename) {
++		if ($filename =~ m/\.html?$/i) {
++			$mime = 'text/html';
++		} elsif ($filename =~ m/\.xht(?:ml)?$/i) {
++			$mime = 'text/html';
++		} elsif ($filename =~ m/\.te?xt?$/i) {
++			$mime = 'text/plain';
++		} elsif ($filename =~ m/\.(?:markdown|md)$/i) {
++			$mime = 'text/plain';
++		} elsif ($filename =~ m/\.png$/i) {
++			$mime = 'image/png';
++		} elsif ($filename =~ m/\.gif$/i) {
++			$mime = 'image/gif';
++		} elsif ($filename =~ m/\.jpe?g$/i) {
++			$mime = 'image/jpeg';
++		} elsif ($filename =~ m/\.svgz?$/i) {
++			$mime = 'image/svg+xml';
++		}
+ 	}
+ 
+ 	# just in case
+-	return $default_blob_plain_mimetype unless $fd;
+-
+-	if (-T $fd) {
+-		return 'text/plain';
+-	} elsif (! $filename) {
+-		return 'application/octet-stream';
+-	} elsif ($filename =~ m/\.png$/i) {
+-		return 'image/png';
+-	} elsif ($filename =~ m/\.gif$/i) {
+-		return 'image/gif';
+-	} elsif ($filename =~ m/\.jpe?g$/i) {
+-		return 'image/jpeg';
+-	} else {
+-		return 'application/octet-stream';
++	return $default_blob_plain_mimetype || 'application/octet-stream' unless $fd || $mime;
++
++	$mime = -T $fd ? 'text/plain' : 'application/octet-stream' unless $mime;
++
++	return $mime;
++}
++
++sub is_ascii {
++	use bytes;
++	my $data = shift;
++	return scalar($data =~ /^[\x00-\x7f]*$/);
++}
++
++sub is_valid_utf8 {
++	my $data = shift;
++	return utf8::decode($data);
++}
++
++sub extract_html_charset {
++	return undef unless $_[0] && "$_[0]</head>" =~ m#<head(?:\s+[^>]*)?(?<!/)>(.*?)</head\s*>#is;
++	my $head = $1;
++	return $2 if $head =~ m#<meta\s+charset\s*=\s*(['"])\s*([a-z0-9(:)_.+-]+)\s*\1\s*/?>#is;
++	while ($head =~ m#<meta\s+(http-equiv|content)\s*=\s*(['"])\s*([^\2]+?)\s*\2\s*(http-equiv|content)\s*=\s*(['"])\s*([^\5]+?)\s*\5\s*/?>#sig) {
++		my %kv = (lc($1) => $3, lc($4) => $6);
++		my ($he, $c) = (lc($kv{'http-equiv'}), $kv{'content'});
++		return $1 if $he && $c && $he eq 'content-type' &&
++			$c =~ m!\s*text/html\s*;\s*charset\s*=\s*([a-z0-9(:)_.+-]+)\s*$!is;
+ 	}
++	return undef;
+ }
+ 
+ sub blob_contenttype {
+ 	my ($fd, $file_name, $type) = @_;
+ 
+-	$type ||= blob_mimetype($fd, $file_name);
+-	if ($type eq 'text/plain' && defined $default_text_plain_charset) {
+-		$type .= "; charset=$default_text_plain_charset";
+-	}
+-
+-	return $type;
++	$type ||= blob_mimetype($fd, $file_name, 1);
++	return $type unless $type =~ m!^text/.+!i;
++	my ($leader, $charset, $htmlcharset);
++	if ($fd && read($fd, $leader, 32768)) {{
++		$charset='US-ASCII' if is_ascii($leader);
++		return ("$type; charset=UTF-8", $leader) if !$charset && is_valid_utf8($leader);
++		$charset='ISO-8859-1' unless $charset;
++		$htmlcharset = extract_html_charset($leader) if $type eq 'text/html';
++		if ($htmlcharset && $charset ne 'US-ASCII') {
++			$htmlcharset = undef if $htmlcharset =~ /^(?:utf-8|us-ascii)$/i
++		}
++	}}
++	return ("$type; charset=$htmlcharset", $leader) if $htmlcharset;
++	my $defcharset = $default_text_plain_charset || '';
++	$defcharset =~ s/^\s+//;
++	$defcharset =~ s/\s+$//;
++	$defcharset = '' if $charset && $charset ne 'US-ASCII' && $defcharset =~ /^(?:utf-8|us-ascii)$/i;
++	return ("$type; charset=" . ($defcharset || 'ISO-8859-1'), $leader);
+ }
+ 
+ # peek the first upto 128 bytes off a file handle
+@@ -7694,7 +7765,8 @@ sub git_blob_plain {
+ 	binmode($fd);
+ 
+ 	# content-type (can include charset)
+-	$type = blob_contenttype($fd, $file_name, $type);
++	my $leader;
++	($type, $leader) = blob_contenttype($fd, $file_name, $type);
+ 
+ 	# "save as" filename, even when no $file_name is given
+ 	my $save_as = "$hash";
+@@ -7730,6 +7802,7 @@ sub git_blob_plain {
+ 			. '; filename="' . $save_as . '"');
+ 	binmode STDOUT, ':raw';
+ 	$fcgi_raw_mode = 1;
++	print $leader if defined $leader;
+ 	my $buf;
+ 	while (read($fd, $buf, 32768)) {
+ 		print $buf;
+@@ -7758,6 +7831,7 @@ sub git_blob {
+ 	my $have_blame = gitweb_check_feature('blame');
+ 	defined(my $fd = git_cmd_pipe "cat-file", "blob", $hash)
+ 		or die_error(500, "Couldn't cat $file_name, $hash");
++	binmode($fd);
+ 	my $mimetype = blob_mimetype($fd, $file_name);
+ 	# use 'blob_plain' (aka 'raw') view for files that cannot be displayed
+ 	if ($mimetype !~ m!^(?:text/|image/(?:gif|png|jpeg)$)! && -B $fd) {
+---

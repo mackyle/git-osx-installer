@@ -1,0 +1,172 @@
+Subject: [PATCH] gitweb: add 'refs' action to show all refs
+
+The 'refs' action shows all the refs in a project together on
+one page either by age (the default) or by name.
+
+A new '$default_refs_order' configuration option is provided
+to change the default order from 'age' to 'name' if desired.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl       | 53 +++++++++++++++++++++++++++++++++++++++++-------
+gitweb/static/gitweb.css |  8 ++++++++
+2 files changed, 54 insertions(+), 7 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index ee69110a..677940c2 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -141,6 +141,10 @@ our $project_list_default_category = "";
+ # valid values are none, project, descr, owner, and age
+ our $default_projects_order = "project";
+ 
++# default order of refs list
++# valid values are age and name
++our $default_refs_order = "age";
++
+ # show repository only if this file exists
+ # (only effective if this variable evaluates to true)
+ our $export_ok = "++GITWEB_EXPORT_OK++";
+@@ -860,6 +864,7 @@ our %actions = (
+ 	"log" => \&git_log,
+ 	"patch" => \&git_patch,
+ 	"patches" => \&git_patches,
++	"refs" => \&git_refs,
+ 	"remotes" => \&git_remotes,
+ 	"rss" => \&git_rss,
+ 	"atom" => \&git_atom,
+@@ -3779,12 +3784,15 @@ sub git_get_heads_list {
+ sub git_get_tags_list {
+ 	my $limit = shift;
+ 	my @tagslist;
++	my $all = shift || 0;
++	my $order = shift || $default_refs_order;
++	my $sortkey = $all && $order eq 'name' ? 'refname' : '-creatordate';
+ 
+ 	open my $fd, '-|', git_cmd(), 'for-each-ref',
+-		($limit ? '--count='.($limit+1) : ()), '--sort=-creatordate',
++		($limit ? '--count='.($limit+1) : ()), "--sort=$sortkey",
+ 		'--format=%(objectname) %(objecttype) %(refname) '.
+ 		'%(*objectname) %(*objecttype) %(subject)%00%(creator)',
+-		'refs/tags'
++		($all ? 'refs' : 'refs/tags')
+ 		or return;
+ 	while (my $line = <$fd>) {
+ 		my %ref_item;
+@@ -3795,7 +3803,8 @@ sub git_get_tags_list {
+ 		my ($creator, $epoch, $tz) =
+ 			($creatorinfo =~ /^(.*) ([0-9]+) (.*)$/);
+ 		$ref_item{'fullname'} = $name;
+-		$name =~ s!^refs/tags/!!;
++		$name =~ s!^refs/!! if $all;
++		$name =~ s!^refs/tags/!! unless $all;
+ 
+ 		$ref_item{'type'} = $type;
+ 		$ref_item{'id'} = $id;
+@@ -4347,7 +4356,7 @@ sub git_print_page_nav {
+ 	my ($current, $suppress, $head, $treehead, $treebase, $extra) = @_;
+ 	$extra = '' if !defined $extra; # pager or formats
+ 
+-	my @navs = qw(summary log commit commitdiff tree);
++	my @navs = qw(summary log commit commitdiff tree refs);
+ 	if ($suppress) {
+ 		@navs = grep { $_ ne $suppress } @navs;
+ 	}
+@@ -6034,11 +6043,21 @@ sub git_history_body {
+ 
+ sub git_tags_body {
+ 	# uses global variable $project
+-	my ($taglist, $from, $to, $extra) = @_;
++	my ($taglist, $from, $to, $extra, $head_at, $full, $order) = @_;
+ 	$from = 0 unless defined $from;
+ 	$to = $#{$taglist} if (!defined $to || $#{$taglist} < $to);
++	$order ||= $default_refs_order;
+ 
+ 	print "<table class=\"tags\">\n";
++	if ($full) {
++		print "<tr class=\"tags_header\">\n";
++		print_sort_th('age', $order, 'Last Change');
++		print_sort_th('name', $order, 'Name');
++		print "<th></th>\n" . # for comment
++		      "<th></th>\n" . # for tag
++		      "<th></th>\n" . # for links
++		      "</tr>\n";
++	}
+ 	my $alternate = 1;
+ 	for (my $i = $from; $i <= $to; $i++) {
+ 		my $entry = $taglist->[$i];
+@@ -6048,6 +6067,7 @@ sub git_tags_body {
+ 		if (defined $comment) {
+ 			$comment_short = chop_str($comment, 30, 5);
+ 		}
++		my $curr = defined $head_at && $tag{'id'} eq $head_at;
+ 		if ($alternate) {
+ 			print "<tr class=\"dark\">\n";
+ 		} else {
+@@ -6059,11 +6079,11 @@ sub git_tags_body {
+ 		} else {
+ 			print "<td></td>\n";
+ 		}
+-		print "<td>" .
++		print(($curr ? "<td class=\"current_head\">" : "<td>") .
+ 		      $cgi->a({-href => href(action=>$tag{'reftype'}, hash=>$tag{'refid'}),
+ 		               -class => "list name"}, esc_html($tag{'name'})) .
+ 		      "</td>\n" .
+-		      "<td>";
++		      "<td>");
+ 		if (defined $comment) {
+ 			print format_subject_html($comment, $comment_short,
+ 			                          href(action=>"tag", hash=>$tag{'id'}));
+@@ -6080,6 +6100,7 @@ sub git_tags_body {
+ 		      $cgi->a({-href => href(action=>$tag{'reftype'}, hash=>$tag{'refid'})}, $tag{'reftype'});
+ 		if ($tag{'reftype'} eq "commit") {
+ 			print " | " . $cgi->a({-href => href(action=>"shortlog", hash=>$tag{'fullname'})}, "log");
++			print " | " . $cgi->a({-href => href(action=>"tree", hash=>$tag{'fullname'})}, "tree") if $full;
+ 		} elsif ($tag{'reftype'} eq "blob") {
+ 			print " | " . $cgi->a({-href => href(action=>"blob_plain", hash=>$tag{'refid'})}, "raw");
+ 		}
+@@ -6990,6 +7011,24 @@ sub git_tags {
+ 	git_footer_html();
+ }
+ 
++sub git_refs {
++	my $order = $input_params{'order'};
++	if (defined $order && $order !~ m/age|name/) {
++		die_error(400, "Unknown order parameter");
++	}
++
++	my $head = git_get_head_hash($project);
++	git_header_html();
++	git_print_page_nav('','', $head,undef,$head,format_ref_views('refs'));
++	git_print_header_div('summary', $project);
++
++	my @refslist = git_get_tags_list(undef, 1, $order);
++	if (@refslist) {
++		git_tags_body(\@refslist, undef, undef, undef, $head, 1, $order);
++	}
++	git_footer_html();
++}
++
+ sub git_heads {
+ 	my $head = git_get_head_hash($project);
+ 	git_header_html();
+diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
+index 77e272e3..6528ce2a 100644
+--- a/gitweb/static/gitweb.css
++++ b/gitweb/static/gitweb.css
+@@ -176,6 +176,14 @@ table.tags a.subject {
+ 	font-weight: normal;
+ }
+ 
++tr.tags_header {
++	font-size: 90%;
++}
++
++tr.tags_header th {
++	padding-bottom: 8px;
++}
++
+ a.list:hover {
+ 	text-decoration: underline;
+ 	color: #880000;
+---

@@ -1,0 +1,108 @@
+Subject: [PATCH] gitweb: avoid implicit use of the shell
+
+In the one case where the shell must be run (when using
+highlight), use an explicitly configured $posix_shell_bin that
+can be set in GITWEB_CONFIG if necessary to increase security.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/Makefile    |  9 +++++----
+gitweb/gitweb.perl | 18 ++++++++++++------
+2 files changed, 17 insertions(+), 10 deletions(-)
+
+diff --git a/gitweb/Makefile b/gitweb/Makefile
+index cd194d05..8aab6c99 100644
+--- a/gitweb/Makefile
++++ b/gitweb/Makefile
+@@ -16,6 +16,8 @@ gitwebdir ?= /var/www/cgi-bin
+ 
+ RM ?= rm -f
+ INSTALL ?= install
++SHELL_PATH ?= /bin/sh
++PERL_PATH ?= /usr/bin/perl
+ 
+ # default configuration for gitweb
+ GITWEB_CONFIG = gitweb_config.perl
+@@ -38,6 +40,7 @@ GITWEB_SITE_HTML_HEAD_STRING =
+ GITWEB_SITE_HEADER =
+ GITWEB_SITE_FOOTER =
+ HIGHLIGHT_BIN = highlight
++POSIX_SHELL_BIN = $(SHELL_PATH)
+ 
+ # include user config
+ -include ../config.mak.autogen
+@@ -52,9 +55,6 @@ HIGHLIGHT_BIN = highlight
+ 
+ ### Build rules
+ 
+-SHELL_PATH ?= $(SHELL)
+-PERL_PATH  ?= /usr/bin/perl
+-
+ # Shell quote;
+ bindir_SQ = $(subst ','\'',$(bindir))#'
+ gitwebdir_SQ = $(subst ','\'',$(gitwebdir))#'
+@@ -148,7 +148,8 @@ GITWEB_REPLACE = \
+ 	-e 's|++GITWEB_SITE_HTML_HEAD_STRING++|$(GITWEB_SITE_HTML_HEAD_STRING)|g' \
+ 	-e 's|++GITWEB_SITE_HEADER++|$(GITWEB_SITE_HEADER)|g' \
+ 	-e 's|++GITWEB_SITE_FOOTER++|$(GITWEB_SITE_FOOTER)|g' \
+-	-e 's|++HIGHLIGHT_BIN++|$(HIGHLIGHT_BIN)|g'
++	-e 's|++HIGHLIGHT_BIN++|$(HIGHLIGHT_BIN)|g' \
++	-e 's|++POSIX_SHELL_BIN++|$(POSIX_SHELL_BIN)|g'
+ 
+ GITWEB-BUILD-OPTIONS: FORCE
+ 	@rm -f $@+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 29da752d..18e180e8 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -203,6 +203,10 @@ our @diff_opts = ('-M'); # taken from git_commit
+ # the gitweb domain.
+ our $prevent_xss = 0;
+ 
++# Path to a POSIX shell.  Needed to run $highlight_bin and a snapshot compressor.
++# Only used when highlight is enabled or snapshots with compressors are enabled.
++our $posix_shell_bin = "++POSIX_SHELL_BIN++";
++
+ # Path to the highlight executable to use (must be the one from
+ # http://www.andre-simon.de due to assumptions about parameters and output).
+ # Useful if highlight is not installed on your webserver's PATH.
+@@ -4298,9 +4302,10 @@ sub run_highlighter {
+ 	my ($fd, $syntax) = @_;
+ 	return $fd unless $fd && !eof($fd) && defined $highlight_bin && defined $syntax;
+ 
+-	defined(open my $hifd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
+-	          quote_command($highlight_bin).
+-	          " --replace-tabs=8 --fragment --syntax $syntax |")
++	defined(my $hifd = cmd_pipe $posix_shell_bin, '-c',
++		quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
++		quote_command($highlight_bin).
++		" --replace-tabs=8 --fragment --syntax $syntax")
+ 		or die_error(500, "Couldn't open file or run syntax highlighter");
+ 	if (eof $hifd) {
+ 		# just in case, should not happen as we tested !eof($fd) above
+@@ -8009,12 +8014,13 @@ sub git_snapshot {
+ 	my %co = parse_commit($hash);
+ 	exit_if_unmodified_since($co{'committer_epoch'}) if %co;
+ 
+-	my $cmd = quote_command(
++	my @cmd = (
+ 		git_cmd(), 'archive',
+ 		"--format=$known_snapshot_formats{$format}{'format'}",
+ 		"--prefix=$prefix/", $hash);
+ 	if (exists $known_snapshot_formats{$format}{'compressor'}) {
+-		$cmd .= ' | ' . quote_command(@{$known_snapshot_formats{$format}{'compressor'}});
++		@cmd = ($posix_shell_bin, '-c', quote_command(@cmd) .
++			' | ' . quote_command(@{$known_snapshot_formats{$format}{'compressor'}}));
+ 	}
+ 
+ 	$filename =~ s/(["\\])/\\$1/g;
+@@ -8029,7 +8035,7 @@ sub git_snapshot {
+ 		%co ? (-last_modified => $latest_date{'rfc2822'}) : (),
+ 		-status => '200 OK');
+ 
+-	defined(my $fd = cmd_pipe $cmd)
++	defined(my $fd = cmd_pipe @cmd)
+ 		or die_error(500, "Execute git-archive failed");
+ 	binmode STDOUT, ':raw';
+ 	print <$fd>;
+---

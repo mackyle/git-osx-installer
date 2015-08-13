@@ -1,0 +1,36 @@
+Subject: [PATCH] gitweb: do not fork a shell to run `git version`
+
+There's absolutely no reason to waste cycles forking not one,
+but TWO processes to get this information that only serves
+to leak information about the system to attackers.
+
+If we must run it, don't use a sloppy qx(``) when we conveniently
+have available a cmd_pipe function that avoids an extra fork
+of some indeterminate shell.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 9 ++++++++-
+1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index af60c8bd..ec58bee1 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -965,7 +965,14 @@ sub get_loadavg {
+ # version of the core git binary
+ our $git_version;
+ sub evaluate_git_version {
+-	our $git_version = qx("$GIT" --version) =~ m/git version (.*)$/ ? $1 : "unknown";
++	sub cmd_pipe;
++	my $vers;
++	if (defined(my $fd = cmd_pipe $GIT, '--version')) {
++		$vers = <$fd>;
++		close $fd;
++	}
++	defined $vers or $vers = '';
++	$git_version = $vers =~ m/git version (.*)$/i ? $1 : "unknown";
+ 	$number_of_git_cmds++;
+ }
+ 
+---

@@ -1,0 +1,108 @@
+Subject: [PATCH] gitweb: wrap rather than overflow long lines
+
+Very long lines shown in the blob display would overflow the right
+margin making for a very ugly layout.
+
+Force them to wrap and indent if they are too long.
+
+Since blame lines are contained in a <td></td> cell of a table the
+wrapping technique must be entirely different from the one used for
+blob display.  For diff line wrapping a wrapping indicator must be
+shown since diff displays do not have individual line numbers.
+
+Adjust the CSS and class values so that when wrapping diff lines
+only the lines that are actually part of the diff body are allowed
+to wrap with line continuation characters.
+
+In order for all of this wrapping to work properly, the browser
+needs to support the word-wrap:break-word CSS property.
+
+Also, while we're fixing wrapping problems, make the shortlog display
+wrap in a sane fashion when there are many refs to show for a commit.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl       |  2 +-
+gitweb/static/gitweb.css | 40 ++++++++++++++++++++++++++++++++++++++++
+2 files changed, 41 insertions(+), 1 deletion(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index e8e6cfb8..aa37972a 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -2809,7 +2809,7 @@ sub format_diff_line {
+ 		}
+ 	}
+ 
+-	my $diff_classes = "diff";
++	my $diff_classes = "diff diff_body";
+ 	$diff_classes .= " $diff_class" if ($diff_class);
+ 	$line = "<div class=\"$diff_classes\">$line</div>\n";
+ 
+diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
+index 670cb209..50efe9a0 100644
+--- a/gitweb/static/gitweb.css
++++ b/gitweb/static/gitweb.css
+@@ -146,6 +146,10 @@ div.title_text {
+ 	font-family: monospace;
+ }
+ 
++div.log, div.log_body {
++	word-wrap: break-word;
++}
++
+ div.log_body {
+ 	padding: 8px 8px 8px 150px;
+ }
+@@ -396,7 +400,35 @@ table.blame td.age0 {
+ td.pre, div.pre, div.diff {
+ 	font-family: monospace;
+ 	font-size: 12px;
++}
++
++div.pre, div.diff {
+ 	white-space: pre;
++	word-wrap: break-word;
++}
++
++div.pre {
++	padding-left: 5.5ex !important;
++	text-indent: -5.5ex;
++}
++
++div.diff_body {
++	position: relative;
++	overflow: hidden;
++	padding-left: 2.6ex !important;
++	text-indent: -2.6ex;
++}
++
++div.diff_body:before {
++	position: absolute;
++	left: -0.35ex;
++	white-space: pre;
++	content: " \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa";
++	clip: rect(auto, auto, auto, 1ex);
++}
++
++td.pre {
++	white-space: pre-wrap;
+ }
+ 
+ td.mode {
+@@ -588,6 +620,14 @@ a.linenr {
+ 	text-decoration: none
+ }
+ 
++table.shortlog {
++	white-space: nowrap;
++}
++
++table.shortlog span.refs {
++	white-space: normal;
++}
++
+ a.rss_logo {
+ 	float: right;
+ 	padding: 3px 5px;
+---

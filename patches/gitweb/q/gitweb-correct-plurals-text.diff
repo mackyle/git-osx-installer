@@ -1,0 +1,27 @@
+Subject: [PATCH] gitweb: correct plurals text
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 5 +++--
+1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 4d378c33..9706d530 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -6050,11 +6050,12 @@ sub git_project_list_rows {
+ 			print "<td>";
+ 			if ($pr->{'forks'}) {
+ 				my $nforks = scalar @{$pr->{'forks'}};
++				my $s = $nforks == 1 ? '' : 's';
+ 				if ($nforks > 0) {
+ 					print $cgi->a({-href => href(project=>$pr->{'path'}, action=>"forks"),
+-					               -title => "$nforks forks"}, "+");
++					               -title => "$nforks fork$s"}, "+");
+ 				} else {
+-					print $cgi->span({-title => "$nforks forks"}, "+");
++					print $cgi->span({-title => "$nforks fork$s"}, "+");
+ 				}
+ 			}
+ 			print "</td>\n";
+---

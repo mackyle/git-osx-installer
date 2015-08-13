@@ -1,0 +1,484 @@
+Subject: [PATCH] gitweb: use to_utf8 on all input lines
+
+Git does not mandate a character set encoding in the data it
+tracks.  Therefore the output of any Git command that includes
+user data could be in any encoding.
+
+Just automatically marking it as UTF-8 with the ':utf8' option
+is wrong and can lead to unexpected errors and/or misdisplayed
+results.
+
+Instead make sure every input line that may contain user-created
+bytes passes through the to_utf8 function before being used.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 138 +++++++++++++++++++++++++++++++++++------------------
+1 file changed, 92 insertions(+), 46 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 18e180e8..9ef5e796 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -1484,6 +1484,7 @@ our $CGI = 'CGI';
+ our $cgi;
+ our $fcgi_mode = 0;
+ our $fcgi_nproc_active = 0;
++our $fcgi_raw_mode = 0;
+ sub is_fcgi {
+ 	use Errno;
+ 	my $stdinfno = fileno STDIN;
+@@ -1495,7 +1496,33 @@ sub is_fcgi {
+ sub configure_as_fcgi {
+ 	return if $fcgi_mode;
+ 
++	require FCGI;
+ 	require CGI::Fast;
++
++	# We have gone to great effort to make sure that all incoming data has
++	# been converted from whatever format it was in into UTF-8.  We have
++	# even taken care to make sure the output handle is in ':utf8' mode.
++	# Now along comes FCGI and blows it with:
++	#
++	#     Use of wide characters in FCGI::Stream::PRINT is deprecated
++	#      and will stop wprking[sic] in a future version of FCGI
++	#
++	# To fix this we replace FCGI::Stream::PRINT with our own routine that
++	# first encodes everything and then calls the original routine, but
++	# not if $fcgi_raw_mode is true (then we just call the original routine).
++	#
++	# Note that we could do this by using utf8::is_utf8 to check instead
++	# of having a $fcgi_raw_mode global, but that would be slower to run
++	# the test on each element and much slower than skipping the conversion
++	# entirely when we know we're outputting raw bytes.
++	my $orig = \&FCGI::Stream::PRINT;
++	undef *FCGI::Stream::PRINT;
++	*FCGI::Stream::PRINT = sub {
++		@_ = (shift, map {my $x=$_; utf8::encode($x); $x} @_)
++			unless $fcgi_raw_mode;
++		goto $orig;
++	};
++
+ 	our $CGI = 'CGI::Fast';
+ 
+ 	$fcgi_mode = 1;
+@@ -2977,7 +3004,7 @@ sub git_parse_project_config {
+ 	defined(my $fh = git_cmd_pipe "config", '-z', '-l')
+ 		or return;
+ 
+-	while (my $keyval = <$fh>) {
++	while (my $keyval = to_utf8(scalar <$fh>)) {
+ 		chomp $keyval;
+ 		my ($key, $value) = split(/\n/, $keyval, 2);
+ 
+@@ -3091,7 +3118,7 @@ sub git_get_hash_by_path {
+ 
+ 	defined(my $fd = git_cmd_pipe "ls-tree", $base, "--", $path)
+ 		or die_error(500, "Open git-ls-tree failed");
+-	my $line = <$fd>;
++	my $line = to_utf8(scalar <$fd>);
+ 	close $fd or return undef;
+ 
+ 	if (!defined $line) {
+@@ -3118,7 +3145,7 @@ sub git_get_path_by_hash {
+ 
+ 	defined(my $fd = git_cmd_pipe "ls-tree", '-r', '-t', '-z', $base)
+ 		or return undef;
+-	while (my $line = <$fd>) {
++	while (my $line = to_utf8(scalar <$fd>)) {
+ 		chomp $line;
+ 
+ 		#'040000 tree 595596a6a9117ddba9fe379b6b012b558bac8423	gitweb'
+@@ -3144,7 +3171,7 @@ sub git_get_file_or_project_config {
+ 	$git_dir = "$projectroot/$path";
+ 	open my $fd, '<', "$git_dir/$name"
+ 		or return git_get_project_config($name);
+-	my $conf = <$fd>;
++	my $conf = to_utf8(scalar <$fd>);
+ 	close $fd;
+ 	if (defined $conf) {
+ 		chomp $conf;
+@@ -3185,6 +3212,7 @@ sub git_get_project_ctags {
+ 			close $ct;
+ 
+ 			(my $ctag = $tagfile) =~ s#.*/##;
++			$ctag = to_utf8($ctag);
+ 			if ($val =~ /^\d+$/) {
+ 				$ctags->{$ctag} = $val;
+ 			} else {
+@@ -3194,7 +3222,7 @@ sub git_get_project_ctags {
+ 		closedir $dh;
+ 
+ 	} elsif (open my $fh, '<', "$git_dir/ctags") {
+-		while (my $line = <$fh>) {
++		while (my $line = to_utf8(scalar <$fh>)) {
+ 			chomp $line;
+ 			$ctags->{$line}++ if $line;
+ 		}
+@@ -3294,7 +3322,7 @@ sub git_get_project_url_list {
+ 		or return wantarray ?
+ 		@{ config_to_multi(git_get_project_config('url')) } :
+ 		   config_to_multi(git_get_project_config('url'));
+-	my @git_project_url_list = map { chomp; $_ } <$fd>;
++	my @git_project_url_list = map { chomp; to_utf8($_) } <$fd>;
+ 	close $fd;
+ 
+ 	return wantarray ? @git_project_url_list : \@git_project_url_list;
+@@ -3594,7 +3622,7 @@ sub git_get_remotes_list {
+ 
+ 	my $fd = git_cmd_pipe 'remote', '-v';
+ 	return unless $fd;
+-	while (my $remote = <$fd>) {
++	while (my $remote = to_utf8(scalar <$fd>)) {
+ 		chomp $remote;
+ 		$remote =~ s!\t(.*?)\s+\((\w+)\)$!!;
+ 		next if $wanted and not $remote eq $wanted;
+@@ -3629,7 +3657,7 @@ sub git_get_references {
+ 		($type ? ("--", "refs/$type") : ())) # use -- <pattern> if $type
+ 		or return;
+ 
+-	while (my $line = <$fd>) {
++	while (my $line = to_utf8(scalar <$fd>)) {
+ 		chomp $line;
+ 		if ($line =~ m!^([0-9a-fA-F]{40})\srefs/($type.*)$!) {
+ 			if (defined $refs{$1}) {
+@@ -3648,7 +3676,7 @@ sub git_get_rev_name_tags {
+ 
+ 	defined(my $fd = git_cmd_pipe "name-rev", "--tags", $hash)
+ 		or return;
+-	my $name_rev = <$fd>;
++	my $name_rev = to_utf8(scalar <$fd>);
+ 	close $fd;
+ 
+ 	if ($name_rev =~ m|^$hash tags/(.*)$|) {
+@@ -3703,7 +3731,7 @@ sub parse_tag {
+ 
+ 	defined(my $fd = git_cmd_pipe "cat-file", "tag", $tag_id) or return;
+ 	$tag{'id'} = $tag_id;
+-	while (my $line = <$fd>) {
++	while (my $line = to_utf8(scalar <$fd>)) {
+ 		chomp $line;
+ 		if ($line =~ m/^object ([0-9a-fA-F]{40})$/) {
+ 			$tag{'object'} = $1;
+@@ -3728,7 +3756,7 @@ sub parse_tag {
+ 			last;
+ 		}
+ 	}
+-	push @comment, <$fd>;
++	push @comment, map(to_utf8($_), <$fd>);
+ 	$tag{'comment'} = \@comment;
+ 	close $fd or return;
+ 	if (!defined $tag{'name'}) {
+@@ -3787,6 +3815,7 @@ sub parse_commit_text {
+ 	$co{'parents'} = \@parents;
+ 	$co{'parent'} = $parents[0];
+ 
++	@commit_lines = map to_utf8($_), @commit_lines;
+ 	foreach my $title (@commit_lines) {
+ 		$title =~ s/^    //;
+ 		if ($title ne "") {
+@@ -4030,7 +4059,7 @@ sub git_get_heads_list {
+ 		'--format=%(objectname) %(refname) %(subject)%00%(committer)',
+ 		@patterns)
+ 		or return;
+-	while (my $line = <$fd>) {
++	while (my $line = to_utf8(scalar <$fd>)) {
+ 		my %ref_item;
+ 
+ 		chomp $line;
+@@ -4078,7 +4107,7 @@ sub git_get_tags_list {
+ 		'%(*objectname) %(*objecttype) %(subject)%00%(creator)',
+ 		($all ? 'refs' : 'refs/tags'))
+ 		or return;
+-	while (my $line = <$fd>) {
++	while (my $line = to_utf8(scalar <$fd>)) {
+ 		my %ref_item;
+ 
+ 		chomp $line;
+@@ -4139,7 +4168,9 @@ sub insert_file {
+ 	my $filename = shift;
+ 
+ 	open my $fd, '<', $filename;
+-	print map { to_utf8($_) } <$fd>;
++	while (<$fd>) {
++		print to_utf8($_);
++	}
+ 	close $fd;
+ }
+ 
+@@ -4870,7 +4901,9 @@ sub git_print_section {
+ 	} elsif (ref($content) eq 'SCALAR') {
+ 		print esc_html($$content);
+ 	} elsif (ref($content) eq 'GLOB' or ref($content) eq 'IO::Handle') {
+-		print <$content>;
++		while (<$content>) {
++			print to_utf8($_);
++		}
+ 	} elsif (!ref($content) && defined($content)) {
+ 		print $content;
+ 	}
+@@ -5042,7 +5075,7 @@ sub git_get_link_target {
+ 		or return;
+ 	{
+ 		local $/ = undef;
+-		$link_target = <$fd>;
++		$link_target = to_utf8(scalar <$fd>);
+ 	}
+ 	close $fd
+ 		or return;
+@@ -5781,7 +5814,7 @@ sub git_patchset_body {
+ 	print "<div class=\"patchset\">\n";
+ 
+ 	# skip to first patch
+-	while ($patch_line = <$fd>) {
++	while ($patch_line = to_utf8(scalar <$fd>)) {
+ 		chomp $patch_line;
+ 
+ 		last if ($patch_line =~ m/^diff /);
+@@ -5849,7 +5882,7 @@ sub git_patchset_body {
+ 		# print extended diff header
+ 		print "<div class=\"diff extended_header\">\n";
+ 	EXTENDED_HEADER:
+-		while ($patch_line = <$fd>) {
++		while ($patch_line = to_utf8(scalar<$fd>)) {
+ 			chomp $patch_line;
+ 
+ 			last EXTENDED_HEADER if ($patch_line =~ m/^--- |^diff /);
+@@ -5868,7 +5901,7 @@ sub git_patchset_body {
+ 		#assert($patch_line =~ m/^---/) if DEBUG;
+ 
+ 		my $last_patch_line = $patch_line;
+-		$patch_line = <$fd>;
++		$patch_line = to_utf8(scalar <$fd>);
+ 		chomp $patch_line;
+ 		#assert($patch_line =~ m/^\+\+\+/) if DEBUG;
+ 
+@@ -5878,7 +5911,7 @@ sub git_patchset_body {
+ 
+ 		# the patch itself
+ 	LINE:
+-		while ($patch_line = <$fd>) {
++		while ($patch_line = to_utf8(scalar <$fd>)) {
+ 			chomp $patch_line;
+ 
+ 			next PATCH if ($patch_line =~ m/^diff /);
+@@ -6833,7 +6866,7 @@ sub git_search_changes {
+ 	my $alternate = 1;
+ 	undef %co;
+ 	my @files;
+-	while (my $line = <$fd>) {
++	while (my $line = to_utf8(scalar <$fd>)) {
+ 		chomp $line;
+ 		next unless $line;
+ 
+@@ -6917,7 +6950,7 @@ sub git_search_files {
+ 	my $matches = 0;
+ 	my $lastfile = '';
+ 	my $file_href;
+-	while (my $line = <$fd>) {
++	while (my $line = to_utf8(scalar <$fd>)) {
+ 		chomp $line;
+ 		my ($file, $lno, $ltext, $binary);
+ 		last if ($matches++ > 1000);
+@@ -7354,7 +7387,6 @@ sub git_blame_common {
+ 			$hash_base, '--', $file_name)
+ 			or die_error(500, "Open git-blame --porcelain failed");
+ 	}
+-	binmode $fd, ':utf8';
+ 
+ 	# incremental blame data returns early
+ 	if ($format eq 'data') {
+@@ -7362,8 +7394,8 @@ sub git_blame_common {
+ 			-type=>"text/plain", -charset => "utf-8",
+ 			-status=> "200 OK");
+ 		local $| = 1; # output autoflush
+-		while (my $line = <$fd>) {
+-			print to_utf8($line);
++		while (<$fd>) {
++			print to_utf8($_);
+ 		}
+ 		close $fd
+ 			or print "ERROR $!\n";
+@@ -7441,7 +7473,7 @@ sub git_blame_common {
+ 		#contents of a file
+ 		my $linenr = 0;
+ 	LINE:
+-		while (my $line = <$fd>) {
++		while (my $line = to_utf8(scalar <$fd>)) {
+ 			chomp $line;
+ 			$linenr++;
+ 
+@@ -7460,7 +7492,7 @@ sub git_blame_common {
+ 
+ 		# blame data
+ 	LINE:
+-		while (my $line = <$fd>) {
++		while (my $line = to_utf8(scalar <$fd>)) {
+ 			chomp $line;
+ 			# the header: <SHA-1> <src lineno> <dst lineno> [<lines in group>]
+ 			# no <lines in group> for subsequent lines in group of lines
+@@ -7471,7 +7503,7 @@ sub git_blame_common {
+ 			}
+ 			my $meta = $metainfo{$full_rev};
+ 			my $data;
+-			while ($data = <$fd>) {
++			while ($data = to_utf8(scalar <$fd>)) {
+ 				chomp $data;
+ 				last if ($data =~ s/^\t//); # contents of line
+ 				if ($data =~ /^(\S+)(?: (.*))?$/) {
+@@ -7659,6 +7691,7 @@ sub git_blob_plain {
+ 
+ 	defined(my $fd = git_cmd_pipe "cat-file", "blob", $hash)
+ 		or die_error(500, "Open git-cat-file blob '$hash' failed");
++	binmode($fd);
+ 
+ 	# content-type (can include charset)
+ 	$type = blob_contenttype($fd, $file_name, $type);
+@@ -7695,10 +7728,14 @@ sub git_blob_plain {
+ 		-content_disposition =>
+ 			($sandbox ? 'attachment' : 'inline')
+ 			. '; filename="' . $save_as . '"');
+-	local $/ = undef;
+ 	binmode STDOUT, ':raw';
+-	print <$fd>;
++	$fcgi_raw_mode = 1;
++	my $buf;
++	while (read($fd, $buf, 32768)) {
++		print $buf;
++	}
+ 	binmode STDOUT, ':utf8'; # as set at the beginning of gitweb.cgi
++	$fcgi_raw_mode = 0;
+ 	close $fd;
+ }
+ 
+@@ -7781,7 +7818,7 @@ sub git_blob {
+ 		      qq!" />\n!;
+ 	} else {
+ 		my $nr;
+-		while (my $line = <$fd>) {
++		while (my $line = to_utf8(scalar <$fd>)) {
+ 			chomp $line;
+ 			$nr++;
+ 			$line = untabify($line);
+@@ -7818,7 +7855,7 @@ sub git_tree {
+ 		defined(my $fd = git_cmd_pipe "ls-tree", '-z',
+ 			($show_sizes ? '-l' : ()), @extra_options, $hash)
+ 			or die_error(500, "Open git-ls-tree failed");
+-		@entries = map { chomp; $_ } <$fd>;
++		@entries = map { chomp; to_utf8($_) } <$fd>;
+ 		close $fd
+ 			or die_error(404, "Reading tree failed");
+ 	}
+@@ -8037,9 +8074,15 @@ sub git_snapshot {
+ 
+ 	defined(my $fd = cmd_pipe @cmd)
+ 		or die_error(500, "Execute git-archive failed");
++	binmode($fd);
+ 	binmode STDOUT, ':raw';
+-	print <$fd>;
++	$fcgi_raw_mode = 1;
++	my $buf;
++	while (read($fd, $buf, 32768)) {
++		print $buf;
++	}
+ 	binmode STDOUT, ':utf8'; # as set at the beginning of gitweb.cgi
++	$fcgi_raw_mode = 0;
+ 	close $fd;
+ }
+ 
+@@ -8172,7 +8215,7 @@ sub git_commit {
+ 		(@$parents <= 1 ? $parent : '-c'),
+ 		$hash, "--")
+ 		or die_error(500, "Open git-diff-tree failed");
+-	@difftree = map { chomp; $_ } <$fd>;
++	@difftree = map { chomp; to_utf8($_) } <$fd>;
+ 	close $fd or die_error(404, "Reading git-diff-tree failed");
+ 
+ 	# non-textual hash id's can be cached
+@@ -8266,7 +8309,7 @@ sub git_object {
+ 		# here errors should not happen
+ 		defined(my $fd = git_cmd_pipe "ls-tree", $hash_base, "--", $file_name)
+ 			or die_error(500, "Open git-ls-tree failed");
+-		my $line = <$fd>;
++		my $line = to_utf8(scalar <$fd>);
+ 		close $fd;
+ 
+ 		#'100644 blob 0fa3f3a66fb6a137f6ec2c19351ed4d807070ffa	panic.c'
+@@ -8303,7 +8346,7 @@ sub git_blobdiff {
+ 				$hash_parent_base, $hash_base,
+ 				"--", (defined $file_parent ? $file_parent : ()), $file_name)
+ 				or die_error(500, "Open git-diff-tree failed");
+-			@difftree = map { chomp; $_ } <$fd>;
++			@difftree = map { chomp; to_utf8($_) } <$fd>;
+ 			close $fd
+ 				or die_error(404, "Reading git-diff-tree failed");
+ 			@difftree
+@@ -8321,7 +8364,7 @@ sub git_blobdiff {
+ 				# ':100644 100644 03b21826... 3b93d5e7... M	ls-files.c'
+ 				# $hash == to_id
+ 				grep { /^:[0-7]{6} [0-7]{6} [0-9a-fA-F]{40} $hash/ }
+-				map { chomp; $_ } <$fd>;
++				map { chomp; to_utf8($_) } <$fd>;
+ 			close $fd
+ 				or die_error(404, "Reading git-diff-tree failed");
+ 			@difftree
+@@ -8406,7 +8449,7 @@ sub git_blobdiff {
+ 		git_footer_html();
+ 
+ 	} else {
+-		while (my $line = <$fd>) {
++		while (my $line = to_utf8(scalar <$fd>)) {
+ 			$line =~ s!a/($hash|$hash_parent)!'a/'.esc_path($diffinfo{'from_file'})!eg;
+ 			$line =~ s!b/($hash|$hash_parent)!'b/'.esc_path($diffinfo{'to_file'})!eg;
+ 
+@@ -8414,8 +8457,9 @@ sub git_blobdiff {
+ 
+ 			last if $line =~ m!^\+\+\+!;
+ 		}
+-		local $/ = undef;
+-		print <$fd>;
++		while (<$fd>) {
++			print to_utf8($_);
++		}
+ 		close $fd;
+ 	}
+ }
+@@ -8547,7 +8591,7 @@ sub git_commitdiff {
+ 			$hash_parent_param, $hash, "--")
+ 			or die_error(500, "Open git-diff-tree failed");
+ 
+-		while (my $line = <$fd>) {
++		while (my $line = to_utf8(scalar <$fd>)) {
+ 			chomp $line;
+ 			# empty line ends raw part of diff-tree output
+ 			last unless $line;
+@@ -8661,13 +8705,15 @@ sub git_commitdiff {
+ 		git_footer_html();
+ 
+ 	} elsif ($format eq 'plain') {
+-		local $/ = undef;
+-		print <$fd>;
++		while (<$fd>) {
++			print to_utf8($_);
++		}
+ 		close $fd
+ 			or print "Reading git-diff-tree failed\n";
+ 	} elsif ($format eq 'patch') {
+-		local $/ = undef;
+-		print <$fd>;
++		while (<$fd>) {
++			print to_utf8($_);
++		}
+ 		close $fd
+ 			or print "Reading git-format-patch failed\n";
+ 	}
+@@ -8934,7 +8980,7 @@ XML
+ 			$co{'parent'} || "--root",
+ 			$co{'id'}, "--", (defined $file_name ? $file_name : ()))
+ 			or next;
+-		my @difftree = map { chomp; $_ } <$fd>;
++		my @difftree = map { chomp; to_utf8($_) } <$fd>;
+ 		close $fd
+ 			or next;
+ 
+---

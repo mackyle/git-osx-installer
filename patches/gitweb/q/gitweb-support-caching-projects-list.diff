@@ -1,0 +1,459 @@
+Subject: [PATCH] gitweb: support caching projects list
+
+On repo.or.cz (permanently I/O overloaded and hosting 1050 project +
+forks), the projects list (the default gitweb page) can take more than
+a minute to generate. This naive patch adds simple support for caching
+the projects list data structure so that all the projects do not need
+to get rescanned at every page access.
+
+$projlist_cache_lifetime gitweb configuration variable is introduced,
+by default set to zero. If set to non-zero, it describes the number of
+minutes for which the cache remains valid. Only single project root
+per system can use the cache. Any script running with the same uid as
+gitweb can change the cache trivially - this is for secure
+installations only.
+
+The cache itself is stored in $cache_dir/$projlist_cache_name using
+Storable to store() Perl data structure with the list of project
+details.  When reusing the cache, the data is retrieve()'d back into
+@projects.
+
+To prevent contention when multiple accesses coincide with cache
+expiration, the timeout is postponed to time()+120 when we start
+refreshing.  When showing cached version, a disclaimer is shown
+at the top of the projects list.
+
+[jn: moved from Data::Dumper to Storable for serialization of data]
+
+$cache_grpshared gitweb configuration variable can be set to 1 to
+create the cache file group-readable and group-writable to facilitate
+external re-generation of the cache.
+
+Signed-off-by: Petr Baudis <pasky@ucw.cz>
+Signed-off-by: Jakub Narebski <jnareb@gmail.com>
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+Documentation/gitweb.conf.txt |  51 +++++++++-
+gitweb/gitweb.perl            | 212 ++++++++++++++++++++++++++++++++++++++----
+gitweb/static/gitweb.css      |   8 ++
+3 files changed, 251 insertions(+), 20 deletions(-)
+
+diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
+index 841e7dad..2ed86bf3 100644
+--- a/Documentation/gitweb.conf.txt
++++ b/Documentation/gitweb.conf.txt
+@@ -428,7 +428,8 @@ $frontpage_no_project_list::
+ 	If 0, the gitweb frontpage will contain the project list; if 1 instead,
+ 	it will contain just the index text, search form, tag cloud (if enabled)
+ 	and a link to the actual project list. The page is reduced, but all
+-	projects still need to be scanned for the tag cloud construction. If the
++	projects still need to be scanned for the tag cloud construction (but
++	the project info cache is used if enabled, of course).  If the
+ 	option is set to 2, not even the tag cloud will be shown; this is fastest.
+ 	This option is useful for sites with large amount of projects. The default
+ 	is 0.
+@@ -467,6 +468,54 @@ CPU-intensive.  Note also that non Git tools can have problems with
+ patches generated with options mentioned above, especially when they
+ involve file copies (\'-C') or criss-cross renames (\'-B').
+ 
++These configuration variable control caching in gitweb.  If you don't
++run gitweb installation on busy site with large number of repositories
++(projects) you probably don't need caching; by default caching is
++turned off.
++
++$projlist_cache_lifetime::
++	Lifetime of in-gitweb cache for projects list page, in minutes.
++	By default set to 0, which means tha projects list caching is
++	turned off.
++
++$cache_dir::
++	The cached list version (cache of Perl structure, not of final
++	output) is stored in "$cache_dir/$projlist_cache_name".  $cache_dir
++	should be writable only by processes with the same uid as gitweb
++	(usually web server uid); if $cache_dir does not exist gitweb will
++	try to create it.
++
++$projlist_cache_name::
++	The cached list version (cache of Perl structure, not of final
++	output) is stored in "$cache_dir/$projlist_cache_name".  Only single
++	gitweb project root per system is supported, unless gitweb instances
++	for different projects root have different configuration.
+++
++By default $cache_dir is set to "$TMPDIR/gitweb" if $TMPDIR
++environment variable does exist, "/tmp/gitweb" otherwise.
++Default name for $projlist_cache_name is 'gitweb.index.cache';
+++
++*Note* projects list cache file can be tweaked by other scripts
++running with the same uid as gitweb; use this ONLY at secure
++installations!!!
++
++$cache_grpshared::
++	By default, $cache_grpshared is 0 and the cache file is accessible
++	only by the webserver uid; however, when it is set to 1, it will
++	also be set group-readable and group-writable. You can use that
++	to externally trigger cache re-generation before users may have
++	a chance to trigger it (and wait a long time).  For example, you
++	could use this script:
+++
++----------------------------------------------------------------------
++REQUEST_METHOD=HEAD perl -e 'do "./gitweb.cgi"; END {
++	fill_project_list_info([], "rebuild-cache") }' >/dev/null 2>&1
++----------------------------------------------------------------------
+++
++(You need to run it in the directory of gitweb.cgi and, if
++gitweb_config.perl is not located in that same directory, also
++set GITWEB_CONFIG for getweb_config.perl to be loaded properly.)
++
+ 
+ Some optional features and policies
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 76815232..4c122c69 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -19,6 +19,7 @@ use File::Find qw();
+ use File::Basename qw(basename);
+ use Time::HiRes qw(gettimeofday tv_interval);
+ use Time::Local;
++use constant GITWEB_CACHE_FORMAT => "Gitweb Cache Format 3";
+ binmode STDOUT, ':utf8';
+ 
+ if (!defined($CGI::VERSION) || $CGI::VERSION < 4.08) {
+@@ -209,9 +210,25 @@ our $highlight_bin = "++HIGHLIGHT_BIN++";
+ 
+ # Whether to include project list on the gitweb front page; 0 means yes,
+ # 1 means no list but show tag cloud if enabled (all projects still need
+-# to be scanned), 2 means no list and no tag cloud (very fast)
++# to be scanned, unless the info is cached), 2 means no list and no tag cloud
++# (very fast)
+ our $frontpage_no_project_list = 0;
+ 
++# projects list cache for busy sites with many projects;
++# if you set this to non-zero, it will be used as the cached
++# index lifetime in minutes
++#
++# the cached list version is stored in $cache_dir/$cache_name and can
++# be tweaked by other scripts running with the same uid as gitweb -
++# use this ONLY at secure installations; only single gitweb project
++# root per system is supported, unless you tweak configuration!
++our $projlist_cache_lifetime = 0; # in minutes
++# FHS compliant $cache_dir would be "/var/cache/gitweb"
++our $cache_dir =
++	(defined $ENV{'TMPDIR'} ? $ENV{'TMPDIR'} : '/tmp').'/gitweb';
++our $projlist_cache_name = 'gitweb.index.cache';
++our $cache_grpshared = 0;
++
+ # information about snapshot formats that gitweb is capable of serving
+ our %known_snapshot_formats = (
+ 	# name => {
+@@ -1243,8 +1260,13 @@ sub handle_errors_html {
+ }
+ set_message(\&handle_errors_html);
+ 
++our $shown_stale_message = 0;
++our $cache_dump = undef;
++our $cache_dump_mtime = undef;
++
+ # dispatch
+ sub dispatch {
++	$shown_stale_message = 0;
+ 	if (!defined $action) {
+ 		if (defined $hash) {
+ 			$action = git_get_type($hash);
+@@ -3329,29 +3351,27 @@ sub git_get_last_activity {
+ 	if ($lastactivity_file && open($fd, "<", "$git_dir/$lastactivity_file")) {
+ 		my $activity = <$fd>;
+ 		close $fd;
+-		return (undef, undef) unless defined $activity;
++		return (undef) unless defined $activity;
+ 		chomp $activity;
+-		return (undef, undef) if $activity eq '';
++		return (undef) if $activity eq '';
+ 		if (my $timestamp = parse_activity_date($activity)) {
+-			my $age = time - $timestamp;
+-			return ($age, age_string($age));
++			return ($timestamp);
+ 		}
+ 	}
+-	return (undef, undef) if $quick;
++	return (undef) if $quick;
+ 	open($fd, "-|", git_cmd(), 'for-each-ref',
+ 	     '--format=%(committer)',
+ 	     '--sort=-committerdate',
+ 	     '--count=1',
+ 	     map { "refs/$_" } get_branch_refs ()) or return;
+ 	my $most_recent = <$fd>;
+-	close $fd or return;
++	close $fd or return (undef);
+ 	if (defined $most_recent &&
+ 	    $most_recent =~ / (\d+) [-+][01]\d\d\d$/) {
+ 		my $timestamp = $1;
+-		my $age = time - $timestamp;
+-		return ($age, age_string($age));
++		return ($timestamp);
+ 	}
+-	return (undef, undef);
++	return (undef);
+ }
+ 
+ # Implementation note: when a single remote is wanted, we cannot use 'git
+@@ -5682,12 +5702,99 @@ sub project_info_needs_filling {
+ 	return;
+ }
+ 
++sub git_cache_file_format {
++	return GITWEB_CACHE_FORMAT .
++		(gitweb_check_feature('forks') ? " (forks)" : "");
++}
++
++sub git_retrieve_cache_file {
++	my $cache_file = shift;
++
++	use Storable qw(retrieve);
++
++	if ((my $dump = eval { retrieve($cache_file) })) {
++		return $$dump[1] if
++			ref($dump) eq 'ARRAY' &&
++			@$dump == 2 &&
++			ref($$dump[1]) eq 'ARRAY' &&
++			@{$$dump[1]} == 2 &&
++			ref(${$$dump[1]}[0]) eq 'ARRAY' &&
++			ref(${$$dump[1]}[1]) eq 'HASH' &&
++			$$dump[0] eq git_cache_file_format();
++	}
++
++	return undef;
++}
++
++sub git_store_cache_file {
++	my ($cache_file, $cachedata) = @_;
++
++	use File::Basename qw(dirname);
++	use File::stat;
++	use POSIX qw(:fcntl_h);
++	use Storable qw(store_fd);
++
++	my $result = undef;
++	my $cache_d = dirname($cache_file);
++	my $mask = umask();
++	umask($mask & ~0070) if $cache_grpshared;
++	if ((-d $cache_d || mkdir($cache_d, $cache_grpshared ? 0770 : 0700)) &&
++	    sysopen(my $fd, "$cache_file.lock", O_WRONLY|O_CREAT|O_EXCL, $cache_grpshared ? 0660 : 0600)) {
++		store_fd([git_cache_file_format(), $cachedata], $fd);
++		close $fd;
++		rename "$cache_file.lock", $cache_file;
++		$result = stat($cache_file)->mtime;
++	}
++	umask($mask) if $cache_grpshared;
++	return $result;
++}
++
++sub verify_cached_project {
++	my ($hashref, $path) = @_;
++	return undef unless $path;
++	delete $$hashref{$path}, return undef unless is_valid_project($path);
++	return $$hashref{$path} if exists $$hashref{$path};
++
++	# A valid project was requested but it's not yet in the cache
++	# Manufacture a minimal project entry (path, name, description)
++	# Also provide age, but only if it's available via $lastactivity_file
++
++	my %proj = ('path' => $path);
++	my $val = git_get_project_description($path);
++	defined $val or $val = '';
++	$proj{'descr_long'} = $val;
++	$proj{'descr'} = chop_str($val, $projects_list_description_width, 5);
++	unless ($omit_owner) {
++		$val = git_get_project_owner($path);
++		defined $val or $val = '';
++		$proj{'owner'} = $val;
++	}
++	unless ($omit_age_column) {
++		($val) = git_get_last_activity($path, 1);
++		$proj{'age_epoch'} = $val if defined $val;
++	}
++	$$hashref{$path} = \%proj;
++	return \%proj;
++}
++
++sub git_filter_cached_projects {
++	my ($cache, $projlist, $verify) = @_;
++	my $hashref = $$cache[1];
++	my $sub = $verify ?
++		sub {verify_cached_project($hashref, $_[0])} :
++		sub {$$hashref{$_[0]}};
++	return map {
++		my $c = &$sub($_->{'path'});
++		defined $c ? ($_ = $c) : ()
++	} @$projlist;
++}
++
+ # fills project list info (age, description, owner, category, forks, etc.)
+ # for each project in the list, removing invalid projects from
+ # returned list, or fill only specified info.
+ #
+ # Invalid projects are removed from the returned list if and only if you
+-# ask 'age' or 'age_string' to be filled, because they are the only fields
++# ask 'age_epoch' to be filled, because they are the only fields
+ # that run unconditionally git command that requires repository, and
+ # therefore do always check if project repository is invalid.
+ #
+@@ -5700,6 +5807,66 @@ sub project_info_needs_filling {
+ # NOTE: modifies $projlist, but does not remove entries from it
+ sub fill_project_list_info {
+ 	my ($projlist, @wanted_keys) = @_;
++
++	my $rebuild = @wanted_keys && $wanted_keys[0] eq 'rebuild-cache' && shift @wanted_keys;
++	return fill_project_list_info_uncached($projlist, @wanted_keys)
++		unless $projlist_cache_lifetime && $projlist_cache_lifetime > 0;
++
++	use File::stat;
++
++	my $cache_lifetime = $rebuild ? 0 : $projlist_cache_lifetime;
++	my $cache_file = "$cache_dir/$projlist_cache_name";
++
++	my @projects;
++	my $stale = 0;
++	my $now = time();
++	my $cache_mtime;
++	if ($cache_lifetime && -f $cache_file) {
++		$cache_mtime = stat($cache_file)->mtime;
++		$cache_dump = undef if $cache_mtime &&
++			(!$cache_dump_mtime || $cache_dump_mtime != $cache_mtime);
++	}
++	if (defined $cache_mtime && # caching is on and $cache_file exists
++	    $cache_mtime + $cache_lifetime*60 > $now &&
++	    ($cache_dump || ($cache_dump = git_retrieve_cache_file($cache_file)))) {
++		# Cache hit.
++		$cache_dump_mtime = $cache_mtime;
++		$stale = $now - $cache_mtime;
++		my $verify = ($action eq 'summary' || $action eq 'forks') &&
++			gitweb_check_feature('forks');
++		@projects = git_filter_cached_projects($cache_dump, $projlist, $verify);
++
++	} else { # Cache miss.
++		if (defined $cache_mtime) {
++			# Postpone timeout by two minutes so that we get
++			# enough time to do our job, or to be more exact
++			# make cache expire after two minutes from now.
++			my $time = $now - $cache_lifetime*60 + 120;
++			utime $time, $time, $cache_file;
++		}
++		my @all_projects = git_get_projects_list();
++		my %all_projects_filled = map { ( $_->{'path'} => $_ ) }
++			fill_project_list_info_uncached(\@all_projects);
++		map { $all_projects_filled{$_->{'path'}} = $_ }
++			filter_forks_from_projects_list([values(%all_projects_filled)])
++			if gitweb_check_feature('forks');
++		$cache_dump = [[sort {$a->{'path'} cmp $b->{'path'}} values(%all_projects_filled)],
++			       \%all_projects_filled];
++		$cache_dump_mtime = git_store_cache_file($cache_file, $cache_dump);
++		@projects = git_filter_cached_projects($cache_dump, $projlist);
++	}
++
++	if ($cache_lifetime && $stale > 0) {
++		print "<div class=\"stale_info\">Cached version (${stale}s old)</div>\n"
++			unless $shown_stale_message;
++		$shown_stale_message = 1;
++	}
++
++	return @projects;
++}
++
++sub fill_project_list_info_uncached {
++	my ($projlist, @wanted_keys) = @_;
+ 	my @projects;
+ 	my $filter_set = sub { return @_; };
+ 	if (@wanted_keys) {
+@@ -5710,12 +5877,12 @@ sub fill_project_list_info {
+ 	my $show_ctags = gitweb_check_feature('ctags');
+  PROJECT:
+ 	foreach my $pr (@$projlist) {
+-		if (project_info_needs_filling($pr, $filter_set->('age', 'age_string'))) {
++		if (project_info_needs_filling($pr, $filter_set->('age_epoch'))) {
+ 			my (@activity) = git_get_last_activity($pr->{'path'});
+ 			unless (@activity) {
+ 				next PROJECT;
+ 			}
+-			($pr->{'age'}, $pr->{'age_string'}) = @activity;
++			($pr->{'age_epoch'}) = @activity;
+ 		}
+ 		if (project_info_needs_filling($pr, $filter_set->('descr', 'descr_long'))) {
+ 			my $descr = git_get_project_description($pr->{'path'}) || "";
+@@ -5751,11 +5918,11 @@ sub sort_projects_list {
+ 		return sub { $a->{$key} cmp $b->{$key} };
+ 	}
+ 
+-	sub order_num_then_undef {
++	sub order_reverse_num_then_undef {
+ 		my $key = shift;
+ 		return sub {
+ 			defined $a->{$key} ?
+-				(defined $b->{$key} ? $a->{$key} <=> $b->{$key} : -1) :
++				(defined $b->{$key} ? $b->{$key} <=> $a->{$key} : -1) :
+ 				(defined $b->{$key} ? 1 : 0)
+ 		};
+ 	}
+@@ -5764,7 +5931,7 @@ sub sort_projects_list {
+ 		project => order_str('path'),
+ 		descr => order_str('descr_long'),
+ 		owner => order_str('owner'),
+-		age => order_num_then_undef('age'),
++		age => order_reverse_num_then_undef('age_epoch'),
+ 	);
+ 
+ 	my $ordering = $orderings{$order};
+@@ -5817,6 +5984,7 @@ sub git_project_list_rows {
+ 	$from = 0 unless defined $from;
+ 	$to = $#$projlist if (!defined $to || $#$projlist < $to);
+ 
++	my $now = time;
+ 	my $alternate = 1;
+ 	for (my $i = $from; $i <= $to; $i++) {
+ 		my $pr = $projlist->[$i];
+@@ -5857,8 +6025,14 @@ sub git_project_list_rows {
+ 		        print "<td><i>" . chop_and_escape_str($pr->{'owner'}, 15) . "</i></td>\n";
+ 		}
+ 		unless ($omit_age_column) {
+-		        print "<td class=\"". age_class($pr->{'age'}) . "\">" .
+-		            (defined $pr->{'age_string'} ? $pr->{'age_string'} : "No commits") . "</td>\n";
++			my ($age, $age_string, $age_epoch);
++			if (defined($age_epoch = $pr->{'age_epoch'})) {
++				$age = $now - $age_epoch;
++				$age_string = age_string($age);
++			} else {
++				$age_string = "No commits";
++			}
++		        print "<td class=\"". age_class($age) . "\">" . $age_string . "</td>\n";
+ 		}
+ 		print"<td class=\"link\">" .
+ 		      $cgi->a({-href => href(project=>$pr->{'path'}, action=>"summary")}, "summary")   . " | " .
+@@ -5891,7 +6065,7 @@ sub git_project_list_body {
+ 		if ($tagfilter || $search_regexp);
+ 	# fill the rest
+ 	my @all_fields = ('descr', 'descr_long', 'ctags', 'category');
+-	push @all_fields, ('age', 'age_string') unless($omit_age_column);
++	push @all_fields, 'age_epoch' unless($omit_age_column);
+ 	push @all_fields, 'owner' unless($omit_owner);
+ 	@projects = fill_project_list_info(\@projects, @all_fields);
+ 
+diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
+index 1710b06f..1b7a01bb 100644
+--- a/gitweb/static/gitweb.css
++++ b/gitweb/static/gitweb.css
+@@ -655,6 +655,14 @@ div.remote {
+ 	display: inline-block;
+ }
+ 
++div.stale_info {
++	display: block;
++	text-align: right;
++	font-style: italic;
++	margin-top: 6px;
++	margin-right: 8px;
++}
++
+ /* JavaScript-based timezone manipulation */
+ 
+ .popup { /* timezone selection UI */
+---

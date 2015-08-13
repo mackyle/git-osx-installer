@@ -1,0 +1,28 @@
+Subject: [PATCH] gitweb: do not turn git-svn-id lines into object links
+
+The "git-svn-id:" lines normally added by git-svn include a UUID
+which typically has portions with a tendency to match the 8-40
+character hash id and get turned into an object link.
+
+If the line starts with "git-svn-id:" disable turning any part of
+it into links.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 2 +-
+1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index ec58bee1..f6bbd571 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -2319,7 +2319,7 @@ sub format_log_line_html {
+ 	$line =~ s{\b([0-9a-fA-F]{8,40})\b}{
+ 		$cgi->a({-href => href(action=>"object", hash=>$1),
+ 					-class => "text"}, $1);
+-	}eg;
++	}eg unless $line =~ /^\s*git-svn-id:/;
+ 
+ 	return $line;
+ }
+---

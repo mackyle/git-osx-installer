@@ -1,0 +1,177 @@
+Subject: [PATCH] gitweb: polish the content tags support
+
+This patch integrates the tag filtering CGI parameter into the framework
+for parameter passing, dropping 'by_tag' and instead using query name 't'
+and symbolic name 'ctag_filter'. Compatibility support for 'by_tag' query
+name is retained.
+
+This means that content tag links are now created using $cgi->a() and
+the href() method, and that they now point to the proper action;
+project_list in case of global content tags, forks in case of per-fork
+content tags. Also any other arguments like sorting order of projects
+are replayed within the links.
+
+This patch also restores the ability to add tags if the ctags feature
+is set to a POST action rather than a positive integer.
+
+Signed-off-by: Petr Baudis <pasky@ucw.cz>
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl       | 45 ++++++++++++++++++++++++++++++---------------
+gitweb/static/gitweb.css |  3 +++
+2 files changed, 33 insertions(+), 15 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 677940c2..0d5eb5e5 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -480,8 +480,11 @@ our %feature = (
+ 	# $feature{'ctags'}{'default'} = [1];
+ 	# Project specific override is not supported.
+ 
+-	# In the future whether ctags editing is enabled might depend
+-	# on the value, but using 1 should always mean no editing of ctags.
++	# A value of 0 means no ctags display or editing.  A value of
++	# 1 enables ctags display but never editing.  A non-empty value
++	# that is not a string of digits enables ctags display AND the
++	# ability to add tags using a form that uses method POST and
++	# an action value set to the configured 'ctags' value.
+ 	'ctags' => {
+ 		'override' => 0,
+ 		'default' => [0]},
+@@ -836,6 +839,7 @@ our @cgi_param_mapping = (
+ 	searchtext => "s",
+ 	searchtype => "st",
+ 	snapshot_format => "sf",
++	ctag_filter => 't',
+ 	extra_options => "opt",
+ 	search_use_regexp => "sr",
+ 	ctag => "by_tag",
+@@ -903,6 +907,11 @@ sub evaluate_query_params {
+ 			$input_params{$name} = decode_utf8($cgi->param($symbol));
+ 		}
+ 	}
++
++	# Backwards compatibility - by_tag= <=> t=
++	if ($input_params{'ctag'}) {
++		$input_params{'ctag_filter'} = $input_params{'ctag'};
++	}
+ }
+ 
+ # now read PATH_INFO and update the parameter list for missing parameters
+@@ -2976,7 +2985,7 @@ sub git_gather_all_ctags {
+ }
+ 
+ sub git_populate_project_tagcloud {
+-	my $ctags = shift;
++	my ($ctags, $action) = @_;
+ 
+ 	# First, merge different-cased tags; tags vote on casing
+ 	my %ctags_lc;
+@@ -2990,7 +2999,7 @@ sub git_populate_project_tagcloud {
+ 	}
+ 
+ 	my $cloud;
+-	my $matched = $input_params{'ctag'};
++	my $matched = $input_params{'ctag_filter'};
+ 	if (eval { require HTML::TagCloud; 1; }) {
+ 		$cloud = HTML::TagCloud->new;
+ 		foreach my $ctag (sort keys %ctags_lc) {
+@@ -3003,7 +3012,7 @@ sub git_populate_project_tagcloud {
+ 			if (defined $matched && $matched eq $ctag) {
+ 				$title = qq(<span class="match">$title</span>);
+ 			}
+-			$cloud->add($title, href(project=>undef, ctag=>$ctag),
++			$cloud->add($title, href(-replay=>1, action=>$action, ctag_filter=>$ctag),
+ 			            $ctags_lc{$ctag}->{count});
+ 		}
+ 	} else {
+@@ -3015,7 +3024,7 @@ sub git_populate_project_tagcloud {
+ 			}
+ 			$cloud->{$ctag}{count} = $ctags_lc{$ctag}->{count};
+ 			$cloud->{$ctag}{ctag} =
+-				$cgi->a({-href=>href(project=>undef, ctag=>$ctag)}, $title);
++				$cgi->a({-href=>href(-replay=>1, action=>$action, ctag_filter=>$ctag)}, $title);
+ 		}
+ 	}
+ 	return $cloud;
+@@ -5809,12 +5818,12 @@ sub git_project_list_rows {
+ 
+ sub git_project_list_body {
+ 	# actually uses global variable $project
+-	my ($projlist, $order, $from, $to, $extra, $no_header) = @_;
++	my ($projlist, $order, $from, $to, $extra, $no_header, $ctags_action) = @_;
+ 	my @projects = @$projlist;
+ 
+ 	my $check_forks = gitweb_check_feature('forks');
+ 	my $show_ctags  = gitweb_check_feature('ctags');
+-	my $tagfilter = $show_ctags ? $input_params{'ctag'} : undef;
++	my $tagfilter = $show_ctags ? $input_params{'ctag_filter'} : undef;
+ 	$check_forks = undef
+ 		if ($tagfilter || $search_regexp);
+ 
+@@ -5849,7 +5858,7 @@ sub git_project_list_body {
+ 
+ 	if ($show_ctags) {
+ 		my $ctags = git_gather_all_ctags(\@projects);
+-		my $cloud = git_populate_project_tagcloud($ctags);
++		my $cloud = git_populate_project_tagcloud($ctags, $ctags_action||'project_list');
+ 		print git_show_project_tagcloud($cloud, 64);
+ 	}
+ 
+@@ -6561,7 +6570,7 @@ sub git_forks {
+ 	git_header_html();
+ 	git_print_page_nav('','');
+ 	git_print_header_div('summary', "$project forks");
+-	git_project_list_body(\@list, $order);
++	git_project_list_body(\@list, $order, undef, undef, undef, undef, 'forks');
+ 	git_footer_html();
+ }
+ 
+@@ -6649,12 +6658,18 @@ sub git_summary {
+ 	my $show_ctags = gitweb_check_feature('ctags');
+ 	if ($show_ctags) {
+ 		my $ctags = git_get_project_ctags($project);
+-		if (%$ctags) {
++		if (%$ctags || $show_ctags !~ /^\d+$/) {
+ 			# without ability to add tags, don't show if there are none
+-			my $cloud = git_populate_project_tagcloud($ctags);
++			my $cloud = git_populate_project_tagcloud($ctags, 'project_list');
+ 			print "<tr id=\"metadata_ctags\">" .
+-			      "<td>content tags</td>" .
+-			      "<td>".git_show_project_tagcloud($cloud, 48)."</td>" .
++			      "<td style=\"vertical-align:middle\">content&#160;tags<br />";
++			print "</td>\n<td>" unless %$ctags;
++			print "<form action=\"$show_ctags\" method=\"post\" style=\"white-space:nowrap\">" .
++			      "<input type=\"hidden\" name=\"p\" value=\"$project\"/>" .
++			      "add: <input type=\"text\" name=\"t\" size=\"8\" /></form>"
++			      unless $show_ctags =~ /^\d+$/;
++			print "</td>\n<td>" if %$ctags;
++			print git_show_project_tagcloud($cloud, 48)."</td>" .
+ 			      "</tr>\n";
+ 		}
+ 	}
+@@ -6704,7 +6719,7 @@ sub git_summary {
+ 		git_project_list_body(\@forklist, 'age', 0, 15,
+ 		                      $#forklist <= 15 ? undef :
+ 		                      $cgi->a({-href => href(action=>"forks")}, "..."),
+-		                      'no_header');
++		                      'no_header', 'forks');
+ 	}
+ 
+ 	git_footer_html();
+diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
+index 6528ce2a..420c99fa 100644
+--- a/gitweb/static/gitweb.css
++++ b/gitweb/static/gitweb.css
+@@ -526,6 +526,9 @@ div.chunk_block.ctx div     div.diff.ctx {
+ 	color: #404040;
+ }
+ 
++div#htmltagcloud {
++	margin: 6px 8px;
++}
+ 
+ div.index_include {
+ 	border: solid #d9d8d1;
+---

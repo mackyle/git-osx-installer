@@ -1,0 +1,61 @@
+Subject: [PATCH] gitweb: avoid adding js=0 unless necessary
+
+If javascript-actions is enabled, all links are rewritten to have
+a suffix of ?js=1 (if they do not already have a js= suffix) by
+javascript code that runs in the client's browser.
+
+When js=1 is present, the blame action becomes blame_incremental.
+
+In order to allow the user to select non-incremental blame, the
+non-incremental blame links are unconditionally created with js=0.
+
+This creates rather ugly links and once one of them is selected,
+the js=0 propagates as existing parameters are "replayed" when links
+are generated for a page.  This creates very ugly links with the
+extra, unnecessary ";js=0" added to them.
+
+This is unavoidable when the javascript-actions feature has been
+enabled.  However, when the javascript-actions feature is NOT enabled
+(the default), the non-incremental blame links never need the "js=0"
+in the first place.
+
+Therefore, suppress adding the "js=0" suffix to non-incremental blame
+links UNLESS the javascript-actions feature has been enabled.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 6 ++++--
+1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 11474463..26e62210 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -7502,6 +7502,8 @@ sub git_blame_common {
+ 		return;
+ 	}
+ 
++	my $jsact = gitweb_check_feature('javascript-actions');
++
+ 	# page header
+ 	git_header_html();
+ 	my $formats_nav =
+@@ -7510,7 +7512,7 @@ sub git_blame_common {
+ 		" | ";
+ 	if ($format eq 'incremental') {
+ 		$formats_nav .=
+-			$cgi->a({-href => href(action=>"blame", javascript=>0, -replay=>1)},
++			$cgi->a({-href => href(action=>"blame", ($jsact ? (javascript=>0) : ()), -replay=>1)},
+ 			        "blame") . " (non-incremental)";
+ 	} else {
+ 		$formats_nav .=
+@@ -7532,7 +7534,7 @@ sub git_blame_common {
+ 	if ($format eq 'incremental') {
+ 		print "<noscript>\n<div class=\"error\"><center><b>\n".
+ 		      "This page requires JavaScript to run.\n Use ".
+-		      $cgi->a({-href => href(action=>'blame',javascript=>0,-replay=>1)},
++		      $cgi->a({-href => href(action=>'blame',($jsact?(javascript=>0):()),-replay=>1)},
+ 		              'this page').
+ 		      " instead.\n".
+ 		      "</b></center></div>\n</noscript>\n";
+---

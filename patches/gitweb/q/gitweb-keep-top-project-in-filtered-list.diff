@@ -1,0 +1,70 @@
+Subject: [PATCH] gitweb: keep top project in filtered list
+
+When using a project filter, the list excludes the top project
+that ends in '.git'.  Correct this by adding it back if it
+exists and is valid.
+
+Signed-off-by: Kyle J. McKay
+---
+gitweb/gitweb.perl | 19 +++++++++++++------
+1 file changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 4c122c69..a4eb570a 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -6046,7 +6046,7 @@ sub git_project_list_rows {
+ 
+ sub git_project_list_body {
+ 	# actually uses global variable $project
+-	my ($projlist, $order, $from, $to, $extra, $no_header, $ctags_action) = @_;
++	my ($projlist, $order, $from, $to, $extra, $no_header, $ctags_action, $keep_top) = @_;
+ 	my @projects = @$projlist;
+ 
+ 	my $check_forks = gitweb_check_feature('forks');
+@@ -6055,9 +6055,12 @@ sub git_project_list_body {
+ 	$check_forks = undef
+ 		if ($tagfilter || $search_regexp);
+ 
+-	# filtering out forks before filling info allows to do less work
+-	@projects = filter_forks_from_projects_list(\@projects)
+-		if ($check_forks);
++	# filtering out forks before filling info allows us to do less work
++	if ($check_forks) {
++		@projects = filter_forks_from_projects_list(\@projects);
++		push @projects, { 'path' => "$project_filter.git" }
++			if $project_filter && $keep_top && is_valid_project("$project_filter.git");
++	}
+ 	# search_projects_list pre-fills required info
+ 	@projects = search_projects_list(\@projects,
+ 	                                 'search_regexp' => $search_regexp,
+@@ -6767,6 +6770,10 @@ sub git_project_list_load {
+ 	}
+ 
+ 	my @list = git_get_projects_list($project_filter, $strict_export);
++	if ($project_filter && (!@list || !gitweb_check_feature('forks'))) {
++		push @list, { 'path' => "$project_filter.git" }
++			if is_valid_project("$project_filter.git");
++	}
+ 	if (!@list) {
+ 		die_error(404, "No projects found") unless $empty_list_ok;
+ 	}
+@@ -6801,7 +6808,7 @@ sub git_frontpage {
+ 			print git_show_project_tagcloud($cloud, 64);
+ 		}
+ 	} else {
+-		git_project_list_body($projlist, $order);
++		git_project_list_body($projlist, $order, undef, undef, undef, undef, undef, 1);
+ 	}
+ 	git_footer_html();
+ }
+@@ -6815,7 +6822,7 @@ sub git_project_list {
+ 		print "</div>\n";
+ 	}
+ 	git_project_search_form();
+-	git_project_list_body($projlist, $order);
++	git_project_list_body($projlist, $order, undef, undef, undef, undef, undef, 1);
+ 	git_footer_html();
+ }
+ 
+---

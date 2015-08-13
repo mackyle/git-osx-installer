@@ -1,0 +1,31 @@
+Subject: [PATCH] gitweb: only allow GET and HEAD methods
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 12 ++++++++++++
+1 file changed, 12 insertions(+)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index ef7f2a69..d13e5d00 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -1300,6 +1300,18 @@ our $first_request = 1;
+ sub run_request {
+ 	reset_timer();
+ 
++	# Only allow GET and HEAD methods
++	if (!$ENV{'REQUEST_METHOD'} || ($ENV{'REQUEST_METHOD'} ne 'GET' && $ENV{'REQUEST_METHOD'} ne 'HEAD')) {
++		print <<EOT;
++Status: 405 Method Not Allowed
++Content-Type: text/plain
++Allow: GET,HEAD
++
++405 Method Not Allowed
++EOT
++		return;
++	}
++
+ 	evaluate_uri();
+ 	if ($first_request) {
+ 		evaluate_gitweb_config();
+---

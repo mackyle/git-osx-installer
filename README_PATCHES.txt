@@ -104,13 +104,24 @@ Git Patches
 
 * Add submodule support to gitweb:
 
-  - `patches/km/gitweb-gitdir.txt`
+  - `patches/gitweb/q/gitweb-find-project-dirs-with-.git-gitdir-links.diff`
 
   My own patch to allow gitweb to find submodules that use gitdir links.  With
   this patch using git instaweb in a working tree that contains checked-out
   submodules makes it very easy to browse the submodules -- without the patch
   they are not listed in the gitweb projects list.  Has not been posted
   elsewhere.
+
+* Various gitweb bug fixes / enhancements:
+
+- `patches/gitweb/q/*.diff`
+
+  A selection of various patches from Girocco's [1] custom version of
+  gitweb [2] that vastly improves the usability of git instaweb by making
+  gitweb work so much better.
+
+  [1] <http://repo.or.cz/w/girocco.git>  
+  [2] <http://repo.or.cz/w/git/gitweb.git/blob/girocco:README_FIRST.txt>
 
 
 Curl Patches

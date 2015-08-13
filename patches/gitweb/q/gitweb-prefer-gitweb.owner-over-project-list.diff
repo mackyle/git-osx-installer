@@ -1,0 +1,53 @@
+Subject: [PATCH] gitweb: prefer gitweb.owner over project list
+
+When showing the summary page, the current owner displayed should
+be taken directly from the current value in the config file, not
+from a possibly outdated value in the project list.
+
+Make git_get_project_owner prefer the value of gitweb.owner if
+it exists when fetching the owner for the current project but
+retain the current order (project list value first) if there
+is no project (i.e. project list page) or the project being
+fetched is not the current one.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 18 ++++++++++--------
+1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index a3b85d5e..52bf96b0 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -3541,20 +3541,22 @@ sub git_get_project_list_from_file {
+ }
+ 
+ sub git_get_project_owner {
+-	my $project = shift;
++	my $proj = shift;
+ 	my $owner;
+ 
+-	return undef unless $project;
+-	$git_dir = "$projectroot/$project";
++	return undef unless $proj;
++	$git_dir = "$projectroot/$proj";
+ 
+-	if (!defined $gitweb_project_owner) {
++	if (defined $project && $proj eq $project) {
++		$owner = git_get_project_config('owner');
++	}
++	if (!defined $owner && !defined $gitweb_project_owner) {
+ 		git_get_project_list_from_file();
+ 	}
+-
+-	if (exists $gitweb_project_owner->{$project}) {
+-		$owner = $gitweb_project_owner->{$project};
++	if (!defined $owner && exists $gitweb_project_owner->{$proj}) {
++		$owner = $gitweb_project_owner->{$proj};
+ 	}
+-	if (!defined $owner){
++	if (!defined $owner && (!defined $project || $proj ne $project)) {
+ 		$owner = git_get_project_config('owner');
+ 	}
+ 	if (!defined $owner) {
+---

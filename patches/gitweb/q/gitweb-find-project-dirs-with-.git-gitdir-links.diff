@@ -1,23 +1,20 @@
-From 98a38c82739063d3c02b17e8df2ed123321bf267 Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Sun, 8 Feb 2015 06:53:56 -0800
-Subject: [PATCH] gitweb.perl: find project dirs with .git gitdir: links
+Subject: [PATCH] gitweb: find project dirs with .git gitdir: links
 
 If .git is a file with a gitdir: link and the link is
-relatave and does not escape the projectroot then add
+relative and does not escape the projectroot then add
 it to the projects list when searching a directory for
 projects.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- gitweb/gitweb.perl | 37 +++++++++++++++++++++++++++++++++++++
- 1 file changed, 37 insertions(+)
+gitweb/gitweb.perl | 37 +++++++++++++++++++++++++++++++++++++
+1 file changed, 37 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 7a5b23ac..f492f789 100755
+index 26e62210..08cf24f7 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -3055,6 +3055,43 @@ sub git_get_projects_list {
+@@ -3364,6 +3364,43 @@ sub git_get_projects_list {
  				our $projectroot;
  				# skip project-list toplevel, if we get it.
  				return if (m!^[/.]$!);
@@ -61,4 +58,4 @@ index 7a5b23ac..f492f789 100755
  				# only directories can be git repositories
  				return unless (-d $_);
  				# don't traverse too deep (Find is super slow on os x)
---
+---

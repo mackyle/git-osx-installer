@@ -1,0 +1,43 @@
+Subject: [PATCH] gitweb: exclude trailing '.git' of path from search
+
+It's most likely that many, many, many projects (if not all) will
+have a path name that ends in '.git'.  Searching for 'git' would
+then find these.  This is not helpful.
+
+Exclude any trailing '.git' of the path from the search.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 8 ++++++--
+1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index f6bbd571..e8e6cfb8 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -3504,8 +3504,10 @@ sub search_projects_list {
+ 		}
+ 
+ 		if ($search_re) {
++			my $path = $pr->{'path'};
++			$path =~ s/\.git$//; # should not be included in search
+ 			next unless
+-				$pr->{'path'} =~ /$search_re/ ||
++				$path =~ /$search_re/ ||
+ 				$pr->{'descr_long'} =~ /$search_re/;
+ 		}
+ 
+@@ -6398,9 +6400,11 @@ sub git_project_list_rows {
+ 			}
+ 			print "</td>\n";
+ 		}
++		my $path = $pr->{'path'};
++		my $dotgit = $path =~ s/\.git$// ? '.git' : '';
+ 		print "<td>" . $cgi->a({-href => href(project=>$pr->{'path'}, action=>"summary"),
+ 		                        -class => "list"},
+-		                       esc_html_match_hl($pr->{'path'}, $search_regexp)) .
++		                       esc_html_match_hl($path, $search_regexp).$dotgit) .
+ 		      "</td>\n" .
+ 		      "<td>" . $cgi->a({-href => href(project=>$pr->{'path'}, action=>"summary"),
+ 		                        -class => "list",
+---

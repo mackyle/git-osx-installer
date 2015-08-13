@@ -1,0 +1,71 @@
+Subject: [PATCH] gitweb: workaround surrogate code point problem
+
+When gitweb attempts to automatically treat repository data as
+UTF-8, it uses utf8::decode to activate Perl's UTF-8 flag.
+
+Unfortunately, surrogate pairs (codepoints 0xD800-0xDFFF) are
+also converted to UTF-8 if present in the input.  However those
+codepoints are only valid in UTF-16.  Attempting to do any kind
+of pattern match substitution on the strings that contain these
+UTF-8 surrogate pair code points will result in a fatal
+'Malformed UTF-8 character' error.
+
+The substitution in question is attempting to replace control
+characters with nice-looking escapes sequences.  It only needs
+to detect character values 0x00-0x1f, so switch into bytes mode
+for the substitution to avoid the fatal error.
+
+This results in the surrogates actually being sent back to the
+browser for display which typically results in them being
+rendered as a replacement character (0xfffd).
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl | 5 +++++
+1 file changed, 5 insertions(+)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 8ccc7e20..e6685380 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -1717,6 +1717,7 @@ sub esc_html {
+ 	if ($opts{'-nbsp'}) {
+ 		$str =~ s/ /&#160;/g;
+ 	}
++	use bytes;
+ 	$str =~ s|([[:cntrl:]])|(($1 ne "\t") ? quot_cec($1) : $1)|eg;
+ 	return $str;
+ }
+@@ -1733,6 +1734,7 @@ sub esc_path {
+ 	if ($opts{'-nbsp'}) {
+ 		$str =~ s/ /&#160;/g;
+ 	}
++	use bytes;
+ 	$str =~ s|([[:cntrl:]])|quot_cec($1)|eg;
+ 	return $str;
+ }
+@@ -1744,6 +1746,7 @@ sub sanitize {
+ 	return undef unless defined $str;
+ 
+ 	$str = to_utf8($str);
++	use bytes;
+ 	$str =~ s|([[:cntrl:]])|(index("\t\n\r", $1) != -1 ? $1 : quot_cec($1))|eg;
+ 	return $str;
+ }
+@@ -1917,6 +1920,7 @@ sub chop_and_escape_str {
+ 	if ($chopped eq $str) {
+ 		return esc_html($chopped);
+ 	} else {
++		use bytes;
+ 		$str =~ s/[[:cntrl:]]/?/g;
+ 		return $cgi->span({-title=>$str}, esc_html($chopped));
+ 	}
+@@ -2231,6 +2235,7 @@ sub format_subject_html {
+ 	$extra = '' unless defined($extra);
+ 
+ 	if (length($short) < length($long)) {
++		use bytes;
+ 		$long =~ s/[[:cntrl:]]/?/g;
+ 		return $cgi->a({-href => $href, -class => "list subject",
+ 		                -title => to_utf8($long)},
+---

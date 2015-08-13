@@ -93,6 +93,17 @@
       background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAQnRFWHRDb21tZW50AHRJTUUgY2h1bmtsZW4gNyBpZ25vcmVkDUFTQ0lJOiAuLi4uLjA3DUhFWDogMDdENjA5MTYxMDMwMzeLgNWuAAACTUlEQVR4nJRQW2iSYRj+tgq6k5BuDILdObqoYLBRxsjBsKvoIoKKokbrMMibrZsMNseojPJAbINg0zZlFVEi1Yi8aNJWiXlG51lvdOiNiBcefp++74tfZGzQXnh43+89PN/zvoTsYhfmeoQrr3oxsngSY0v9UFvPYLfeHe2c8Yjw5rcB7z0v8fHPLNTLA3sjGNIfFqw/n+PFVzUnufu6b28Ep59JBMu6Dk9Xx/DWbcTIwon/I+h5RIrHpruK1xZPYeHHE8x8HsWK2wDNh4u4v9yHByuKnYmi0agzHA7j6MN9uG4Zwuz3STp8D5OOGzB8G+cqphyXcYse1Ww2O7cPD6ZSKVQqFWwVt6AyHsfNpWHMrWmh/XQblg0dxt+dx6V5OcrlMux2O0wmk7JNEAqFnIVCAfF4HLlcDsl0Amf1coxaVZhfm8Yd6zAllcHlcsHv9yMQCECn0/1TEQwGBzc3N1EqlcBUUDW8YePXOhTaQ7hqVmDg8UG43W74fD4kk0mwz+ga0Gg0SuL1evnv+Xwe2WwWmUyGI51OIxqPoHfqABKJBB9knqlkdY/Hg4mJCWd3vV4n1WqV0GFCCxxUCaHNJJvKEX2/g8RiMRKJRAg9MgddmdB7ETbLCPgx2EMQBEJ35A10LUJ/42BkVAEnZj21Wo1IJBI2o+xmj2azycGKIsScmN8eNxoNjv2MQBxqtVpELpdzzwCgnWdxZ575NoFUKuWNrCBCbGTGYmaddZlMxpV02Wy2L3QXFbsBI+v0IkS5DJ2rUqLVvwAAAP//AwDkwh7q3xB35AAAAABJRU5ErkJggg==);
     }
 
+    span.rss {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin: 0 2px;
+      vertical-align: baseline;
+      background-repeat: no-repeat;
+      background-position: 0% 100%;
+      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAACQElEQVR4nIyS70tTURjH739RFmvbDc2kjAxHRRgUWK5JVK8aEb4oiHrRMrKitmptLbc7GDUi3czSBQVKL+pVQUJBJNXIDGVuOtfdz5t33t3ZNr0vvp17r2xRbzrwPZznnOdzvuc8PFSsk1ob7aTGIyYqQcTNmKgsibOxf5VbVZiojpKh2dM0Jrt0SIVsSA9YkPQcRrJnE3LWJgiOLSh6mlHybUfl3jairZBhijgIkVMbMWXrwN/j18RLCH0HUXpggBTYCenRbkj9LTII2VGcO1ePWXs7ksOXkHrag+wrBuL0WPWC5S+PsTxAoME9kIK7qqAwb2lArLsRrO8YeeY+pO/uAOsxIDN6EZXMlAKvTD4jYBtW+v8EuxsQvdNedSjH3kF8cRbc/VYkHh5AOfVN2a8E21Bm6mtg6spm/GD2Y+GtH4ufn9cueO9G1qUFGzyigh8DKDr0Kkgmgb/djEWmBXlPEzJOHZJ9RpTiH5Rkcfgo4je14Mf8Spy30SooV/WnvRG8QwPRVYclZj04lwZxb6vqEnmNuFWL9Og1JeZ9JhWcPkQJ8atrUBh/ohxIEyGIXh3iNzagEB5R9uadBiSGzitrzn9SBb8bqcIMAaUiV/3bEqMHS5638IZRYtZrRGJQBfkRd9WxmLy1DoVPQ2rZv4aw1EuDs+tJVTvAB04gYdFj7vpesL1mRMy1P4YFpwaCW4eCW69AooNG3kojd5lG5gKNxBmS3EUjcpxG1KxVW05u2NXGxX9KafLfAAAA//8DANHLGgh1x+0wAAAAAElFTkSuQmCC);
+    }
+
     span.git {
       display: inline-block;
       width: 0.8em;
@@ -112,7 +123,7 @@
 
 <div id="container">
 
-<h1><span class="git"></span>Git OS X Installer</h1>
+<h1><span class="git"></span>Git OS X Installer<a rel="alternate" type="application/atom+xml" title="Git OS X Installer Updates Feed" href="feed.atom"><span class="rss"></span></a></h1>
 
 <div class="description">
 <p>Universal binary OS X Installer for Git that supports Mac OS X 10.4.8 and later including PPC/X86 and 32/64 bit.</p>

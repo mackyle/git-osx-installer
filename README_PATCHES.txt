@@ -81,6 +81,13 @@ Git Patches
   Both patches included in the thread and discussion at:
   <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
 
+* Backport contrib/hooks/pre-auto-gc-battery update
+
+  - `patches/pa/pre-auto-gc-newer-osx.txt`
+
+  A backport of c54c7b37 that first appeared in Git 2.4.6 that updates
+  the checking for newer osxen.
+
 * Improve usability of git-instaweb:
 
   - `patches/instaweb/q/t_instaweb_subdir.diff`

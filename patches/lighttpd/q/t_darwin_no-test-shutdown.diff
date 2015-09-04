@@ -21,10 +21,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/tests/LightyTest.pm b/tests/LightyTest.pm
-index b92af876..23362552 100755
+index d8850a37..e78fe198 100644
 --- a/tests/LightyTest.pm
 +++ b/tests/LightyTest.pm
-@@ -187,7 +187,7 @@ sub handle_http {
+@@ -223,7 +223,7 @@ sub handle_http {
  			print $remote $_.$BLANK;
  			diag("\n<< ".$_) if $is_debug;
  		}
@@ -34,4 +34,4 @@ index b92af876..23362552 100755
  		diag("\nsending request header to ".$host.":".$self->{PORT}) if $is_debug;
  		foreach(@request) {
 -- 
-tg: (7b11aa70..) t/darwin/no-test-shutdown (depends on: t/darwin/sendfile)
+tg: (067ee62a..) t/darwin/no-test-shutdown (depends on: t/darwin/sendfile)

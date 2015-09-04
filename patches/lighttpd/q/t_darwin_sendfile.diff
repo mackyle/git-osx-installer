@@ -10,21 +10,25 @@ macro to adjust the arguments.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- src/network_backends.h | 15 ++++++++++++++-
- 1 file changed, 14 insertions(+), 1 deletion(-)
+ src/network_backends.h | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/src/network_backends.h b/src/network_backends.h
-index 5813253a..f2ec58bb 100644
+index 8233c488..3b98c3d9 100644
 --- a/src/network_backends.h
 +++ b/src/network_backends.h
-@@ -15,9 +15,22 @@
- # include <sys/uio.h>
+@@ -17,12 +17,26 @@
+ # define USE_LINUX_SENDFILE
  #endif
  
--#if defined HAVE_SYS_UIO_H && defined HAVE_SENDFILE && defined HAVE_WRITEV && (defined(__FreeBSD__) || defined(__DragonFly__))
-+#if defined HAVE_SYS_UIO_H && defined HAVE_SENDFILE && defined HAVE_WRITEV && (defined(__FreeBSD__) || defined(__DragonFly__) || defined(__APPLE__))
+-#if defined HAVE_SENDFILE && (defined(__FreeBSD__) || defined(__DragonFly__))
++#if defined HAVE_SENDFILE && (defined(__FreeBSD__) || defined(__DragonFly__) || defined(__APPLE__))
+ # ifdef USE_SENDFILE
+ #  error "can't have more than one sendfile implementation"
+ # endif
+ # define USE_SENDFILE "freebsd-sendfile"
  # define USE_FREEBSD_SENDFILE
- # include <sys/uio.h>
++# include <sys/uio.h>
 +# ifdef __APPLE__
 +#  include <sys/types.h>
 +#  include <sys/socket.h>
@@ -37,9 +41,9 @@ index 5813253a..f2ec58bb 100644
 +    {return sendfile(fd, s, offset, len, hdtr, flags);}
 +#  define sendfile(fd, s, offset, nbytes, hdtr, sbytes, flags) \
 +    ((*sbytes)=(off_t)(nbytes),_darwin_sendfile(fd, s, offset, sbytes, hdtr, flags))
-+# endif
++# endif /* __APPLE__ */
  #endif
  
- #if defined HAVE_SYS_SENDFILE_H && defined HAVE_SENDFILEV && defined HAVE_WRITEV && defined(__sun)
+ #if defined HAVE_SYS_SENDFILE_H && defined HAVE_SENDFILEV && defined(__sun)
 -- 
-tg: (4e2815a7..) t/darwin/sendfile (depends on: release)
+tg: (6e31aff4..) t/darwin/sendfile (depends on: release)

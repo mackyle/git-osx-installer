@@ -21,6 +21,9 @@ Git 2.3.8 Installer - released 2015-09-??
 * cURL/libcURL 7.44.0
   - updated from version 7.40.0
 
+* lighttpd 1.4.37
+  - updated from version 1.4.35
+
 * PCRE 8.37
   - updated from version 8.35
 

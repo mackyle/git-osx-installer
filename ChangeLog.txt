@@ -4,7 +4,7 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
-Git 2.3.8 Installer - released 2015-08-??
+Git 2.3.8 Installer - released 2015-09-??
 -----------------------------------------
 
 * Git v2.3.8
@@ -18,8 +18,8 @@ Git 2.3.8 Installer - released 2015-08-??
 * GnuPG 1.4.19
   - update from version 1.4.18
 
-* cURL/libcURL 7.42.1
-  - updated from version 7.40
+* cURL/libcURL 7.44.0
+  - updated from version 7.40.0
 
 * PCRE 8.37
   - updated from version 8.35

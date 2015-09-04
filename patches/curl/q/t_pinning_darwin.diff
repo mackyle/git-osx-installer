@@ -10,10 +10,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/tests/runtests.pl b/tests/runtests.pl
-index ef9d3c8d..8c7fb986 100755
+index 3ff31871..3f3488b7 100755
 --- a/tests/runtests.pl
 +++ b/tests/runtests.pl
-@@ -2362,6 +2362,7 @@ sub checksystem {
+@@ -2364,6 +2364,7 @@ sub checksystem {
             }
             elsif ($libcurl =~ /securetransport/i) {
                 $has_darwinssl=1;
@@ -22,4 +22,4 @@ index ef9d3c8d..8c7fb986 100755
             }
             elsif ($libcurl =~ /BoringSSL/i) {
 -- 
-tg: (dbd7cf1d..) t/pinning/darwin (depends on: release)
+tg: (6ec32952..) t/pinning/darwin (depends on: release)

@@ -820,31 +820,45 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     }
   }
 
+  connssl->cf = 0;
 #if LIBCURL_VERSION_NUM >= 0x072700
   /* Collect public key pinning key(s). */
   if(data->set.str[STRING_SSL_PINNEDPUBLICKEY]) {
     errinfo_t e;
     CFArrayRef pubkeys;
-    CFDataRef pindata = CFDataCreateWithContentsOfFile(kCFAllocatorDefault,
-                                    data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+    CFDataRef pindata;
 
-    if(!pindata) {
-      failf(data, "SSL: can't read pinned public key file %s",
-            data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
-      return CURLE_READ_ERROR;
-    }
     e.f = (errinfo_func_t)failf;
     e.u = data;
+    if (IsSha256HashList(data->set.str[STRING_SSL_PINNEDPUBLICKEY])) {
+      pubkeys = CreatePubKeySha256Array(
+                                data->set.str[STRING_SSL_PINNEDPUBLICKEY], &e);
+      if (!pubkeys) {
+        failf(data, "SSL: can't parse pinned public key hashes %s",
+              data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+        return CURLE_READ_ERROR;
+      }
+      connssl->cf |= 0x08;
+    }
+    else {
+      pindata = CFDataCreateWithContentsOfFile(kCFAllocatorDefault,
+                                    data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+      if(!pindata) {
+        failf(data, "SSL: can't read pinned public key file %s",
+              data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+        return CURLE_READ_ERROR;
+      }
+      pubkeys = CreatePubKeyArrayWithData(pindata, &e);
+      CFRelease(pindata);
+      if(!pubkeys) {
+        failf(data, "SSL: can't load pinned public key file %s",
+              data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+        return CURLE_SSL_CACERT_BADFILE; /* no really good choice here */
+      }
+    }
     if(connssl->pa) {
       CFRelease((CFTypeRef)connssl->pa);
       connssl->pa = NULL;
-    }
-    pubkeys = CreatePubKeyArrayWithData(pindata, &e);
-    CFRelease(pindata);
-    if(!pubkeys) {
-      failf(data, "SSL: can't load pinned public key file %s",
-            data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
-      return CURLE_SSL_CACERT_BADFILE; /* no really good choice here */
     }
     connssl->pa = (void *)pubkeys;
   }
@@ -1075,7 +1089,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
         failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
         return CURLE_SSL_CONNECT_ERROR;
       }
-      err = VerifyTrustChain(trust, connssl->ra, vflags, 0,
+      err = VerifyTrustChain(trust, connssl->ra, connssl->cf|vflags, 0,
         connssl->vh ? conn->host.name : NULL, (CFArrayRef)connssl->pa);
       CFRelease(trust);
     }
@@ -1111,7 +1125,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
         failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
         return CURLE_SSL_CONNECT_ERROR;
       }
-      err = VerifyTrustChain(trust, connssl->ra, vflags, 0,
+      err = VerifyTrustChain(trust, connssl->ra, connssl->cf|vflags, 0,
         connssl->vh ? conn->host.name : NULL, (CFArrayRef)connssl->pa);
     }
 

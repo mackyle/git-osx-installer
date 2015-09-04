@@ -3,23 +3,24 @@ Subject: [PATCH] urldata.h: add extra items for Secure Transport
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- lib/urldata.h | 4 ++++
- 1 file changed, 4 insertions(+)
+ lib/urldata.h | 5 +++++
+ 1 file changed, 5 insertions(+)
 
 diff --git a/lib/urldata.h b/lib/urldata.h
-index b1b1a678..becaffe9 100644
+index b1c2056c..d0acccfa 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
-@@ -329,6 +329,10 @@ struct ssl_connect_data {
+@@ -334,6 +334,11 @@ struct ssl_connect_data {
    ssl_connect_state connecting_state;
    bool ssl_direction; /* true if writing, false if reading */
    size_t ssl_write_buffered_length;
 +  void *kh;
 +  void *ra;
 +  void *pa;
++  unsigned cf;
 +  bool vh;
  #endif /* USE_DARWINSSL */
  };
  
 -- 
-tg: (dbd7cf1d..) t/securetransport/extra-data (depends on: release)
+tg: (6ec32952..) t/securetransport/extra-data (depends on: release)

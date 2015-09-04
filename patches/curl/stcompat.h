@@ -478,6 +478,11 @@ Boolean CheckCertOkay(SecCertificateRef cert);
  * public keys will be automatically extracted and added to the pinning set.  */
 CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e);
 Boolean CheckPubKeyOkay(CFDataRef pubkey);
+/* Never returns a 0-element array, resturn NULL instead.  Input should
+ * be a semicolon-separated list of sha256//... where the ... part is the base64
+ * encoding of the binary sha256 hash of a DER format public key. */
+CFArrayRef CreatePubKeySha256Array(const char *hashlist, const errinfo_t *e);
+Boolean IsSha256HashList(const char *hashlist);
 /* caller must free() result unless NULL.  If s is NULL will return NULL.
  * if s is not NULL and release is true will CFRelease(s) before return */
 char *CFStringCreateUTF8String(CFStringRef s, Boolean release);
@@ -541,7 +546,9 @@ OSStatus cSecTrustGetResult(
    then certificate chain validation errors are ignored (but host name
    matching will still be done if certFlags & 0x02 is NOT set).  If
    certFlags & 0x04 is set AND certFlags & 0x02 is NOT set then peername
-   MUST NOT be NULL or the empty string.  */
+   MUST NOT be NULL or the empty string.  If certFlags & 0x08 IS set
+   then pinnedKeySetOrNull is actually an array of binary sha256
+   hash(es) of the DER form of the public key(s) to match. */
 OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
                           unsigned certFlags, unsigned flags,
                           const char *peername, CFArrayRef pinnedKeySetOrNull);

@@ -18,6 +18,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 #undef sprintf
 #include <Security/Security.h>
+#include <CommonCrypto/CommonDigest.h>
 #include <limits.h>
 #include <objc/objc-runtime.h>
 #include <stdio.h>
@@ -180,6 +181,11 @@ CF_INLINE int is_prnt(int c)
   return c >= ' ' && c <= '~';
 }
 
+CF_INLINE int is_spc(int c)
+{
+  return c == ' ' || c == '\t';
+}
+
 static int has_lb(const void *_m, size_t l)
 {
   const char *m = (const char *)_m;
@@ -301,6 +307,9 @@ static int nextpem(const char *p, size_t l, peminfo_t *o)
   }
   return (int)((o->start + o->len) - p);
 }
+
+#define BASE64CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+#define BASE64SIZE(n) ((((unsigned)(n)+2)/3)*4)
 
 static const signed char b64tab[256] = {
 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -523,6 +532,95 @@ CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e)
     } else if (!readcnt) break;
     plen -= (pem.start + pem.len) - p;
     p = pem.start + pem.len;
+  }
+  if (!CFArrayGetCount(a)) {
+    CFRelease(a);
+    a = NULL;
+  }
+  return a;
+}
+
+static void skip_space_semi(const char **pstr)
+{
+  while (is_spc(**pstr)) ++(*pstr);
+  if (**pstr == ';') ++(*pstr);
+  while (is_spc(**pstr)) ++(*pstr);
+}
+
+static bool skip_sha256_prefix(const char **pstr)
+{
+  skip_space_semi(pstr);
+  if (**pstr != 's' && **pstr != 'S') return 0;
+  ++(*pstr);
+  if (**pstr != 'h' && **pstr != 'H') return 0;
+  ++(*pstr);
+  if (**pstr != 'a' && **pstr != 'A') return 0;
+  ++(*pstr);
+  if (!strncmp(*pstr, "256//", 5)) {
+    *pstr += 5;
+    return 1;
+  }
+  return 0;
+}
+
+Boolean IsSha256HashList(const char *hashlist)
+{
+  if (!hashlist || !*hashlist)
+    return 0;
+  return skip_sha256_prefix(&hashlist);
+}
+
+CFArrayRef CreatePubKeySha256Array(const char *hashlist, const errinfo_t *e)
+{
+  const char *orig = hashlist;
+  CFMutableArrayRef a = NULL;
+  if (!hashlist || !*hashlist)
+    return NULL;
+  a = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+  if (!a) return NULL;
+  for (;;) {
+    CFDataRef blob;
+    size_t l;
+    if (!skip_sha256_prefix(&hashlist)) {
+      if (e)
+        e->f(e->u, "Invalid public key sha256 base64 hash -- "
+          "missing \"sha256//\" prefix at string offset %u",
+          (unsigned)(hashlist-orig));
+      CFRelease(a);
+      return NULL;
+    }
+    l = strspn(hashlist, BASE64CHARS);
+    if (l != BASE64SIZE(CC_SHA256_DIGEST_LENGTH)) {
+      if (e)
+        e->f(e->u, "Invalid public key sha256 base64 hash -- "
+          "wrong base64 length %u (should be %u) at string offset %u",
+          (unsigned)l, (unsigned)BASE64SIZE(CC_SHA256_DIGEST_LENGTH),
+          (unsigned)(hashlist-orig));
+      CFRelease(a);
+      return NULL;
+    }
+    blob = CFDataCreateFromBase64(kCFAllocatorDefault, hashlist, l);
+    if (!blob) {
+      if (e)
+        e->f(e->u, "out of memory");
+      CFRelease(a);
+      return NULL;
+    }
+    if ((size_t)CFDataGetLength(blob) != (size_t)CC_SHA256_DIGEST_LENGTH) {
+      if (e)
+        e->f(e->u, "Invalid public key sha256 base64 hash -- "
+          "wrong hash length %u (should be %u) at string offset %u",
+          (unsigned)CFDataGetLength(blob), (unsigned)CC_SHA256_DIGEST_LENGTH,
+          (unsigned)(hashlist-orig));
+      CFRelease(blob);
+      CFRelease(a);
+      return NULL;
+    }
+    hashlist += l;
+    CFArrayAppendValue(a, blob);
+    CFRelease(blob);
+    skip_space_semi(&hashlist);
+    if (!*hashlist) break;
   }
   if (!CFArrayGetCount(a)) {
     CFRelease(a);
@@ -2597,8 +2695,17 @@ OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
       CFRelease(certder);
       return errSSLBadCert;
     }
-    peerPubKey = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault,
-      cert.subjectPubKey.d, cert.subjectPubKey.l, kCFAllocatorNull);
+    if (certFlags & 0x08) {
+      unsigned char sha256[CC_SHA256_DIGEST_LENGTH];
+      CC_SHA256_CTX ctx;
+      CC_SHA256_Init(&ctx);
+      CC_SHA256_Update(&ctx, cert.subjectPubKey.d, (CC_LONG)cert.subjectPubKey.l);
+      CC_SHA256_Final(sha256, &ctx);
+      peerPubKey = CFDataCreate(kCFAllocatorDefault, sha256, sizeof(sha256));
+    } else {
+      peerPubKey = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault,
+        cert.subjectPubKey.d, cert.subjectPubKey.l, kCFAllocatorNull);
+    }
     if (!peerPubKey) {
       CFRelease(certder);
       return memFullErr;

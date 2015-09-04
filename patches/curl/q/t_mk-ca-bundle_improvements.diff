@@ -274,4 +274,4 @@ index c2080e95..4c25b192 100755
  my $currentdate = scalar gmtime($filedate);
  
 -- 
-tg: (dbd7cf1d..) t/mk-ca-bundle/improvements (depends on: release)
+tg: (6ec32952..) t/mk-ca-bundle/improvements (depends on: release)

@@ -12,7 +12,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index f771a321..ba23d5dd 100755
+index 6897e0b8..70e4d858 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -252,9 +252,13 @@ EOF
@@ -38,4 +38,4 @@ index f771a321..ba23d5dd 100755
  
  apache2_conf () {
 -- 
-tg: (ea85a097..) t/instaweb/ipv6 (depends on: t/instaweb/git-browser)
+tg: (9bf9127a..) t/instaweb/ipv6 (depends on: t/instaweb/git-browser)

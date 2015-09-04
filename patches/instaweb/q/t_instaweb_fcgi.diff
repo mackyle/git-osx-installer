@@ -16,26 +16,28 @@ present.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- git-instaweb.sh | 39 ++++++++++++++++++++++++++++++++++++---
- 1 file changed, 36 insertions(+), 3 deletions(-)
+ git-instaweb.sh | 41 ++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 38 insertions(+), 3 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index ba23d5dd..26ffc003 100755
+index 70e4d858..de534347 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -44,6 +44,11 @@ test -z "$root" && root='@@GITWEBDIR@@'
+@@ -44,6 +44,13 @@ test -z "$root" && root='@@GITWEBDIR@@'
  # any untaken local port will do...
  test -z "$port" && port=1234
  
 +# check for Perl FCGI support
 +hasfcgi=
-+perlcmd="$(sed -ne 1p <"$root/gitweb.cgi" | sed -e 's,^[^/]*,,')"
-+! eval "$perlcmd -MFCGI -MCGI::Fast -e 1 >/dev/null 2>&1" || hasfcgi=1
++if grep -q '^our \$auto_fcgi' "$root/gitweb.cgi"; then
++  perlcmd="$(sed -ne 1p <"$root/gitweb.cgi" | sed -e 's,^[^/]*,,')"
++  ! eval "$perlcmd -MFCGI -MCGI::Fast -e 1 >/dev/null 2>&1" || hasfcgi=1
++fi
 +
  resolve_full_httpd () {
  	case "$httpd" in
  	*apache2*|*lighttpd*|*httpd*)
-@@ -254,12 +259,14 @@ EOF
+@@ -254,12 +261,14 @@ EOF
  lighttpd_conf () {
  	host4="0.0.0.0"; host6="[::]"
  	test x"$local" = xtrue && { host4="127.0.0.1"; host6="[::1]"; }
@@ -51,7 +53,7 @@ index ba23d5dd..26ffc003 100755
  server.indexfiles = ( "gitweb.cgi" )
  server.pid-file = "$fqgitdir/pid"
  server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
-@@ -269,9 +276,33 @@ server.force-lowercase-filenames = "disable"
+@@ -269,9 +278,33 @@ server.force-lowercase-filenames = "disable"
  # variable above and uncomment this
  #accesslog.filename = "$fqgitdir/gitweb/$httpd_only/access.log"
  
@@ -87,7 +89,7 @@ index ba23d5dd..26ffc003 100755
  
  # mimetype mapping
  mimetype.assign             = (
-@@ -607,6 +638,8 @@ EOF
+@@ -607,6 +640,8 @@ EOF
  gitweb_conf() {
  	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
  #!@@PERL@@
@@ -97,4 +99,4 @@ index ba23d5dd..26ffc003 100755
  our \$git_temp = "$fqgitdir/gitweb/tmp";
  our \$projects_list = \$projectroot;
 -- 
-tg: (f9978704..) t/instaweb/fcgi (depends on: t/instaweb/ipv6)
+tg: (50496475..) t/instaweb/fcgi (depends on: t/instaweb/ipv6)

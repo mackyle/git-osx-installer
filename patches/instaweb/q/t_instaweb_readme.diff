@@ -1,0 +1,33 @@
+Subject: [PATCH] git-instaweb: enable readme blob display
+
+iIf the necessary support is present, configure gitweb
+to display readme blobs.
+
+Whether or not they are actually displayed depends on
+the actual version of gitweb.cgi being used.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ git-instaweb.sh | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index de534347..f5a9284e 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -680,6 +680,12 @@ EOF
+ our \$mimetypes_file = "$etcdir/mime.types";
+ EOF
+ 	fi
++	rfrbin="$(command -v run-format-readme 2>/dev/null)"
++	if [ -x "$rfrbin" ] && "$rfrbin" --version | grep -q 'Kyle J\. McKay'; then
++		cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
++our \$git_automatic_readme_html = "$rfrbin";
++EOF
++	fi
+ }
+ 
+ configure_httpd() {
+-- 
+tg: (2ef19760..) t/instaweb/readme (depends on: t/instaweb/fcgi)

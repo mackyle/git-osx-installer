@@ -1,7 +1,22 @@
-diff --git a/lighttpd-1.4.35/src/network_backends.h b/source/src/network_backends.h
+Subject: [PATCH] network_backends.h: support darwin sendfile
+
+The FreeBSD version of sendfile is already supported.  Starting
+with OS X 10.5, Darwin also supports sendfile, but using a
+slightly different argument list.
+
+Add support for darwin's sendfile by introducing a suitable
+macro to adjust the arguments.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ src/network_backends.h | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/src/network_backends.h b/src/network_backends.h
 index 5813253a..f2ec58bb 100644
---- a/lighttpd-1.4.35/src/network_backends.h
-+++ b/source/src/network_backends.h
+--- a/src/network_backends.h
++++ b/src/network_backends.h
 @@ -15,9 +15,22 @@
  # include <sys/uio.h>
  #endif
@@ -26,3 +41,5 @@ index 5813253a..f2ec58bb 100644
  #endif
  
  #if defined HAVE_SYS_SENDFILE_H && defined HAVE_SENDFILEV && defined HAVE_WRITEV && defined(__sun)
+-- 
+tg: (4e2815a7..) t/darwin/sendfile (depends on: release)

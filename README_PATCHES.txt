@@ -169,11 +169,11 @@ Lighttpd Patches
 
 * Allow the darwin sendfile function to be used
 
-  - `patches/lighttpd/darwin_sendfile.patch`
+  - `patches/lighttpd/q/t_darwin_sendfile.diff`
 
 * Avoid spurious testing failures on darwin
 
-  - `patches/lighttpd/darwin_shutdown.patch`
+  - `patches/lighttpd/q/t_darwin_no-test-shutdown.diff`
 
 
 GnuPG Patches

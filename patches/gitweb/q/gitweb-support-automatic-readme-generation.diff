@@ -1,0 +1,134 @@
+Subject: [PATCH] gitweb: support automatic readme generation
+
+If enabled by setting $git_automatic_readme_html to an executable
+that takes a .git directory as its argument, then if README.html
+insertion is enabled and README.html does not exist or is zero
+length, then the output of the $git_automatic_readme_html utility
+will be inserted instead if it is non-empty.
+
+It's still possible to prevent display of any readme by creating
+a README.html file that consists of only XML <!-- comments -->.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+gitweb/gitweb.perl       | 52 +++++++++++++++++++++++++++++++++++++++++++-----
+gitweb/static/gitweb.css | 24 ++++++++++++++++++----
+2 files changed, 67 insertions(+), 9 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 26e62210..32edb88f 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -200,6 +200,13 @@ our $fallback_encoding = 'latin1';
+ # - one might want to include '-B' option, e.g. '-B', '-M'
+ our @diff_opts = ('-M'); # taken from git_commit
+ 
++# utility to automatically produce a default README.html if README.html is
++# enabled and it does not exist or is 0 bytes in length.  If this is set to an
++# executable utility that takes an absolute path to a .git directory as its
++# first argument and outputs an HTML fragment to use for README.html, then
++# it will be called when README.html is enabled but empty or missing.
++our $git_automatic_readme_html = undef;
++
+ # Disables features that would allow repository owners to inject script into
+ # the gitweb domain.
+ our $prevent_xss = 0;
+@@ -4187,6 +4194,33 @@ sub insert_file {
+ 	close $fd;
+ }
+ 
++# return undef on failure
++sub collect_output {
++	defined(my $fd = cmd_pipe @_) or return undef;
++	if (eof $fd) {
++		close $fd;
++		return undef;
++	}
++	my $result = join('', map({ to_utf8($_) } <$fd>));
++	close $fd or return undef;
++	return $result;
++}
++
++# return undef on failure
++# return '' if only comments
++sub collect_html_file {
++	my $filename = shift;
++
++	open my $fd, '<', $filename or return undef;
++	my $result = join('', map({ to_utf8($_) } <$fd>));
++	close $fd or return undef;
++	return undef unless defined($result);
++	my $test = $result;
++	$test =~ s/<!--(?:[^-]|(?:-(?!-)))*-->//gs;
++	$test =~ s/\s+//s;
++	return $test eq '' ? '' : $result;
++}
++
+ ## ......................................................................
+ ## mimetype related functions
+ 
+@@ -7347,11 +7381,19 @@ sub git_summary {
+ 
+ 	# If XSS prevention is on, we don't include README.html.
+ 	# TODO: Allow a readme in some safe format.
+-	if (!$prevent_xss && -s "$projectroot/$project/README.html") {
+-		print "<div class=\"title\">readme</div>\n" .
+-		      "<div class=\"readme\">\n";
+-		insert_file("$projectroot/$project/README.html");
+-		print "\n</div>\n"; # class="readme"
++	if (!$prevent_xss) {
++		my $readme = -s "$projectroot/$project/README.html"
++			? collect_html_file("$projectroot/$project/README.html")
++			: collect_output($git_automatic_readme_html, "$projectroot/$project");
++		if (defined($readme)) {
++			$readme =~ s/^\s+//s;
++			$readme =~ s/\s+$//s;
++			print "<div class=\"title\">readme</div>\n",
++			      "<div class=\"readme\">\n",
++			      $readme,
++			      "\n</div>\n"
++			if $readme ne '';
++		}
+ 	}
+ 
+ 	# we need to request one more than 16 (0..15) to check if
+diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
+index 50efe9a0..1030b552 100644
+--- a/gitweb/static/gitweb.css
++++ b/gitweb/static/gitweb.css
+@@ -131,14 +131,30 @@ span.title {
+ 	display: block;
+ }
+ 
+-div.readme {
+-	padding: 8px;
+-}
+-
+ span.title:hover {
+ 	background-color: #d9d8d1;
+ }
+ 
++div.readme {
++	padding: 8px;
++}
++
++div.readme h1 {
++	font-size: 150%;
++}
++
++div.readme h2 {
++	font-size: 125%;
++}
++
++div.readme h3 {
++	font-size: 110%;
++}
++
++div.readme h4 {
++	font-size: 100%;
++}
++
+ div.title_text {
+ 	padding: 6px 0px;
+ 	border: solid #d9d8d1;
+---

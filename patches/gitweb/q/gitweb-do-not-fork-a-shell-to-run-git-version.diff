@@ -14,7 +14,7 @@ gitweb/gitweb.perl | 9 ++++++++-
 1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index af60c8bd..ec58bee1 100755
+index bcab22d4..f6bbd571 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -965,7 +965,14 @@ sub get_loadavg {

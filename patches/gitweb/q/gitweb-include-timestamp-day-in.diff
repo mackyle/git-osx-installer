@@ -12,7 +12,7 @@ gitweb/gitweb.perl | 7 ++++---
 1 file changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 1beab540..a3b85d5e 100755
+index aa37972a..a502664d 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -3726,6 +3726,7 @@ sub parse_date {

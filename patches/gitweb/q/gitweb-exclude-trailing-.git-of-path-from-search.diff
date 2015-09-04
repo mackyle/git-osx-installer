@@ -12,7 +12,7 @@ gitweb/gitweb.perl | 8 ++++++--
 1 file changed, 6 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f6bbd571..e8e6cfb8 100755
+index 7a546911..aa37972a 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -3504,8 +3504,10 @@ sub search_projects_list {

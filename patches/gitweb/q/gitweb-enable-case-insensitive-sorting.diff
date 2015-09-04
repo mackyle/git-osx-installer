@@ -6,7 +6,7 @@ gitweb/gitweb.perl | 2 +-
 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 2845803b..4d378c33 100755
+index 4c7f46d5..9706d530 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -5965,7 +5965,7 @@ sub sort_projects_list {

@@ -16,10 +16,10 @@ gitweb/static/js/javascript-detection.js |  4 +-
 4 files changed, 101 insertions(+), 8 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 32ee4055..0e5514be 100755
+index 41c0774e..02c371ae 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -6816,7 +6816,11 @@ sub git_blame_common {
+@@ -6783,7 +6783,11 @@ sub git_blame_common {
  	print qq!<table id="blame_table" class="blame" width="100%">\n!.
  	      #qq!<col width="5.5em" /><col width="2.5em" /><col width="*" />\n!.
  	      qq!<thead>\n!.
@@ -32,7 +32,7 @@ index 32ee4055..0e5514be 100755
  	      qq!</thead>\n!.
  	      qq!<tbody>\n!;
  
-@@ -6836,6 +6840,8 @@ sub git_blame_common {
+@@ -6803,6 +6807,8 @@ sub git_blame_common {
  
  			print qq!<tr id="l$linenr" class="$color_class">!.
  			      qq!<td class="sha1"><a href=""> </a></td>!.
@@ -41,7 +41,7 @@ index 32ee4055..0e5514be 100755
  			      qq!<td class="linenr">!.
  			      qq!<a class="linenr" href="">$linenr</a></td>!;
  			print qq!<td class="pre">! . esc_html($line) . "</td>\n";
-@@ -6882,10 +6888,10 @@ sub git_blame_common {
+@@ -6849,10 +6855,10 @@ sub git_blame_common {
  			$tr_class .= ' multiple-previous' if ($meta->{'nprevious'} > 1);
  			print "<tr id=\"l$lineno\" class=\"$tr_class\">\n";
  			if ($group_size) {
@@ -54,7 +54,7 @@ index 32ee4055..0e5514be 100755
  				print $cgi->a({-href => href(action=>"commit",
  				                             hash=>$full_rev,
  				                             file_name=>$file_name)},
-@@ -6899,6 +6905,8 @@ sub git_blame_common {
+@@ -6866,6 +6872,8 @@ sub git_blame_common {
  					}
  				}
  				print "</td>\n";

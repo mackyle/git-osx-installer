@@ -12,8 +12,8 @@ a README.html file that consists of only XML <!-- comments -->.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
 gitweb/gitweb.perl       | 52 +++++++++++++++++++++++++++++++++++++++++++-----
-gitweb/static/gitweb.css | 24 ++++++++++++++++++----
-2 files changed, 67 insertions(+), 9 deletions(-)
+gitweb/static/gitweb.css | 36 +++++++++++++++++++++++++++++----
+2 files changed, 79 insertions(+), 9 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index 26e62210..32edb88f 100755
@@ -93,10 +93,10 @@ index 26e62210..32edb88f 100755
  
  	# we need to request one more than 16 (0..15) to check if
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 50efe9a0..1030b552 100644
+index 50efe9a0..2075619b 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
-@@ -131,14 +131,30 @@ span.title {
+@@ -131,14 +131,42 @@ span.title {
  	display: block;
  }
  
@@ -126,6 +126,18 @@ index 50efe9a0..1030b552 100644
 +
 +div.readme h4 {
 +	font-size: 100%;
++}
++
++div.readme pre {
++	margin: 0 3ex;
++	padding: 1ex;
++	background-color: #eee;
++}
++
++div.readme pre.plaintext {
++	margin: 0;
++	padding: 0;
++	background-color: inherit;
 +}
 +
  div.title_text {

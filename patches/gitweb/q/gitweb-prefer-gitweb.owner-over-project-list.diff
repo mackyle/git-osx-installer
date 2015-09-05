@@ -16,10 +16,10 @@ gitweb/gitweb.perl | 18 ++++++++++--------
 1 file changed, 10 insertions(+), 8 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index a3b85d5e..52bf96b0 100755
+index b371a756..11474463 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -3541,20 +3541,22 @@ sub git_get_project_list_from_file {
+@@ -3542,20 +3542,22 @@ sub git_get_project_list_from_file {
  }
  
  sub git_get_project_owner {

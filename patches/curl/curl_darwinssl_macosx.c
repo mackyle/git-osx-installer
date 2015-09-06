@@ -830,10 +830,10 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 
     e.f = (errinfo_func_t)failf;
     e.u = data;
-    if (IsSha256HashList(data->set.str[STRING_SSL_PINNEDPUBLICKEY])) {
+    if(IsSha256HashList(data->set.str[STRING_SSL_PINNEDPUBLICKEY])) {
       pubkeys = CreatePubKeySha256Array(
                                 data->set.str[STRING_SSL_PINNEDPUBLICKEY], &e);
-      if (!pubkeys) {
+      if(!pubkeys) {
         failf(data, "SSL: can't parse pinned public key hashes %s",
               data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
         return CURLE_READ_ERROR;
@@ -1016,9 +1016,10 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 #endif
 #define NSTR(s) ((s)?(s):"")
     ssl_sessionid =
-      aprintf("%s:%s:%d:%d:%s:%hu", NSTR(data->set.str[STRING_SSL_CAFILE]),
-              NSTR(PKSTR), data->set.ssl.verifypeer, data->set.ssl.verifyhost,
-              NSTR(conn->host.name), conn->remote_port);
+      aprintf("%s:%s:%s:%d:%d:%s:%hu", NSTR(data->set.str[STRING_SSL_CAFILE]),
+              NSTR(PKSTR), NSTR(data->set.str[STRING_CERT]),
+              data->set.ssl.verifypeer, data->set.ssl.verifyhost,
+              NSTR(conn->host.name), (unsigned short)conn->remote_port);
     ssl_sessionid_len = strlen(ssl_sessionid);
 #undef NSTR
 #undef PKSTR
@@ -1057,6 +1058,14 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   return CURLE_OK;
 }
 
+static bool
+is_ssl_ctx_connected(SSLContextRef ssl_ctx)
+{
+  SSLSessionState state = kSSLIdle;
+  OSStatus err = SSLGetSessionState(ssl_ctx, &state);
+  return !err && state == kSSLConnected;
+}
+
 static CURLcode
 darwinssl_connect_step2(struct connectdata *conn, int sockindex)
 {
@@ -1083,7 +1092,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
 
   if(err == errSSLServerAuthCompleted) {
     if(data->set.ssl.verifypeer || vflags) {
-      SecTrustRef trust;
+      SecTrustRef trust = NULL;
       err = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
       if(err) {
         failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
@@ -1118,9 +1127,12 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     SecTrustResultType result;
     CSSM_TP_APPLE_EVIDENCE_INFO *evidence;
     CFArrayRef certChain = NULL;
+    bool resumed;
 
     err2 = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
-    if(!err && (data->set.ssl.verifypeer || vflags)) {
+    resumed = !err2 && !trust && is_ssl_ctx_connected(connssl->ssl_ctx);
+    if(resumed) infof(data, "SSL successfully resumed session\n");
+    if(!err && !resumed && (data->set.ssl.verifypeer || vflags)) {
       if(err2) {
         failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
         return CURLE_SSL_CONNECT_ERROR;
@@ -1142,9 +1154,9 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     }
 
     /* Try to show the computed certificate chain even on failure */
-    if(!err2)
+    if(!resumed && !err2)
       err2 = cSecTrustGetResult(trust, &result, &certChain, &evidence);
-    if(!err2)
+    if(!resumed && !err2)
       show_certs_array(data, (err || vflags) ?
         "Candidate/partial certificate chain" :
         "Certificate chain", certChain, 0x05, evidence);
@@ -1244,7 +1256,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
               "handshake");
         return CURLE_SSL_CONNECT_ERROR;
       default:
-        failf(data, "Unknown SSL protocol error in connection to %s:%d",
+        failf(data, "Unknown SSL protocol error in connection to %s: %d",
               conn->host.name, err);
         return CURLE_SSL_CONNECT_ERROR;
     }

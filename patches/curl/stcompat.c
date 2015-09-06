@@ -32,6 +32,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #include <arpa/inet.h>
 #include <pwd.h>
 #include <crt_externs.h>
+#include <pthread.h>
 #include "stcompat.h"
 
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE))
@@ -53,6 +54,11 @@ extern CFStringRef CFStringCreateWithBytesNoCopy(
   CFAllocatorRef contentsDeallocator); /* available 10.4 but not in header */
 extern CFStringRef NSTemporaryDirectory(void);
 static Boolean CheckPubKeyOkayInt(CFDataRef d, data_t *pubkey, int flags);
+static pthread_mutex_t keych_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Macro result is true on success */
+#define MUTEX_LOCK() (!pthread_mutex_lock(&keych_mutex))
+#define MUTEX_UNLOCK() (!pthread_mutex_unlock(&keych_mutex))
 
 static CFStringRef CFCopyTemporaryDirectory(void)
 {
@@ -737,6 +743,7 @@ static void del_temp_keych(tempch_t *keych)
     DIR *d;
     if (keych->ref) {
       int needs_reset = 0;
+      (void)MUTEX_LOCK();
       if (keych->dirs.home) {
         keych->dirs.cur_home = find_home_env();
         if (!keych->dirs.cur_home || strcmp(keych->dirs.cur_home, keych->dirs.home)) {
@@ -754,6 +761,7 @@ static void del_temp_keych(tempch_t *keych)
       }
       CFRelease(keych->ref);
       keych->ref = NULL;
+      (void)MUTEX_UNLOCK();
     }
     unlink(keych->loc);
     keych->loc[l - 14] = '\0';
@@ -827,6 +835,7 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
   if (!cert || !kh) return NULL;
   if (keydata)
     rawkey = extract_key_copy(keydata, &ispem);
+  (void)MUTEX_LOCK();
   while (rawkey) {
     CFArrayRef searchlist = NULL;
     keych = new_temp_keych();
@@ -906,6 +915,7 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
     err = cSecIdentityCreateWithCertificate(keychain, cert, &ans);
     CFRelease(key);
   }
+  (void)MUTEX_UNLOCK();
   /* We MUST NOT call SecKeychainDelete because that will purge all copies of
    * the keychain from memory.  We've already removed it from the search list
    * so we just release it and remove the disk files instead in order to allow

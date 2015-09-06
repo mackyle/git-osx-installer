@@ -556,7 +556,7 @@ OSStatus VerifyTrustChain(SecTrustRef trust, CFArrayRef customRootsOrNull,
 Boolean SecCertsEqual(SecCertificateRef c1, SecCertificateRef c2);
 /* returns true iff at least one cert in a is SecCertsEqual to c */
 Boolean SecCertInArray(SecCertificateRef c, CFArrayRef a);
-/* returns true iff both items are not NULL AND are bite-wise identical */
+/* returns true iff both items are not NULL AND are byte-wise identical */
 Boolean BlobsEqual(CFDataRef b1, CFDataRef b2);
 /* returns true iff at least one item in a is BlobsEqual to b */
 Boolean BlobInArray(CFDataRef b, CFArrayRef a);

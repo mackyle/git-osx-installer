@@ -11,7 +11,7 @@ gitweb/gitweb.perl | 37 +++++++++++++++++++++++++++++++++++++
 1 file changed, 37 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 32edb88f..f382c7fa 100755
+index 0f46da17..64e2571a 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -3371,6 +3371,43 @@ sub git_get_projects_list {

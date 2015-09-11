@@ -14,7 +14,7 @@ gitweb/static/gitweb.css | 37 +++++++++++++++++++++++++++++++++----
 2 files changed, 50 insertions(+), 19 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 9706d530..937177c3 100755
+index 3a29edb2..8ccc7e20 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -2213,13 +2213,13 @@ sub format_ref_marker {

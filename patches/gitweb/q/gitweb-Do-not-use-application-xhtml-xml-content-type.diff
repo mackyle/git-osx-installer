@@ -10,7 +10,7 @@ gitweb/gitweb.perl | 16 +++++-----------
 1 file changed, 5 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 4c122c69..378bb449 100755
+index a8009d8d..ef7f2a69 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -4071,17 +4071,11 @@ sub get_page_title {

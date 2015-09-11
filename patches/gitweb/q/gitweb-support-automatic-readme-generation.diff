@@ -12,11 +12,11 @@ a README.html file that consists of only XML <!-- comments -->.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
 gitweb/gitweb.perl       | 52 +++++++++++++++++++++++++++++++++++++++++++-----
-gitweb/static/gitweb.css | 36 +++++++++++++++++++++++++++++----
-2 files changed, 79 insertions(+), 9 deletions(-)
+gitweb/static/gitweb.css | 44 ++++++++++++++++++++++++++++++++++------
+2 files changed, 85 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 26e62210..32edb88f 100755
+index 11474463..0f46da17 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -200,6 +200,13 @@ our $fallback_encoding = 'latin1';
@@ -93,10 +93,28 @@ index 26e62210..32edb88f 100755
  
  	# we need to request one more than 16 (0..15) to check if
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 50efe9a0..2075619b 100644
+index 50efe9a0..b46617f0 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
-@@ -131,14 +131,42 @@ span.title {
+@@ -8,11 +8,15 @@ body {
+ 	color: #000000;
+ }
+ 
+-a {
++a, a:hover, a:visited, a:active {
++	color: #000000;
++}
++
++a[href] {
+ 	color: #0000cc;
+ }
+ 
+-a:hover, a:visited, a:active {
++a[href]:hover, a[href]:visited, a[href]:active {
+ 	color: #880000;
+ }
+ 
+@@ -131,14 +135,42 @@ span.title {
  	display: block;
  }
  

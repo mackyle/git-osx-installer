@@ -14,10 +14,10 @@ gitweb/gitweb.perl | 25 ++++++++++++++++++++++++-
 1 file changed, 24 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index a502664d..a3b85d5e 100755
+index aa37972a..1beab540 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -7398,12 +7398,17 @@ sub git_tag {
+@@ -7397,12 +7397,17 @@ sub git_tag {
  		die_error(404, "Unknown tag object");
  	}
  
@@ -35,7 +35,7 @@ index a502664d..a3b85d5e 100755
  	      "<tr>\n" .
  	      "<td>object</td>\n" .
  	      "<td>" . $cgi->a({-class => "list", -href => href(action=>$tag{'type'}, hash=>$tag{'object'})},
-@@ -7827,18 +7832,22 @@ sub git_blob_plain {
+@@ -7826,18 +7831,22 @@ sub git_blob_plain {
  sub git_blob {
  	my $expires;
  
@@ -58,7 +58,7 @@ index a502664d..a3b85d5e 100755
  
  	my $have_blame = gitweb_check_feature('blame');
  	defined(my $fd = git_cmd_pipe "cat-file", "blob", $hash)
-@@ -7892,6 +7901,11 @@ sub git_blob {
+@@ -7891,6 +7900,11 @@ sub git_blob {
  		      "<div class=\"title\">".esc_html($hash)."</div>\n";
  	}
  	git_print_page_path($file_name, "blob", $hash_base);
@@ -70,7 +70,7 @@ index a502664d..a3b85d5e 100755
  	print "<div class=\"page_body\">\n";
  	if ($mimetype =~ m!^image/!) {
  		print qq!<img class="blob" type="!.esc_attr($mimetype).qq!"!;
-@@ -7920,17 +7934,21 @@ sub git_blob {
+@@ -7919,17 +7933,21 @@ sub git_blob {
  }
  
  sub git_tree {
@@ -92,7 +92,7 @@ index a502664d..a3b85d5e 100755
  
  	my $show_sizes = gitweb_check_feature('show-sizes');
  	my $have_blame = gitweb_check_feature('blame');
-@@ -7981,6 +7999,11 @@ sub git_tree {
+@@ -7980,6 +7998,11 @@ sub git_tree {
  		}
  		git_print_page_path($file_name, 'tree', $hash_base);
  	}
@@ -104,7 +104,7 @@ index a502664d..a3b85d5e 100755
  	print "<div class=\"page_body\">\n";
  	print "<table class=\"tree\">\n";
  	my $alternate = 1;
-@@ -8324,8 +8347,8 @@ sub git_commit {
+@@ -8323,8 +8346,8 @@ sub git_commit {
  	}
  	print "<div class=\"title_text\">\n" .
  	      "<table class=\"object_header\">\n";

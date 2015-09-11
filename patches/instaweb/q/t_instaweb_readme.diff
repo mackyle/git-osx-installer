@@ -13,10 +13,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index de534347..f5a9284e 100755
+index 42ebac04..b17d49f1 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -680,6 +680,12 @@ EOF
+@@ -708,6 +708,12 @@ EOF
  our \$mimetypes_file = "$etcdir/mime.types";
  EOF
  	fi
@@ -30,4 +30,4 @@ index de534347..f5a9284e 100755
  
  configure_httpd() {
 -- 
-tg: (2ef19760..) t/instaweb/readme (depends on: t/instaweb/fcgi)
+tg: (09bd8a53..) t/instaweb/readme (depends on: t/instaweb/fcgi)

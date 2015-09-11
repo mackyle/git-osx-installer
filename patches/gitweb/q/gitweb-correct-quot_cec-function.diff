@@ -10,10 +10,10 @@ gitweb/gitweb.perl | 2 +-
 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index b629a989..e6685380 100755
+index 9706d530..3a29edb2 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -1768,7 +1768,7 @@ sub quot_cec {
+@@ -1765,7 +1765,7 @@ sub quot_cec {
  	);
  	my $chr = ( (exists $es{$cntrl})
  		    ? $es{$cntrl}

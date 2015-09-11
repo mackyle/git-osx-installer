@@ -16,29 +16,50 @@ present.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- git-instaweb.sh | 41 ++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 38 insertions(+), 3 deletions(-)
+ git-instaweb.sh | 69 ++++++++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 66 insertions(+), 3 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 70e4d858..de534347 100755
+index 70e4d858..42ebac04 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -44,6 +44,13 @@ test -z "$root" && root='@@GITWEBDIR@@'
- # any untaken local port will do...
- test -z "$port" && port=1234
+@@ -201,6 +201,31 @@ GITWEB_CONFIG="$fqgitdir/gitweb/gitweb_config.perl"
+ GITBROWSER_CONFIG="$fqgitdir/gitweb/git-browser.conf"
+ export GIT_EXEC_PATH GIT_DIR GITWEB_CONFIG GITBROWSER_CONFIG
  
-+# check for Perl FCGI support
++# check for Perl FCGI related support
 +hasfcgi=
-+if grep -q '^our \$auto_fcgi' "$root/gitweb.cgi"; then
-+  perlcmd="$(sed -ne 1p <"$root/gitweb.cgi" | sed -e 's,^[^/]*,,')"
-+  ! eval "$perlcmd -MFCGI -MCGI::Fast -e 1 >/dev/null 2>&1" || hasfcgi=1
-+fi
++ourincdir=
++fcgiconf=
++hasfcgi_conf() {
++	[ -z "$fcgiconf" ] || return 0
++	fcgiconf=1
++	perlcmd=
++	case "$httpd" in lighttpd|"lighttpd "*)
++		if grep -q '^our \$auto_fcgi' "$root/gitweb.cgi"; then
++			perlcmd="$(sed -ne 1p <"$root/gitweb.cgi" | sed -e 's,^[^/]*,,')"
++			! eval "$perlcmd -MFCGI -MCGI::Fast -e 1 >/dev/null 2>&1" || hasfcgi=1
++		fi
++		if [ -n "$perlcmd" ] && [ "$root" = '@@GITWEBDIR@@' ]; then
++			libdir="$(cd "$GIT_EXEC_PATH/../../lib" 2>/dev/null && pwd -P)"
++			if [ -n "$libdir" ] && \
++			   [ -f "$libdir/perl5/site_perl/extra/CGI/FCGI.pm" ] && \
++			   eval "$perlcmd -I\"$libdir/perl5/site_perl/extra\" -MCGI::FCGI -e 1 >/dev/null 2>&1"; then
++				ourincdir="$libdir/perl5/site_perl/extra"
++				hasfcgi=1
++			fi
++		fi
++	esac
++}
 +
- resolve_full_httpd () {
- 	case "$httpd" in
- 	*apache2*|*lighttpd*|*httpd*)
-@@ -254,12 +261,14 @@ EOF
+ webrick_conf () {
+ 	# webrick seems to have no way of passing arbitrary environment
+ 	# variables to the underlying CGI executable, so we wrap the
+@@ -252,14 +277,17 @@ EOF
+ }
+ 
  lighttpd_conf () {
++	hasfcgi_conf
  	host4="0.0.0.0"; host6="[::]"
  	test x"$local" = xtrue && { host4="127.0.0.1"; host6="[::1]"; }
 +	fcgimod=
@@ -53,7 +74,7 @@ index 70e4d858..de534347 100755
  server.indexfiles = ( "gitweb.cgi" )
  server.pid-file = "$fqgitdir/pid"
  server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
-@@ -269,9 +278,33 @@ server.force-lowercase-filenames = "disable"
+@@ -269,9 +297,33 @@ server.force-lowercase-filenames = "disable"
  # variable above and uncomment this
  #accesslog.filename = "$fqgitdir/gitweb/$httpd_only/access.log"
  
@@ -89,10 +110,21 @@ index 70e4d858..de534347 100755
  
  # mimetype mapping
  mimetype.assign             = (
-@@ -607,6 +640,8 @@ EOF
+@@ -605,8 +657,19 @@ EOF
+ }
+ 
  gitweb_conf() {
++	hasfcgi_conf
  	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
  #!@@PERL@@
++EOF
++	if [ -n "$ourincdir" ]; then
++		cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
++use lib "$ourincdir";
++use CGI::FCGI;
++EOF
++	fi
++	cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
 +our \$per_request_config = 0;
 +our \$auto_fcgi = 1;
  our \$projectroot = "$(dirname "$fqgitdir")";

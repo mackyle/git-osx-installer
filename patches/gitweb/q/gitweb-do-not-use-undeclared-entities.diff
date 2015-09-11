@@ -36,7 +36,7 @@ gitweb/gitweb.perl | 40 ++++++++++++++++++++--------------------
 1 file changed, 20 insertions(+), 20 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index cf00d040..ef7f2a69 100755
+index a4eb570a..a8009d8d 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -1659,7 +1659,7 @@ sub esc_html {
@@ -81,7 +81,7 @@ index cf00d040..ef7f2a69 100755
  			if (defined $matched && $matched eq $ctag) {
  				$title = qq(<span class="match">$title</span>);
  			}
-@@ -4497,19 +4497,19 @@ sub format_paging_nav {
+@@ -4503,19 +4503,19 @@ sub format_paging_nav {
  	if ($page > 0) {
  		$paging_nav .=
  			$cgi->a({-href => href(-replay=>1, page=>undef)}, "first") .
@@ -105,7 +105,7 @@ index cf00d040..ef7f2a69 100755
  	}
  
  	return $paging_nav;
-@@ -4968,7 +4968,7 @@ sub git_difftree_body {
+@@ -4974,7 +4974,7 @@ sub git_difftree_body {
  			               -title => 'commitdiff to parent number ' .
  			                          ($i+1) . ': ' . substr($par,0,7)},
  			              $i+1) .
@@ -114,7 +114,7 @@ index cf00d040..ef7f2a69 100755
  		}
  		print "</tr></thead>\n<tbody>\n";
  	}
-@@ -6327,7 +6327,7 @@ sub git_tags_body {
+@@ -6333,7 +6333,7 @@ sub git_tags_body {
  		if ($tag{'type'} eq "tag") {
  			print $cgi->a({-href => href(action=>"tag", hash=>$tag{'id'})}, "tag");
  		} else {
@@ -123,7 +123,7 @@ index cf00d040..ef7f2a69 100755
  		}
  		print "</td>\n" .
  		      "<td class=\"link\">" . " | " .
-@@ -6502,20 +6502,20 @@ sub git_search_message {
+@@ -6508,20 +6508,20 @@ sub git_search_message {
  		$paging_nav .=
  			$cgi->a({-href => href(-replay=>1, page=>undef)},
  			        "first") .
@@ -148,7 +148,7 @@ index cf00d040..ef7f2a69 100755
  	}
  
  	git_header_html();
-@@ -6898,7 +6898,7 @@ sub git_summary {
+@@ -6904,7 +6904,7 @@ sub git_summary {
  	git_header_html();
  	git_print_page_nav('summary','', $head);
  
@@ -157,7 +157,7 @@ index cf00d040..ef7f2a69 100755
  	print "<table class=\"projects_list\">\n" .
  	      "<tr id=\"metadata_desc\"><td>description</td><td>" . esc_html($descr) . "</td></tr>\n";
          if ($owner and not $omit_owner) {
-@@ -7592,7 +7592,7 @@ sub git_tree {
+@@ -7598,7 +7598,7 @@ sub git_tree {
  		undef $up unless $up;
  		# based on git_print_tree_entry
  		print '<td class="mode">' . mode_str('040000') . "</td>\n";
@@ -166,7 +166,7 @@ index cf00d040..ef7f2a69 100755
  		print '<td class="list">';
  		print $cgi->a({-href => href(action=>"tree",
  		                             hash_base=>$hash_base,
-@@ -7810,7 +7810,7 @@ sub git_log_generic {
+@@ -7816,7 +7816,7 @@ sub git_log_generic {
  	my ($patch_max) = gitweb_get_feature('patches');
  	if ($patch_max && !defined $file_name) {
  		if ($patch_max < 0 || @commitlist <= $patch_max) {

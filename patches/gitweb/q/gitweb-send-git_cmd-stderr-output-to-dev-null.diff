@@ -2,11 +2,11 @@ Subject: [PATCH] gitweb: send git_cmd() stderr output to /dev/null
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 134 ++++++++++++++++++++++++++++++++---------------------
-1 file changed, 80 insertions(+), 54 deletions(-)
+ gitweb/gitweb.perl | 134 ++++++++++++++++++++++++++++++++---------------------
+ 1 file changed, 80 insertions(+), 54 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 8ccc7e20..27d4b965 100755
+index e6685380..f52794ee 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -17,6 +17,7 @@ use Encode;
@@ -17,7 +17,7 @@ index 8ccc7e20..27d4b965 100755
  use Time::HiRes qw(gettimeofday tv_interval);
  use Time::Local;
  use constant GITWEB_CACHE_FORMAT => "Gitweb Cache Format 3";
-@@ -2746,6 +2747,32 @@ sub git_cmd {
+@@ -2751,6 +2752,32 @@ sub git_cmd {
  	return $GIT, '--git-dir='.$git_dir;
  }
  
@@ -50,7 +50,7 @@ index 8ccc7e20..27d4b965 100755
  # quote the given arguments for passing them to the shell
  # quote_command("command", "arg 1", "arg with ' and ! characters")
  # => "'command' 'arg 1' 'arg with '\'' and '\!' characters'"
-@@ -2773,8 +2800,8 @@ sub git_get_hash {
+@@ -2778,8 +2805,8 @@ sub git_get_hash {
  	my $o_git_dir = $git_dir;
  	my $retval = undef;
  	$git_dir = "$projectroot/$project";
@@ -61,7 +61,7 @@ index 8ccc7e20..27d4b965 100755
  		$retval = <$fd>;
  		chomp $retval if defined $retval;
  		close $fd;
-@@ -2789,7 +2816,7 @@ sub git_get_hash {
+@@ -2794,7 +2821,7 @@ sub git_get_hash {
  sub git_get_type {
  	my $hash = shift;
  
@@ -70,7 +70,7 @@ index 8ccc7e20..27d4b965 100755
  	my $type = <$fd>;
  	close $fd or return;
  	chomp $type;
-@@ -2822,7 +2849,7 @@ sub git_parse_project_config {
+@@ -2827,7 +2854,7 @@ sub git_parse_project_config {
  
  	local $/ = "\0";
  
@@ -79,7 +79,7 @@ index 8ccc7e20..27d4b965 100755
  		or return;
  
  	while (my $keyval = <$fh>) {
-@@ -2937,7 +2964,7 @@ sub git_get_hash_by_path {
+@@ -2942,7 +2969,7 @@ sub git_get_hash_by_path {
  
  	$path =~ s,/+$,,;
  
@@ -88,7 +88,7 @@ index 8ccc7e20..27d4b965 100755
  		or die_error(500, "Open git-ls-tree failed");
  	my $line = <$fd>;
  	close $fd or return undef;
-@@ -2964,7 +2991,7 @@ sub git_get_path_by_hash {
+@@ -2969,7 +2996,7 @@ sub git_get_path_by_hash {
  
  	local $/ = "\0";
  
@@ -97,7 +97,7 @@ index 8ccc7e20..27d4b965 100755
  		or return undef;
  	while (my $line = <$fd>) {
  		chomp $line;
-@@ -3415,7 +3442,7 @@ sub git_get_last_activity {
+@@ -3420,7 +3447,7 @@ sub git_get_last_activity {
  		}
  	}
  	return (undef) if $quick;
@@ -106,7 +106,7 @@ index 8ccc7e20..27d4b965 100755
  	     '--format=%(committer)',
  	     '--sort=-committerdate',
  	     '--count=1',
-@@ -3440,7 +3467,7 @@ sub git_get_remotes_list {
+@@ -3445,7 +3472,7 @@ sub git_get_remotes_list {
  	my $wanted = shift;
  	my %remotes = ();
  
@@ -115,7 +115,7 @@ index 8ccc7e20..27d4b965 100755
  	return unless $fd;
  	while (my $remote = <$fd>) {
  		chomp $remote;
-@@ -3473,8 +3500,8 @@ sub git_get_references {
+@@ -3478,8 +3505,8 @@ sub git_get_references {
  	my %refs;
  	# 5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c refs/tags/v2.6.11
  	# c39ae07f393806ccf406ef966e9a15afc43cc36a refs/tags/v2.6.11^{}
@@ -126,7 +126,7 @@ index 8ccc7e20..27d4b965 100755
  		or return;
  
  	while (my $line = <$fd>) {
-@@ -3494,7 +3521,7 @@ sub git_get_references {
+@@ -3499,7 +3526,7 @@ sub git_get_references {
  sub git_get_rev_name_tags {
  	my $hash = shift || return undef;
  
@@ -135,7 +135,7 @@ index 8ccc7e20..27d4b965 100755
  		or return;
  	my $name_rev = <$fd>;
  	close $fd;
-@@ -3549,7 +3576,7 @@ sub parse_tag {
+@@ -3554,7 +3581,7 @@ sub parse_tag {
  	my %tag;
  	my @comment;
  
@@ -144,7 +144,7 @@ index 8ccc7e20..27d4b965 100755
  	$tag{'id'} = $tag_id;
  	while (my $line = <$fd>) {
  		chomp $line;
-@@ -3689,12 +3716,12 @@ sub parse_commit {
+@@ -3694,12 +3721,12 @@ sub parse_commit {
  
  	local $/ = "\0";
  
@@ -159,7 +159,7 @@ index 8ccc7e20..27d4b965 100755
  		or die_error(500, "Open git-rev-list failed");
  	%co = parse_commit_text(<$fd>, 1);
  	close $fd;
-@@ -3711,7 +3738,7 @@ sub parse_commits {
+@@ -3716,7 +3743,7 @@ sub parse_commits {
  
  	local $/ = "\0";
  
@@ -168,7 +168,7 @@ index 8ccc7e20..27d4b965 100755
  		"--header",
  		@args,
  		("--max-count=" . $maxcount),
-@@ -3719,7 +3746,7 @@ sub parse_commits {
+@@ -3724,7 +3751,7 @@ sub parse_commits {
  		@extra_options,
  		$commit_id,
  		"--",
@@ -177,7 +177,7 @@ index 8ccc7e20..27d4b965 100755
  		or die_error(500, "Open git-rev-list failed");
  	while (my $line = <$fd>) {
  		my %co = parse_commit_text($line);
-@@ -3873,10 +3900,10 @@ sub git_get_heads_list {
+@@ -3878,10 +3905,10 @@ sub git_get_heads_list {
  	my @patterns = map { "refs/$_" } @classes;
  	my @headslist;
  
@@ -190,7 +190,7 @@ index 8ccc7e20..27d4b965 100755
  		or return;
  	while (my $line = <$fd>) {
  		my %ref_item;
-@@ -3920,11 +3947,11 @@ sub git_get_tags_list {
+@@ -3925,11 +3952,11 @@ sub git_get_tags_list {
  	my $order = shift || $default_refs_order;
  	my $sortkey = $all && $order eq 'name' ? 'refname' : '-creatordate';
  
@@ -204,7 +204,7 @@ index 8ccc7e20..27d4b965 100755
  		or return;
  	while (my $line = <$fd>) {
  		my %ref_item;
-@@ -4813,7 +4840,7 @@ sub git_get_link_target {
+@@ -4818,7 +4845,7 @@ sub git_get_link_target {
  	my $link_target;
  
  	# read link
@@ -213,7 +213,7 @@ index 8ccc7e20..27d4b965 100755
  		or return;
  	{
  		local $/ = undef;
-@@ -6594,9 +6621,9 @@ sub git_search_changes {
+@@ -6599,9 +6626,9 @@ sub git_search_changes {
  	my %co = @_;
  
  	local $/ = "\n";
@@ -225,7 +225,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-log failed");
  
  	git_header_html();
-@@ -6677,9 +6704,9 @@ sub git_search_files {
+@@ -6682,9 +6709,9 @@ sub git_search_files {
  	my %co = @_;
  
  	local $/ = "\n";
@@ -237,7 +237,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-grep failed");
  
  	git_header_html();
-@@ -7116,17 +7143,17 @@ sub git_blame_common {
+@@ -7121,17 +7148,17 @@ sub git_blame_common {
  	my $fd;
  	if ($format eq 'incremental') {
  		# get file contents (as base)
@@ -260,7 +260,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-blame --porcelain failed");
  	}
  	binmode $fd, ':utf8';
-@@ -7432,7 +7459,7 @@ sub git_blob_plain {
+@@ -7437,7 +7464,7 @@ sub git_blob_plain {
  		$expires = "+1d";
  	}
  
@@ -269,7 +269,7 @@ index 8ccc7e20..27d4b965 100755
  		or die_error(500, "Open git-cat-file blob '$hash' failed");
  
  	# content-type (can include charset)
-@@ -7494,7 +7521,7 @@ sub git_blob {
+@@ -7499,7 +7526,7 @@ sub git_blob {
  	}
  
  	my $have_blame = gitweb_check_feature('blame');
@@ -278,7 +278,7 @@ index 8ccc7e20..27d4b965 100755
  		or die_error(500, "Couldn't cat $file_name, $hash");
  	my $mimetype = blob_mimetype($fd, $file_name);
  	# use 'blob_plain' (aka 'raw') view for files that cannot be displayed
-@@ -7590,8 +7617,8 @@ sub git_tree {
+@@ -7595,8 +7622,8 @@ sub git_tree {
  	my @entries = ();
  	{
  		local $/ = "\0";
@@ -289,7 +289,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-ls-tree failed");
  		@entries = map { chomp; $_ } <$fd>;
  		close $fd
-@@ -7809,7 +7836,7 @@ sub git_snapshot {
+@@ -7814,7 +7841,7 @@ sub git_snapshot {
  		%co ? (-last_modified => $latest_date{'rfc2822'}) : (),
  		-status => '200 OK');
  
@@ -298,7 +298,7 @@ index 8ccc7e20..27d4b965 100755
  		or die_error(500, "Execute git-archive failed");
  	binmode STDOUT, ':raw';
  	print <$fd>;
-@@ -7941,10 +7968,10 @@ sub git_commit {
+@@ -7946,10 +7973,10 @@ sub git_commit {
  		$parent = "--root";
  	}
  	my @difftree;
@@ -311,7 +311,7 @@ index 8ccc7e20..27d4b965 100755
  		or die_error(500, "Open git-diff-tree failed");
  	@difftree = map { chomp; $_ } <$fd>;
  	close $fd or die_error(404, "Reading git-diff-tree failed");
-@@ -8023,8 +8050,7 @@ sub git_object {
+@@ -8028,8 +8055,7 @@ sub git_object {
  	if ($hash || ($hash_base && !defined $file_name)) {
  		my $object_id = $hash || $hash_base;
  
@@ -321,7 +321,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(404, "Object does not exist");
  		$type = <$fd>;
  		chomp $type;
-@@ -8039,7 +8065,7 @@ sub git_object {
+@@ -8044,7 +8070,7 @@ sub git_object {
  			or die_error(404, "Base object does not exist");
  
  		# here errors should not happen
@@ -330,7 +330,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-ls-tree failed");
  		my $line = <$fd>;
  		close $fd;
-@@ -8074,9 +8100,9 @@ sub git_blobdiff {
+@@ -8079,9 +8105,9 @@ sub git_blobdiff {
  	if (defined $hash_base && defined $hash_parent_base) {
  		if (defined $file_name) {
  			# read raw output
@@ -342,7 +342,7 @@ index 8ccc7e20..27d4b965 100755
  				or die_error(500, "Open git-diff-tree failed");
  			@difftree = map { chomp; $_ } <$fd>;
  			close $fd
-@@ -8089,8 +8115,8 @@ sub git_blobdiff {
+@@ -8094,8 +8120,8 @@ sub git_blobdiff {
  			# try to find filename from $hash
  
  			# read filtered raw output
@@ -353,7 +353,7 @@ index 8ccc7e20..27d4b965 100755
  				or die_error(500, "Open git-diff-tree failed");
  			@difftree =
  				# ':100644 100644 03b21826... 3b93d5e7... M	ls-files.c'
-@@ -8124,10 +8150,10 @@ sub git_blobdiff {
+@@ -8129,10 +8155,10 @@ sub git_blobdiff {
  		}
  
  		# open patch output
@@ -366,7 +366,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-diff-tree failed");
  	}
  
-@@ -8317,9 +8343,9 @@ sub git_commitdiff {
+@@ -8322,9 +8348,9 @@ sub git_commitdiff {
  	my $fd;
  	my @difftree;
  	if ($format eq 'html') {
@@ -378,7 +378,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-diff-tree failed");
  
  		while (my $line = <$fd>) {
-@@ -8330,8 +8356,8 @@ sub git_commitdiff {
+@@ -8335,8 +8361,8 @@ sub git_commitdiff {
  		}
  
  	} elsif ($format eq 'plain') {
@@ -389,7 +389,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-diff-tree failed");
  	} elsif ($format eq 'patch') {
  		# For commit ranges, we limit the output to the number of
-@@ -8355,8 +8381,8 @@ sub git_commitdiff {
+@@ -8360,8 +8386,8 @@ sub git_commitdiff {
  			}
  			push @commit_spec, '--root', $hash;
  		}
@@ -400,7 +400,7 @@ index 8ccc7e20..27d4b965 100755
  			or die_error(500, "Open git-format-patch failed");
  	} else {
  		die_error(400, "Unknown commitdiff format");
-@@ -8705,9 +8731,9 @@ XML
+@@ -8710,9 +8736,9 @@ XML
  		my %cd = parse_date($co{'author_epoch'}, $co{'author_tz'});
  
  		# get list of changed files

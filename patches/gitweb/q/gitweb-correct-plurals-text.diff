@@ -2,14 +2,14 @@ Subject: [PATCH] gitweb: correct plurals text
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 5 +++--
-1 file changed, 3 insertions(+), 2 deletions(-)
+ gitweb/gitweb.perl | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 2845803b..4c7f46d5 100755
+index dcf82491..937177c3 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -6050,11 +6050,12 @@ sub git_project_list_rows {
+@@ -6052,11 +6052,12 @@ sub git_project_list_rows {
  			print "<td>";
  			if ($pr->{'forks'}) {
  				my $nforks = scalar @{$pr->{'forks'}};

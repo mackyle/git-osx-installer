@@ -53,5 +53,4 @@ index 9003ea4d..18c29665 100644
    if (prot != 1)
      {
        if (!try)
--- 
-tg: (8ef77d2f..) t/launchd/agent-compat (depends on: release)
+---

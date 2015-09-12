@@ -2,8 +2,8 @@ Subject: [PATCH] gitweb: only allow GET and HEAD methods
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 12 ++++++++++++
-1 file changed, 12 insertions(+)
+ gitweb/gitweb.perl | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index ef7f2a69..d13e5d00 100755

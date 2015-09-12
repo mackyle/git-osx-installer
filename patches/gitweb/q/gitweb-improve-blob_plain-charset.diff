@@ -9,11 +9,11 @@ cases based on the first portion of the content.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 132 +++++++++++++++++++++++++++++++++++++++++------------
-1 file changed, 103 insertions(+), 29 deletions(-)
+ gitweb/gitweb.perl | 132 +++++++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 103 insertions(+), 29 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index e0587221..ec58bee1 100755
+index 9ef5e796..af60c8bd 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -175,7 +175,7 @@ our $strict_export = "++GITWEB_STRICT_EXPORT++";
@@ -25,7 +25,7 @@ index e0587221..ec58bee1 100755
  our $default_text_plain_charset  = undef;
  
  # file to use for guessing MIME types before trying /etc/mime.types
-@@ -4187,6 +4187,7 @@ sub insert_file {
+@@ -4180,6 +4180,7 @@ sub insert_file {
  sub mimetype_guess_file {
  	my $filename = shift;
  	my $mimemap = shift;
@@ -33,7 +33,7 @@ index e0587221..ec58bee1 100755
  	-r $mimemap or return undef;
  
  	my %mimemap;
-@@ -4200,12 +4201,25 @@ sub mimetype_guess_file {
+@@ -4193,12 +4194,25 @@ sub mimetype_guess_file {
  	}
  	close($mh);
  
@@ -61,7 +61,7 @@ index e0587221..ec58bee1 100755
  	my $mime;
  	$filename =~ /\./ or return undef;
  
-@@ -4215,48 +4229,105 @@ sub mimetype_guess {
+@@ -4208,48 +4222,105 @@ sub mimetype_guess {
  			# it is relative to project
  			$file = "$projectroot/$project/$file";
  		}
@@ -192,7 +192,7 @@ index e0587221..ec58bee1 100755
  }
  
  # peek the first upto 128 bytes off a file handle
-@@ -7701,7 +7772,8 @@ sub git_blob_plain {
+@@ -7694,7 +7765,8 @@ sub git_blob_plain {
  	binmode($fd);
  
  	# content-type (can include charset)
@@ -202,7 +202,7 @@ index e0587221..ec58bee1 100755
  
  	# "save as" filename, even when no $file_name is given
  	my $save_as = "$hash";
-@@ -7737,6 +7809,7 @@ sub git_blob_plain {
+@@ -7730,6 +7802,7 @@ sub git_blob_plain {
  			. '; filename="' . $save_as . '"');
  	binmode STDOUT, ':raw';
  	$fcgi_raw_mode = 1;
@@ -210,7 +210,7 @@ index e0587221..ec58bee1 100755
  	my $buf;
  	while (read($fd, $buf, 32768)) {
  		print $buf;
-@@ -7765,6 +7838,7 @@ sub git_blob {
+@@ -7758,6 +7831,7 @@ sub git_blob {
  	my $have_blame = gitweb_check_feature('blame');
  	defined(my $fd = git_cmd_pipe "cat-file", "blob", $hash)
  		or die_error(500, "Couldn't cat $file_name, $hash");

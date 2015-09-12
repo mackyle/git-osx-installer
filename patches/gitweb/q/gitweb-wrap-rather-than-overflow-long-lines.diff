@@ -22,12 +22,12 @@ wrap in a sane fashion when there are many refs to show for a commit.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl       |  2 +-
-gitweb/static/gitweb.css | 40 ++++++++++++++++++++++++++++++++++++++++
-2 files changed, 41 insertions(+), 1 deletion(-)
+ gitweb/gitweb.perl       |  2 +-
+ gitweb/static/gitweb.css | 40 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 41 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f6bbd571..7a546911 100755
+index b03073e1..1beab540 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -2809,7 +2809,7 @@ sub format_diff_line {

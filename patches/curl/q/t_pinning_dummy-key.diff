@@ -71,5 +71,4 @@ index 63d935ad..a7ea6cfb 100644
  </command>
  # Ensure that we're running on localhost because we're checking the host name
  <precheck>
--- 
-tg: (6ec32952..) t/pinning/dummy-key (depends on: release)
+---

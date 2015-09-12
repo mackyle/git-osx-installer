@@ -1,6 +1,3 @@
-From 63ea46bebd12199755c4c786ceb942b26e4d4f46 Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Sat, 22 Nov 2014 08:07:05 -0800
 Subject: [PATCH] git-send-email: use libcurl for implementation
 
 Use libcurl's API to send SMTP messages rather than
@@ -43,14 +40,13 @@ omits the X-Mailer header and hashes the Message-Id
 value to render it opaque.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
 ---
  git-send-email--libcurl.pl | 218 +++++++++++++++++++++++++
- git-send-email.perl        | 160 +++++++++---------
+ git-send-email.perl        | 159 +++++++++---------
  send-email--libcurl.c      | 393 +++++++++++++++++++++++++++++++++++++++++++++
- t/t9001-send-email.sh      |  10 --
- 4 files changed, 686 insertions(+), 95 deletions(-)
- create mode 100644 git-send-email--libcurl.pl
- create mode 100644 send-email--libcurl.c
+ t/t9001-send-email.sh      |  20 +--
+ 4 files changed, 696 insertions(+), 94 deletions(-)
 
 diff --git a/git-send-email--libcurl.pl b/git-send-email--libcurl.pl
 new file mode 100644
@@ -277,7 +273,7 @@ index 00000000..31a78b63
 +
 +1;
 diff --git a/git-send-email.perl b/git-send-email.perl
-index a18a7959..9414f416 100755
+index a18a7959..0f34a72a 100755
 --- a/git-send-email.perl
 +++ b/git-send-email.perl
 @@ -26,8 +26,12 @@ use Data::Dumper;
@@ -410,7 +406,7 @@ index a18a7959..9414f416 100755
  	}
  }
  
-@@ -1263,61 +1259,56 @@ Message-Id: $message_id
+@@ -1263,65 +1259,61 @@ Message-Id: $message_id
  			die "The required SMTP server is not properly defined."
  		}
  
@@ -470,9 +466,17 @@ index a18a7959..9414f416 100755
 -				} else {
 -					die "Server does not support STARTTLS! ".$smtp->message;
 -				}
+-			}
 +			$scheme = 'smtp';
 +			$smtp->setopt_use_ssl($smtp_encryption eq 'tls' ? 1 : -1);
-+		}
+ 		}
+-
+-		if (!$smtp) {
+-			die "Unable to initialize SMTP properly. Check config and use --smtp-debug. ",
+-			    "VALUES: server=$smtp_server ",
+-			    "encryption=$smtp_encryption ",
+-			    "hello=$smtp_domain",
+-			    defined $smtp_server_port ? " port=$smtp_server_port" : "";
 +		$smtp_domain ||= maildomain();
 +		$smtp->setopt_url("$scheme://$smtp_server:$smtp_server_port/$smtp_domain");
 +		$smtp->setopt_mail_from($raw_from);
@@ -482,28 +486,8 @@ index a18a7959..9414f416 100755
 +		if ($auth && !$auth->{'finished_auth'}) {
 +			$smtp->setopt_username($auth->{'username'});
 +			$smtp->setopt_password($auth->{'password'});
-+		}
-+
-+		my $payload = join("\r\n", split(/\n/, "$header\n$message", -1));
-+		$smtp->setopt_readdata($payload);
-+		my $retcode = $smtp->perform;
-+		if ($auth && !$auth->{'finished_auth'}) {
-+			if ($retcode == CURLE_LOGIN_DENIED) {
-+				Git::credential($auth, 'reject');
-+			} elsif (!$retcode) {
-+				Git::credential($auth, 'approve');
- 			}
-+			$auth->{'finished_auth'} = 1;
  		}
--
--		if (!$smtp) {
--			die "Unable to initialize SMTP properly. Check config and use --smtp-debug. ",
--			    "VALUES: server=$smtp_server ",
--			    "encryption=$smtp_encryption ",
--			    "hello=$smtp_domain",
--			    defined $smtp_server_port ? " port=$smtp_server_port" : "";
--		}
--
+ 
 -		smtp_auth_maybe or die $smtp->message;
 -
 -		$smtp->mail( $raw_from ) or die $smtp->message;
@@ -512,12 +496,28 @@ index a18a7959..9414f416 100755
 -		$smtp->datasend("$header\n$message") or die $smtp->message;
 -		$smtp->dataend() or die $smtp->message;
 -		$smtp->code =~ /250|200/ or die "Failed to send $subject\n".$smtp->message;
++		my $payload = join("\r\n", split(/\n/, "$header\n$message", -1));
++		$smtp->setopt_readdata($payload);
++		my $retcode = $smtp->perform;
++		if ($auth && !$auth->{'finished_auth'}) {
++			if ($retcode == CURLE_LOGIN_DENIED) {
++				Git::credential($auth, 'reject');
++			} elsif (!$retcode) {
++				Git::credential($auth, 'approve');
++			}
++			$auth->{'finished_auth'} = 1;
++		}
 +		die "Failed to send $subject\nError ($retcode) ".$smtp->strerror($retcode).": ".$smtp->errbuf, "\n"
 +			if $retcode;
  	}
  	if ($quiet) {
  		printf (($dry_run ? "Dry-" : "")."Sent %s\n", $subject);
-@@ -1334,8 +1325,7 @@ Message-Id: $message_id
+ 	} else {
++		print "\n";
+ 		print (($dry_run ? "Dry-" : "")."OK. Log says:\n");
+ 		if (!file_name_is_absolute($smtp_server)) {
+ 			print "Server: $smtp_server\n";
+@@ -1334,8 +1326,7 @@ Message-Id: $message_id
  		}
  		print $header, "\n";
  		if ($smtp) {
@@ -527,7 +527,7 @@ index a18a7959..9414f416 100755
  		} else {
  			print "Result: OK\n";
  		}
-@@ -1593,7 +1583,7 @@ sub cleanup_compose_files {
+@@ -1593,7 +1584,7 @@ sub cleanup_compose_files {
  	unlink($compose_filename, $compose_filename . ".final") if $compose;
  }
  
@@ -936,10 +936,18 @@ index 00000000..9dabea3f
 +	return 0;
 +}
 diff --git a/t/t9001-send-email.sh b/t/t9001-send-email.sh
-index 05130554..79238967 100755
+index 05130554..14f18bd9 100755
 --- a/t/t9001-send-email.sh
 +++ b/t/t9001-send-email.sh
-@@ -164,7 +164,6 @@ Cc: cc@example.com,
+@@ -146,6 +146,7 @@ cat >expected-show-all-headers <<\EOF
+ (mbox) Adding cc: A <author@example.com> from line 'From: A <author@example.com>'
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -164,7 +165,6 @@ Cc: cc@example.com,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -947,7 +955,15 @@ index 05130554..79238967 100755
  In-Reply-To: <unique-message-id@example.com>
  References: <unique-message-id@example.com>
  
-@@ -513,7 +512,6 @@ Cc: cc@example.com,
+@@ -496,6 +496,7 @@ cat >expected-suppress-sob <<\EOF
+ (mbox) Adding cc: A <author@example.com> from line 'From: A <author@example.com>'
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -513,7 +514,6 @@ Cc: cc@example.com,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -955,7 +971,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -560,7 +558,6 @@ Cc: A <author@example.com>,
+@@ -545,6 +545,7 @@ cat >expected-suppress-sob <<\EOF
+ (mbox) Adding cc: A <author@example.com> from line 'From: A <author@example.com>'
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -560,7 +561,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -963,7 +987,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -595,7 +592,6 @@ Cc: A <author@example.com>,
+@@ -578,6 +578,7 @@ cat >expected-suppress-cccmd <<\EOF
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
+ (body) Adding cc: C O Mitter <committer@example.com> from line 'Signed-off-by: C O Mitter <committer@example.com>'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -595,7 +596,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -971,7 +1003,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -621,7 +617,6 @@ To: to@example.com
+@@ -612,6 +612,7 @@ test_expect_success $PREREQ 'sendemail.cccmd' '
+ test_expect_success $PREREQ 'setup expect' '
+ cat >expected-suppress-all <<\EOF
+ 0001-Second.patch
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -621,7 +622,6 @@ To: to@example.com
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -979,7 +1019,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -655,7 +650,6 @@ Cc: A <author@example.com>,
+@@ -638,6 +638,7 @@ cat >expected-suppress-body <<\EOF
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
+ (cc-cmd) Adding cc: cc-cmd@example.com from: './cccmd'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -655,7 +656,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -987,7 +1035,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -686,7 +680,6 @@ Cc: A <author@example.com>,
+@@ -671,6 +671,7 @@ cat >expected-suppress-body-cccmd <<\EOF
+ (mbox) Adding cc: A <author@example.com> from line 'From: A <author@example.com>'
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -686,7 +687,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -995,7 +1051,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -717,7 +710,6 @@ Cc: A <author@example.com>,
+@@ -702,6 +702,7 @@ cat >expected-suppress-sob <<\EOF
+ (mbox) Adding cc: A <author@example.com> from line 'From: A <author@example.com>'
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -717,7 +718,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -1003,7 +1067,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -752,7 +744,6 @@ Cc: A <author@example.com>,
+@@ -735,6 +735,7 @@ cat >expected-suppress-bodycc <<\EOF
+ (mbox) Adding cc: One <one@example.com> from line 'Cc: One <one@example.com>, two@example.com'
+ (mbox) Adding cc: two@example.com from line 'Cc: One <one@example.com>, two@example.com'
+ (body) Adding cc: C O Mitter <committer@example.com> from line 'Signed-off-by: C O Mitter <committer@example.com>'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -752,7 +753,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -1011,7 +1083,15 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
-@@ -780,7 +771,6 @@ Cc: A <author@example.com>,
+@@ -767,6 +767,7 @@ cat >expected-suppress-cc <<\EOF
+ 0001-Second.patch
+ (mbox) Adding cc: A <author@example.com> from line 'From: A <author@example.com>'
+ (body) Adding cc: C O Mitter <committer@example.com> from line 'Signed-off-by: C O Mitter <committer@example.com>'
++
+ Dry-OK. Log says:
+ Server: relay.example.com
+ MAIL FROM:<from@example.com>
+@@ -780,7 +781,6 @@ Cc: A <author@example.com>,
  Subject: [PATCH 1/1] Second.
  Date: DATE-STRING
  Message-Id: MESSAGE-ID-STRING
@@ -1019,4 +1099,4 @@ index 05130554..79238967 100755
  
  Result: OK
  EOF
---
+---

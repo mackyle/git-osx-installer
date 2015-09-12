@@ -26,5 +26,4 @@ index a8542fb2..b9366a56 100755
  }
  
  configure_httpd() {
--- 
-tg: (b3f125d3..) t/instaweb/mimetypes (depends on: t/instaweb/highlight)
+---

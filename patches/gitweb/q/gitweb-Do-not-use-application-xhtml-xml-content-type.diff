@@ -6,8 +6,8 @@ for example when showing user-supplied README.html files.
 
 Signed-off-by: Petr Baudis <pasky@suse.cz>
 ---
-gitweb/gitweb.perl | 16 +++++-----------
-1 file changed, 5 insertions(+), 11 deletions(-)
+ gitweb/gitweb.perl | 16 +++++-----------
+ 1 file changed, 5 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index a8009d8d..ef7f2a69 100755

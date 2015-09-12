@@ -3,11 +3,11 @@ Subject: [PATCH] gitweb: do not use undeclared entities
 The XML specification requires that all XML processors
 MUST recognize these five entities:
 
-&lt;
-&gt;
-&amp;
-&apos;
-&quot;
+	&lt;
+	&gt;
+	&amp;
+	&apos;
+	&quot;
 
 whether the are declared or not.  Note that neither
 &nbsp; nor &sdot; are listed.
@@ -32,8 +32,8 @@ that route.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 40 ++++++++++++++++++++--------------------
-1 file changed, 20 insertions(+), 20 deletions(-)
+ gitweb/gitweb.perl | 40 ++++++++++++++++++++--------------------
+ 1 file changed, 20 insertions(+), 20 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index a4eb570a..a8009d8d 100755

@@ -41,5 +41,4 @@ index b9366a56..5ac32127 100755
  EOF
  	hlbin="$(command -v highlight 2>/dev/null)"
  	if [ -x "$hlbin" ] && "$hlbin" --version | grep -q 'Andre Simon'; then
--- 
-tg: (2ee716b8..) t/instaweb/defaults (depends on: t/instaweb/mimetypes)
+---

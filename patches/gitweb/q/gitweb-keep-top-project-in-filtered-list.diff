@@ -6,8 +6,8 @@ exists and is valid.
 
 Signed-off-by: Kyle J. McKay
 ---
-gitweb/gitweb.perl | 19 +++++++++++++------
-1 file changed, 13 insertions(+), 6 deletions(-)
+ gitweb/gitweb.perl | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index 4c122c69..a4eb570a 100755

@@ -10,11 +10,11 @@ by including only orthogonal links to most popular views.
 
 Signed-off-by: Petr Baudis <petr.baudis@novartis.com>
 ---
-gitweb/gitweb.perl | 48 ++++++++++++++++++++++++++++++++++++------------
-1 file changed, 36 insertions(+), 12 deletions(-)
+ gitweb/gitweb.perl | 48 ++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 36 insertions(+), 12 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 0e5514be..ee69110a 100755
+index 32ee4055..8c34928c 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -4347,7 +4347,7 @@ sub git_print_page_nav {
@@ -103,7 +103,7 @@ index 0e5514be..ee69110a 100755
  		      $cgi->a({-href => href(action=>"tree", hash=>$ref{'fullname'}, hash_base=>$ref{'fullname'})}, "tree") .
  		      "</td>\n" .
  		      "</tr>";
-@@ -7459,7 +7480,7 @@ sub git_log_generic {
+@@ -7451,7 +7472,7 @@ sub git_log_generic {
  	}
  
  
@@ -112,7 +112,7 @@ index 0e5514be..ee69110a 100755
  	my $next_link = '';
  	if ($#commitlist >= 100) {
  		$next_link =
-@@ -7475,7 +7496,10 @@ sub git_log_generic {
+@@ -7467,7 +7488,10 @@ sub git_log_generic {
  		}
  	}
  

@@ -10,11 +10,11 @@ Cc: Fredrik Kuivinen <frekui@gmail.com>
 Signed-off-by: Petr Baudis <pasky@ucw.cz>
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 47 +++++++++++++++++++++++++++++++++++++++++------
-1 file changed, 41 insertions(+), 6 deletions(-)
+ gitweb/gitweb.perl | 47 +++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 41 insertions(+), 6 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 02c371ae..0e5514be 100755
+index 41c0774e..32ee4055 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -320,6 +320,22 @@ our %feature = (
@@ -107,7 +107,7 @@ index 02c371ae..0e5514be 100755
  				              "blame") . " | ";
  			}
  			print $cgi->a({-href => href(action=>"history", hash_base=>$hash,
-@@ -7083,7 +7116,8 @@ sub git_blob {
+@@ -7075,7 +7108,8 @@ sub git_blob {
  		if (defined $file_name) {
  			if ($have_blame) {
  				$formats_nav .=
@@ -117,7 +117,7 @@ index 02c371ae..0e5514be 100755
  					        "blame") .
  					" | ";
  			}
-@@ -8333,7 +8367,8 @@ XML
+@@ -8325,7 +8359,8 @@ XML
  			              -title => "diff"}, 'D');
  			if ($have_blame) {
  				print $cgi->a({-href => href(-full=>1, action=>"blame",

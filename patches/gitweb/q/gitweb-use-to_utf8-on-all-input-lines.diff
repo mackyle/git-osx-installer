@@ -13,8 +13,8 @@ bytes passes through the to_utf8 function before being used.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 138 +++++++++++++++++++++++++++++++++++------------------
-1 file changed, 92 insertions(+), 46 deletions(-)
+ gitweb/gitweb.perl | 138 +++++++++++++++++++++++++++++++++++------------------
+ 1 file changed, 92 insertions(+), 46 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index 18e180e8..9ef5e796 100755

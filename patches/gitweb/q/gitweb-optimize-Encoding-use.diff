@@ -6,11 +6,11 @@ not UTF-8 or US-ASCII.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 17 ++++++++++++++++-
-1 file changed, 16 insertions(+), 1 deletion(-)
+ gitweb/gitweb.perl | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 174a3a28..2845803b 100755
+index f79414e9..4d378c33 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -805,6 +805,20 @@ sub evaluate_gitweb_config {

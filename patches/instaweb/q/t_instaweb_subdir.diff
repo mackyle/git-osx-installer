@@ -18,5 +18,4 @@ index 513efa66..4c0af04f 100755
  . git-sh-setup
  
  fqgitdir="$GIT_DIR"
--- 
-tg: (a26d01e1..) t/instaweb/subdir (depends on: release)
+---

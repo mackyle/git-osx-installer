@@ -9,9 +9,9 @@ date being displayed rather than the current date.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/static/js/adjust-timezone.js |  3 ---
-gitweb/static/js/lib/datetime.js    | 14 +++++++++-----
-2 files changed, 9 insertions(+), 8 deletions(-)
+ gitweb/static/js/adjust-timezone.js |  3 ---
+ gitweb/static/js/lib/datetime.js    | 14 +++++++++-----
+ 2 files changed, 9 insertions(+), 8 deletions(-)
 
 diff --git a/gitweb/static/js/adjust-timezone.js b/gitweb/static/js/adjust-timezone.js
 index 0c677795..cc32df37 100644

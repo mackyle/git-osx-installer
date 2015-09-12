@@ -45,5 +45,4 @@ index 8233c488..3b98c3d9 100644
  #endif
  
  #if defined HAVE_SYS_SENDFILE_H && defined HAVE_SENDFILEV && defined(__sun)
--- 
-tg: (6e31aff4..) t/darwin/sendfile (depends on: release)
+---

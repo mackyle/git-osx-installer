@@ -73,5 +73,4 @@ index 5ac32127..6897e0b8 100755
  gitweb_conf
  
  resolve_full_httpd
--- 
-tg: (f68f1c5f..) t/instaweb/git-browser (depends on: t/instaweb/defaults)
+---

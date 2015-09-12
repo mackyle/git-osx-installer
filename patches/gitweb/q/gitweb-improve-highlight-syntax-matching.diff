@@ -11,8 +11,8 @@ The extended list of extensions is compatible with both highlight
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 230 ++++++++++++++++++++++++++++++++++++++++++++++++-----
-1 file changed, 209 insertions(+), 21 deletions(-)
+ gitweb/gitweb.perl | 230 ++++++++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 209 insertions(+), 21 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index f52794ee..29da752d 100755

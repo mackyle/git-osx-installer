@@ -14,9 +14,9 @@ to not actually run in FCGI mode.  And someday pigs might fly.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-Documentation/gitweb.conf.txt |  5 +++
-gitweb/gitweb.perl            | 77 +++++++++++++++++++++++++++++--------------
-2 files changed, 58 insertions(+), 24 deletions(-)
+ Documentation/gitweb.conf.txt |  5 +++
+ gitweb/gitweb.perl            | 77 +++++++++++++++++++++++++++++--------------
+ 2 files changed, 58 insertions(+), 24 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
 index 2ed86bf3..1942a63e 100644

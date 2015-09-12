@@ -2,14 +2,14 @@ Subject: [PATCH] gitweb: enable case-insensitive sorting
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 2 +-
-1 file changed, 1 insertion(+), 1 deletion(-)
+ gitweb/gitweb.perl | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 4c7f46d5..9706d530 100755
+index 174a3a28..f79414e9 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -5965,7 +5965,7 @@ sub sort_projects_list {
+@@ -5950,7 +5950,7 @@ sub sort_projects_list {
  
  	sub order_str {
  		my $key = shift;

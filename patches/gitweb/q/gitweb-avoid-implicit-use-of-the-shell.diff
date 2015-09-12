@@ -6,9 +6,9 @@ can be set in GITWEB_CONFIG if necessary to increase security.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/Makefile    |  9 +++++----
-gitweb/gitweb.perl | 18 ++++++++++++------
-2 files changed, 17 insertions(+), 10 deletions(-)
+ gitweb/Makefile    |  9 +++++----
+ gitweb/gitweb.perl | 18 ++++++++++++------
+ 2 files changed, 17 insertions(+), 10 deletions(-)
 
 diff --git a/gitweb/Makefile b/gitweb/Makefile
 index cd194d05..8aab6c99 100644

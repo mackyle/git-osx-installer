@@ -4,10 +4,10 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
-Git 2.3.8 Installer - released 2015-09-??
+Git 2.3.9 Installer - released 2015-09-12
 -----------------------------------------
 
-* Git v2.3.8
+* Git v2.3.9
   - update from version 2.3.3
   - include backport of pre-auto-gc-battery hook osx fix
   - include various git instaweb usability enhancements

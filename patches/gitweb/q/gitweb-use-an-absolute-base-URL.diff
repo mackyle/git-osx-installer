@@ -8,8 +8,8 @@ port number when an absolute URL will do just fine.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 5 +++--
-1 file changed, 3 insertions(+), 2 deletions(-)
+ gitweb/gitweb.perl | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index 52bf96b0..11474463 100755

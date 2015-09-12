@@ -33,5 +33,4 @@ index d8850a37..e78fe198 100644
  	} else {
  		diag("\nsending request header to ".$host.":".$self->{PORT}) if $is_debug;
  		foreach(@request) {
--- 
-tg: (067ee62a..) t/darwin/no-test-shutdown (depends on: t/darwin/sendfile)
+---

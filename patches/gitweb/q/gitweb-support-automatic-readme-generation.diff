@@ -11,9 +11,9 @@ a README.html file that consists of only XML <!-- comments -->.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl       | 52 +++++++++++++++++++++++++++++++++++++++++++-----
-gitweb/static/gitweb.css | 44 ++++++++++++++++++++++++++++++++++------
-2 files changed, 85 insertions(+), 11 deletions(-)
+ gitweb/gitweb.perl       | 52 +++++++++++++++++++++++++++++++++++++++++++-----
+ gitweb/static/gitweb.css | 44 ++++++++++++++++++++++++++++++++++------
+ 2 files changed, 85 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index 11474463..0f46da17 100755

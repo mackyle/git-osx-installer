@@ -8,8 +8,8 @@ Always include the day of the month in parentheses as well.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 7 ++++---
-1 file changed, 4 insertions(+), 3 deletions(-)
+ gitweb/gitweb.perl | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index 6b627858..52bf96b0 100755

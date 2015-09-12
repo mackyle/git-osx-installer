@@ -10,11 +10,11 @@ moved to the top to be consistent with the others.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-gitweb/gitweb.perl | 25 ++++++++++++++++++++++++-
-1 file changed, 24 insertions(+), 1 deletion(-)
+ gitweb/gitweb.perl | 25 ++++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index aa37972a..1beab540 100755
+index e8e6cfb8..b03073e1 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -7397,12 +7397,17 @@ sub git_tag {

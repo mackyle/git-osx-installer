@@ -33,10 +33,10 @@ Signed-off-by: Petr Baudis <pasky@ucw.cz>
 Signed-off-by: Jakub Narebski <jnareb@gmail.com>
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
-Documentation/gitweb.conf.txt |  51 +++++++++-
-gitweb/gitweb.perl            | 212 ++++++++++++++++++++++++++++++++++++++----
-gitweb/static/gitweb.css      |   8 ++
-3 files changed, 251 insertions(+), 20 deletions(-)
+ Documentation/gitweb.conf.txt |  51 +++++++++-
+ gitweb/gitweb.perl            | 212 ++++++++++++++++++++++++++++++++++++++----
+ gitweb/static/gitweb.css      |   8 ++
+ 3 files changed, 251 insertions(+), 20 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
 index 841e7dad..2ed86bf3 100644

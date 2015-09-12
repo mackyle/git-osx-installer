@@ -21,5 +21,4 @@ index 3ff31871..3f3488b7 100755
                 $ssllib="DarwinSSL";
             }
             elsif ($libcurl =~ /BoringSSL/i) {
--- 
-tg: (6ec32952..) t/pinning/darwin (depends on: release)
+---

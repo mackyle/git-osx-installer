@@ -142,5 +142,4 @@ index 76ee74e6..f739d299 100644
        max=3072;
        break;
  
--- 
-tg: (8ef77d2f..) t/gnupg/longer-keys (depends on: release)
+---

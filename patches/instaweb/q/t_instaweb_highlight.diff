@@ -27,5 +27,4 @@ index 4c0af04f..a8542fb2 100755
  }
  
  configure_httpd() {
--- 
-tg: (692c0996..) t/instaweb/highlight (depends on: t/instaweb/subdir)
+---

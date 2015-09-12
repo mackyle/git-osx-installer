@@ -26,5 +26,4 @@ index 2e5b573f..a227aa7b 100644
  #elif defined(USE_WIN32_CRYPTO)
      HCRYPTPROV hprov;
      if(CryptAcquireContext(&hprov, NULL, NULL, PROV_RSA_FULL,
--- 
-tg: (6ec32952..) t/ntlm/no-one-shot (depends on: release)
+---

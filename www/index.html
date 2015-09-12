@@ -38,7 +38,7 @@
     h3 { /* text-align: center;*/ color: black; }
     h1, h2, h3, th { font-family: Helvetica, Arial, FreeSans, sans-serif; font-weight: normal; }
     a { color: black; }
-    .description { font-size: 1.2em; margin-bottom: 1em; margin-top: 2em; font-style: italic; }
+    .description { font-size: 1.2em; margin-bottom: 1em; margin-top: 1em; font-style: italic; margin-left: 3em; }
     .download { float: right; }
     tt, .nowrap { white-space: nowrap; font-size: 90%; }
     pre, ttx { font-family: Menlo, Monaco, Consolas, Courier, "Courier New", monospace;}
@@ -49,7 +49,7 @@
     .inset { margin-left: 1ex; margin-right: 1ex; }
     .footer { text-align:center; padding-top:2em; font-style: italic; }
     ul.ulnone { list-style-type: none; }
-    li { margin-top: 0.5em; margin-bottom: 0.5em; }
+    li { margin-top: 0; margin-bottom: 0; }
     .indent { display: block; margin-left: 5ex; margin-right: 5ex; text-align: left; }
     .spacer05 { display: inline-block; height: 1em; width: 0.5ex; }
     .spacer25 { display: inline-block; height: 1em; width: 2.5ex; }
@@ -90,7 +90,19 @@
       background-repeat: no-repeat;
       background-position: 0% 100%;
       background-size: 1em 1em;
+      -moz-background-size: 1em 1em;
       background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAQnRFWHRDb21tZW50AHRJTUUgY2h1bmtsZW4gNyBpZ25vcmVkDUFTQ0lJOiAuLi4uLjA3DUhFWDogMDdENjA5MTYxMDMwMzeLgNWuAAACTUlEQVR4nJRQW2iSYRj+tgq6k5BuDILdObqoYLBRxsjBsKvoIoKKokbrMMibrZsMNseojPJAbINg0zZlFVEi1Yi8aNJWiXlG51lvdOiNiBcefp++74tfZGzQXnh43+89PN/zvoTsYhfmeoQrr3oxsngSY0v9UFvPYLfeHe2c8Yjw5rcB7z0v8fHPLNTLA3sjGNIfFqw/n+PFVzUnufu6b28Ep59JBMu6Dk9Xx/DWbcTIwon/I+h5RIrHpruK1xZPYeHHE8x8HsWK2wDNh4u4v9yHByuKnYmi0agzHA7j6MN9uG4Zwuz3STp8D5OOGzB8G+cqphyXcYse1Ww2O7cPD6ZSKVQqFWwVt6AyHsfNpWHMrWmh/XQblg0dxt+dx6V5OcrlMux2O0wmk7JNEAqFnIVCAfF4HLlcDsl0Amf1coxaVZhfm8Yd6zAllcHlcsHv9yMQCECn0/1TEQwGBzc3N1EqlcBUUDW8YePXOhTaQ7hqVmDg8UG43W74fD4kk0mwz+ga0Gg0SuL1evnv+Xwe2WwWmUyGI51OIxqPoHfqABKJBB9knqlkdY/Hg4mJCWd3vV4n1WqV0GFCCxxUCaHNJJvKEX2/g8RiMRKJRAg9MgddmdB7ETbLCPgx2EMQBEJ35A10LUJ/42BkVAEnZj21Wo1IJBI2o+xmj2azycGKIsScmN8eNxoNjv2MQBxqtVpELpdzzwCgnWdxZ575NoFUKuWNrCBCbGTGYmaddZlMxpV02Wy2L3QXFbsBI+v0IkS5DJ2rUqLVvwAAAP//AwDkwh7q3xB35AAAAABJRU5ErkJggg==);
+    }
+
+    span.rss {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin: 0 2px;
+      vertical-align: baseline;
+      background-repeat: no-repeat;
+      background-position: 0% 100%;
+      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAACQElEQVR4nIyS70tTURjH739RFmvbDc2kjAxHRRgUWK5JVK8aEb4oiHrRMrKitmptLbc7GDUi3czSBQVKL+pVQUJBJNXIDGVuOtfdz5t33t3ZNr0vvp17r2xRbzrwPZznnOdzvuc8PFSsk1ob7aTGIyYqQcTNmKgsibOxf5VbVZiojpKh2dM0Jrt0SIVsSA9YkPQcRrJnE3LWJgiOLSh6mlHybUfl3jairZBhijgIkVMbMWXrwN/j18RLCH0HUXpggBTYCenRbkj9LTII2VGcO1ePWXs7ksOXkHrag+wrBuL0WPWC5S+PsTxAoME9kIK7qqAwb2lArLsRrO8YeeY+pO/uAOsxIDN6EZXMlAKvTD4jYBtW+v8EuxsQvdNedSjH3kF8cRbc/VYkHh5AOfVN2a8E21Bm6mtg6spm/GD2Y+GtH4ufn9cueO9G1qUFGzyigh8DKDr0Kkgmgb/djEWmBXlPEzJOHZJ9RpTiH5Rkcfgo4je14Mf8Spy30SooV/WnvRG8QwPRVYclZj04lwZxb6vqEnmNuFWL9Og1JeZ9JhWcPkQJ8atrUBh/ohxIEyGIXh3iNzagEB5R9uadBiSGzitrzn9SBb8bqcIMAaUiV/3bEqMHS5638IZRYtZrRGJQBfkRd9WxmLy1DoVPQ2rZv4aw1EuDs+tJVTvAB04gYdFj7vpesL1mRMy1P4YFpwaCW4eCW69AooNG3kojd5lG5gKNxBmS3EUjcpxG1KxVW05u2NXGxX9KafLfAAAA//8DANHLGgh1x+0wAAAAAElFTkSuQmCC);
     }
 
     span.git {
@@ -102,6 +114,7 @@
       background-repeat: no-repeat;
       background-position: 0% 100%;
       background-size: 0.8em 0.8em;
+      -moz-background-size: 0.8em 0.8em;
       background-image: url(git-icon.png);
     }
 
@@ -112,29 +125,26 @@
 
 <div id="container">
 
-<h1><span class="git"></span>Git OS X Installer</h1>
+<h1><span class="git"></span>Git OS X Installer<a rel="alternate" type="application/atom+xml" title="Git OS X Installer Updates Feed" href="feed.atom"><span class="rss"></span></a></h1>
 
 <div class="description">
-<p>Universal binary OS X Installer for Git that supports Mac OS X 10.4.8 and later including PPC/X86 and 32/64 bit.</p>
+<p>Universal binary OS X Installer for Git</p>
 </div>
 
-<p>The Git translations ARE included.  The installer also contains an option (off by default) to make the installed
-version of Git choose its translation based on the System Preferences > International > Languages settings
-(instead of the <tt>LANG</tt> etc. environment variables) if desired.  Support for <tt>perl-regexp</tt> is also included.</p>
+<ul>
+<li>FAT universal binary includes ppc, ppc64, x86 and x86-64</li>
+<li>OS X 10.4.8 and later compatible (including 10.5.x, 10.6.x, 10.7.x, 10.8.x, 10.9.x, 10.10.x etc.)</li>
+<li>Git <a href="#translations">translations</a> included!</li>
+<li><tt>git send-email</tt> and <tt>git imap-send</tt> work out-of-the-box, nothing more to install!</li>
+<li><tt>git instaweb</tt> works out-of-the-box and includes several enhancements</li>
+<li><tt>--perl-regexp</tt> is fully supported</li>
+<li><tt>git subtree</tt> included</li>
+<li><tt>git-credential-osx-keychain</tt> included</li>
+<li>Full documentation included (man pages, html pages, release notes, howtos, tech docs etc.)</li>
+<li>GnuPG <tt>gpg</tt> signing utility with smart card support included!</li>
+</ul>
 
-<p>All of <tt>git send-email</tt>, <tt>git imap-send</tt> and <tt>git instaweb</tt> are fully functional out-of-the-box
-after installation &#x2013; no additional software installation required.</p>
-
-<p>In addition to <tt>git-subtree</tt> and <tt>git-credential-osxkeychain</tt>, all of the Git documentation is included as well in both man page and html formats.  Miscellaneous Git documentation (release notes, technical docs, howtos etc.) is also included.</p>
-
-<p>Optional installs of <a href="http://repo.or.cz/topgit/pro.git">TopGit</a>, a <tt>curl</tt> command line
-tool (that uses the <tt>libcurl.dylib</tt> installed for Git), <a href="https://www.gnupg.org/">GnuPG</a>&#x2019;s
-<tt>gpg</tt> utility and library headers (so that a new version of Git can be built from source using the
-libraries installed for Git) are included in the installer.</p>
-
-<p>This installer installs on and the installed Git runs on 10.4.x, 10.5.x, 10.6.x, 10.7.x, 10.8.x, 10.9.x and 10.10.x.  It has not been tested on earlier or later versions of the OS.</p>
-
-<h3 id="quick">Quick Download</h3>
+<h2 id="quick">Quick Download</h2>
 
 <table class="download-list">
 <thead>
@@ -166,7 +176,7 @@ libraries installed for Git) are included in the installer.</p>
 </tbody>
 </table>
 
-<h2>Important Notes</h2>
+<h2 id="notes">Important Notes</h2>
 
 <p>In order to fully support SHA-256 certificates on Mac OS X 10.4 and Mac OS X 10.5 and to be more fully integrated
 with the native OS X experience, this version of Git uses libcurl for all http/https/imap/imaps/smtp/smtps activity
@@ -192,10 +202,29 @@ an OpenSSL-using version of <tt>git imap-send</tt> will attempt to use the <tt>S
 the tunnel supports it.  A libcurl-using version of <tt>git imap-send</tt> will never do this.  This only affects tunnels.  All
 direct connections using <tt>imaps</tt> will always be encrypted.</p>
 
-<p>A change log showing the various versions and patches included in the different releases is available
+<p>A change log showing the various software versions and patches included in the different releases is available
 <a href="https://github.com/mackyle/git-osx-installer/blob/master/ChangeLog.txt">here</a>.</p>
 
-<h2>Patch Sources</h2>
+<h2 id="translations">Git Translations</h2>
+
+<p>The Git translations ARE included.  The installer also contains an option (off by default) to make the installed
+version of Git choose its translation based on the System Preferences > International > Languages settings
+(instead of the <tt>LANG</tt> etc. environment variables) if desired.</p>
+
+<p>Details on how to alter the translation selection behavior can be found in the release notes (installed to <tt>/opt/git/Release_Notes.rtf</tt>).</p>
+
+<h2 id="extras">Optional Extras</h2>
+
+<p>Optional installs of <a href="http://repo.or.cz/topgit/pro.git">TopGit</a>, a <tt>curl</tt> command line
+tool (that uses the <tt>libcurl.dylib</tt> installed for Git), <a href="https://www.gnupg.org/">GnuPG</a>&#x2019;s
+<tt>gpg</tt> utility and library headers (so that a new version of Git can be built from source using the
+libraries installed for Git) are included in the installer and enabled by default.</p>
+
+<p>Customize the installation to turn off any of the optional installs.</p>
+
+<p>Details on what gets installed and where everything goes can be found in the release notes (installed to <tt>/opt/git/Release_Notes.rtf</tt>).</p>
+
+<h2 id="patches">Patch Sources</h2>
 
 <p>Various patches have been applied in order to make the build work well with Mac OS X.  They are all available
 from the <a href="https://github.com/mackyle/git-osx-installer">Git OS X Installer repository</a> and the
@@ -233,7 +262,7 @@ runnable on Mac OS X 10.4 or later are available from the following convenient d
 
 </dl>
 
-<h2>License</h2>
+<h2 id="license">License</h2>
 
 <p>Git itself is licensed under GPLv2.  Some of the libraries it has been linked with have less restrictive licenses,
 but since GPLv2 is the most restrictive of the bunch it&#x2019;s the controlling one.  GnuPG is licensed under
@@ -243,7 +272,7 @@ effective GnuPG license restrictions still GPLv3.</p>
 
 <p>The installer will display ALL licences for all software included in ihe installer package.</p>
 
-<h2>See Also</h2>
+<h2 id="seealso">See Also</h2>
 
 <ul class="last">
 <li><a href="http://git-scm.com/">The Git home page</a></li>

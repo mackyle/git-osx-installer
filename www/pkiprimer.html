@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<!--
+"PKI Primer" Page
+Copyright (C) 2015 Kyle J. McKay (mackyle a_t g_ma_il d_o_t _co_m)
+All rights reserved
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+ * The names of the copyright holders or contributors may not be used to
+   endorse or promote products derived from this software without specific
+   prior written permission.
+ 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!--
+<head>
+-->
+<head>
+  <meta charset='utf-8' />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <script type="text/javascript">var NREUMQ=[];NREUMQ.f=function(){}</script>
+
+  <title>PKI Primer</title>
+
+  <style type="text/css">
+    body {
+      margin-top: 1.0em;
+      background-color: #f0efe7;
+      font-family: Times, "Times New Roman", serif;
+      color: black;
+    }
+    #container {
+      margin: 0 auto;
+      max-width: 90ex;
+      position: relative;
+    }
+    @media screen {
+      .last { margin-bottom: -1em;}
+      .aftermargin {
+        position: absolute;
+        height: 100%;
+        width: 1px;
+      }
+    }
+    h1 { font-size: 2em; color: black; margin-bottom: 0.1em; }
+    h1 .small { font-size: 0.4em; }
+    h1 a { text-decoration: none; }
+    h2 { font-size: 1.5em; color: black; }
+    h3 { /* text-align: center;*/ color: black; }
+    h1, h2, h3, th { font-family: Helvetica, Arial, FreeSans, sans-serif; font-weight: normal; }
+    a { color: black; }
+    .description { font-size: 1.2em; margin-bottom: 1em; margin-top: 1em; font-style: italic; margin-left: 3em; }
+    .download { float: right; }
+    tt, .nowrap { white-space: nowrap; font-size: 90%; }
+    pre, ttx { font-family: Menlo, Monaco, Consolas, Courier, "Courier New", monospace;}
+    pre { font-size: 90%; padding: 0.5em 1ex; border: thin dotted silver; }
+    hr { border: 0; width: 80%; border-bottom: thin solid silver; }
+    p { text-align: justify; }
+    p.left { text-align: left; }
+    .inset { margin-left: 1ex; margin-right: 1ex; }
+    .footer { text-align:center; padding-top:2em; font-style: italic; }
+    ul.ulnone { list-style-type: none; }
+    li { margin-top: 0; margin-bottom: 0; }
+    .indent { display: block; margin-left: 5ex; margin-right: 5ex; text-align: left; }
+    .spacer05 { display: inline-block; height: 1em; width: 0.5ex; }
+    .spacer25 { display: inline-block; height: 1em; width: 2.5ex; }
+
+    .nobreak { white-space: nowrap; }
+    .hash td { font-size: 80%; line-height: 1.0; font-family: monospace; }
+    .hash tr > td:first-child { text-align: right; }
+    .hash tr > td:first-child:after { content: ':'; }
+
+    table.download-list {
+      border-collapse: separate;
+      border-spacing: 1.25ex 0;
+      width: 100%;
+      margin-bottom: 0.5em;
+    }
+
+    table.download-list > * > tr > td:first-child,
+    table.download-list > * > tr > td:first-child + td,
+    table.download-list > * > tr > td:first-child + td + td,
+    table.download-list > * > tr > td:first-child + td + td + td {
+      white-space: nowrap;
+    }
+
+    tr.header th {
+      text-align: left;
+      border-bottom: thin solid black;
+    }
+    tr.separator {
+      height: 0.25em;
+    }
+
+    #credit {
+      margin-top: 1.75em;
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+    #credit span {
+      color: gray;
+      font-size: 60%;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="container">
+
+<h1 id="primer">Public Key Infrastructure (PKI) Primer</h1>
+
+<div class="description">
+<p>What is the Public Key Infrastructure (PKI) and why should you care?</p>
+</div>
+
+<h2 id="summary">Summary</h2>
+
+<p>When connecting securely to your favorite website through whatever means (e.g. browser, mobile, command line client, etc.), a secure connection to transfer data back and forth must be established before anything else can take place (e.g. ordering the latest gadget).</p>
+
+<p>When initially establishing the connection, X.509 certificates (containing public keys and other identifying information) which are signed by private keys are exchanged.  This information allows the client (e.g. browser, mobile, etc.) to decide whether to trust (or not) that the newly established connection really connects to the intended server.  The server may, optionally, then require the client to provide its own set of certificates (and signatures) to prove its identity to the server.</p>
+
+<p>Using a notary public analogy, the information exchanged during initial connection establishment is described.</p>
+
+<h2 id="analogy">Notary Public Analogy</h2>
+
+<p>Consider a legal transaction that requires signed and notarized forms.  You might fill out a form and sign it in the presence of a notary which then stamps and signs to verify that's really your signature at which point the form with your signature and the notary's stamp and signature can be sent on to a third party for action.</p>
+
+<p>The third party can then do a quick check to make sure the notary's stamp and signature is recognized and trusted and in that case trust that your signature on the form is really yours and not a forgery.</p>
+
+<h4 id="imperfect">Imperfect Analogy</h4>
+
+<p>This analogy does not perfectly match the PKI (Public Key Infrastructure), but it's a helpful way to think of it.  The "forms" correspond to X.509 certificates where the information filled out on them will either be a server's name (more precisely its domain name) or a client's identity.  The notary stamp and signature correspond to an intermediate X.509 certificate.</p>
+
+<p>There can be more than one intermediate certificate.  Imagine that once a notary stamped and signed your document, the notary had to take it back to the notary's office to be further stamped and signed by the notary's supervisor before it could be sent on to the third party.  That supervisory stamp and signature would correspond to an additional intermediate certificate.  This can be further extended by adding a supervisor for the supervisor (and so on).  In the world of PKI, the number of intermediate certificates may vary.</p>
+
+<h4 id="chain">Chain of Trust</h4>
+
+<p>Finally the "forms" arrive at the third party for verification and processing (e.g. a loan application arrives at a potential lender).  Before doing anything with the form, the lender should verify that the notary's signature is valid.  In the case where there's a notary supervisor, only the supervisor's signature need be verified.</p>
+
+<p>There's an implicit trust that the notary (or notary supervisor) would not affix a seal and signature without first following proper procedure and fully verifying the authenticity and identity of the entity which the notary's seal substantiates.  This creates a chain of trust from the original "form" (referred to in PKI as a "leaf certificate") on up through one or more "notaries" (referred to in PKI as "intermediate certificates").</p>
+
+<h4 id="verification">Verification</h4>
+
+<p>Now what about that final step, verifying the final notary's signature?  Where does the list of "trusted" final notaries come from?  In the case of the "form" and its "notary" stamp and signature, the final authority is typically a government register of currently active notaries.  So in the case of the "form" analogy, the government registry is the final authority.  In PKI, this final authority roughly corresponds to a "root certificate".  In the world of PKI, however, there can be more than one final authority.</p>
+
+<h2 id="computerized">Computerized World</h2>
+
+<p>When it comes to computers and PKI, the operating system for a personal computer, mobile device or what have you comes pre-loaded with a set of trusted "root certificates" also known as "certificate authorities".  Future secure operating system updates will then keep the list up to date by adding new ones and removing outdated ones.</p>
+
+<h4 id="whoserver">Who&#x2019;s That Server?</h4>
+
+<p>Consider a connection to an online bank.  The client (in this case a personal computer) wants to connect securely to the server (in this case an online back) to perform a financial transaction.  First the client makes a secure connection to "bank.example.com".  Upon initial connection, "bank.example.com" immediately sends its credentials proving it's really "bank.example.com".  These "credentials" consist of the server's leaf certificate (the "form" with "bank.example.com" filled out on it) and any intermediate certificates (the "notary" stamp and signature) leading up to a "root certificate" authority (the government register).</p>
+
+<p>Often servers do not include the final certificate &#x2013; the standard allows the final root certificate to be omitted (but <em>ONLY</em> the final root certificate) presuming that the client must have a list of pre-trusted root certificates anyway and the root certificate presented by the server must be one of them or the client won't trust the server, so what's the point in sending something the client already has?</p>
+
+<p>Now the client checks to make sure the signatures on all the certificates presented by the server are valid and that the final root certificate (provided by the server or guessed by the client) is one which the client has been pre-configured to trust.  If any of this verification fails, the client aborts the connection.  If all the signatures check out okay, some clients may then perform further checking by looking for certain additional information in the certificates (e.g. an application developer's identity) and then deciding to drop the connection if the additional information is missing or unsatisfactory.</p>
+
+<h4 id="whoclient">Who&#x2019;s That Client?</h4>
+
+<p>The client can now proceed reasonably confident that it's really connected to "bank.example.com".  However, the server, "bank.example.com", doesn't yet have any reason to trust the client.  In most cases, the server will require a name and password on a login form in a web browser to authenticate the client.</p>
+
+<p>However, the server may require the client to present its own "client leaf certificate" (a "form" that contains all kinds of identifying information about the client) together with any needed intermediate certificates ("notary" signature(s) for the client's "form") immediately after the server has sent its credentials to the client.  If the server doesn't like the client credentials presented, it will then abort the connection.  These client certificate credentials are less widely used.</p>
+
+<h2 id="private">Private Parts</h2>
+
+<p>The entire Public Key Infrastructure (PKI) is based on the concept of public key cryptography.  This is the idea that certain mathematical operations are relatively easy to perform whereas their inverse is not.  For example, multiplying two very large prime numbers together is not difficult &#x2013; it make take some time but it can be done.  On the other hand, factoring that very large result to recover the primes could be extremely difficult without knowing one of the primes in advance.  More about this can be found in the <a href="https://wikipedia.org/wiki/Public_key_cryptography">wikipedia article</a>.</p>
+
+<p>The bottom line is that the "key"s used in public cryptography can be split into a public part and a private part.  The "public" part may be shared with the whole world, but nobody else should ever get a hold of your "private" part.</p>
+
+<p>Your "private" key can be used to sign a certificate (or other data) and the rest of the world, using your "public" key, can verify that indeed that certificate (or other data) was signed with the "private" key that matches the "public" key.  All the while your "private" key remains private preventing anyone else from signing anything with it.</p>
+
+<h2 id="certifiable">Certifiable</h2>
+
+<p>Certificate chains work using public and private keys.  A "key" is created for each certificate and the "public" part is embedded into the certificate.  When a certificate is signed (by the intermediate "notary" certificate's private key), that signature is also embedded into the certificate.  It is these signatures that are used to verify the certificate chain.</p>
+
+<p>When a server sends its certificate credentials to a client, the server also signs a small bit of random data from the client with the server's private key that corresponds to the public key embedded in the server leaf certificate it sent the client.</p>
+
+<p>Similarly, if the client sends client certificate credentials to the server, the client also signs a small bit of random data from the server using the client's private key that corresponds to the public key embedded in the client leaf certificate it sent the server.</p>
+
+<p>In this way the client can be certain it's talking to the entity that possesses the server's private key and, if client certifcates are in use, the server can be certain it's talking to the entity that possesses the client's private key.</p>
+
+<h2 id="trust">Broken Trust</h2>
+
+<p>There are two places this chain of trust can break down.  A certificate's private key can be compromised (either stolen or broken cryptographically) allowing use of that certificate by someone other than whom the information in the certificate identifies.  Or a certificate signer can compromised (unauthorized access to certificate signing system, failure to properly validate credentials before signing a certificate, mistakenly accepting fraudulent credentials or compromised cryptographically) allowing credentials to be issued to entities that are not who they say they are.</p>
+
+<p>If the cryptography was not broken, a breakdown in the first place (unauthorized access to the leaf certificate's private key) is the responsibility of the entity to whom the leaf certificate was issued.  Whereas a breakdown in the second place (excluding cryptographic breakage) is the responsibility of the commercial certificate authority that sold the leaf certificate.</p>
+
+<p>In any case, the end result is the same.  Even though the chain of trust appears unbroken, all signatures verify properly and the root certificate is trusted, the client (or server) may be talking to someone other than who is identified by the leaf certificate.</p>
+
+<h2 id="money">Follow The Money</h2>
+
+<p>So how does an enterprising individual who wants to sell a new wonderful widget on a new exciting website get a certificate so that clients (i.e. suckers with money) can connect securely (i.e. browser doesn't complain) and buy it?</p>
+
+<p>The entrepreneur buys a brand spankin' new web server certificate.  This is big business.  The sellers of these web server (and other kinds of) certificates have managed to get their root certificate(s) included in the "pre-included and implicitly trusted" set of certificates that come with the operating system and/or browser.</p>
+
+<p>These certificate sellers (also known as "certificate authorities") charge a fee to issue a certificate.  If you want a certificate that lasts for more than a year, you pay more.  If you want multiple alternate names in your certificate, you pay more.  If you want a certificate that lets you issue your own certificates, you pay a LOT more.  If you want a certificate that makes the browser show a special badge, you pay a LOT more.</p>
+
+<p>It's all about the money.  Yes, there are a very few certificate authorities that provide free, basic certificates.  But that's more about driving business to them.  There is a free certificate authority that's been around since 2003.  But somehow it never quite manages to get its root certificate included in browsers or operating systems &#x2013; that would jeopardize the money stream to the commercial certificate authorities if you could just go get yourself free certificates.</p>
+
+<h2 id="formats">Formats Galore</h2>
+
+<p>The standards stipulate the format of certificates and keys using another standard known as "Distinguished Encoding Rules" or "DER" for short.  It is a binary (i.e. machine readable, not human readable) format.  Certificates stored in this format typically have a "<tt>.cer</tt>" or "<tt>.crt</tt>" extension.  A file containing a certificate or key or whatever in DER format will only have the one thing in the file.</p>
+
+<p>A long time ago, in a standard far, far forgotten (almost) a mechanism was created to turn binary data into ASCII data so it could be transmitted in ASCII-only email.  Basically you just encode the binary blob into Base64, wrap it into lines of 64 characters (except for the last, possibly shorter line) and slap on a leader and trailer line that identifies what the blob is.  Because the standard that invented this format was for privacy enhanced mail, the format has become known as "PEM" format.  Files in this format often have a "<tt>.pem</tt>" extension.</p>
+
+<p>Besides being plain ASCII, the PEM format provides another benefit.  Because the leader and trailer lines clearly identify what each blob is and where it starts and ends, more than one PEM formatted blob may be combined into a single file simply by concatenating them together.  This format is sometimes referred to as "PEMSEQ" (for PEM files concatenated together in SEQuence).</p>
+
+<p>There are, however, many other formats.  Some of them allow private keys to be encrypted with a password (PEM format private keys can also sometimes be encrypted by inserting a few extra lines after the leader) and some allow more than one thing to be included.  One format of note is PKCS #12 which allows both certificates and private keys to be included and for the data to be encrypted and protected with a password.  These files often have a "<tt>.p12</tt>" extension.  Many different systems understand the PCKS #12 format for data import and export purposes.</p>
+
+<h2 id="standards">PKI Related Standards</h2>
+
+<ul>
+
+<li><a href="http://tools.ietf.org/html/rfc5280">RFC 5280</a> - X.509 PKI Certificates<br />
+Describes in detail the format of an X.509 certificate.</li>
+
+<li><a href="http://tools.ietf.org/html/rfc7468">RFC 7468</a> - Textual Encodings of Certificate and Keys<br />
+Describes the "PEM" textual format of X.509 certificates and public/private keys.</li>
+
+<li><a href="http://tools.ietf.org/html/rfc3447">RFC 3447</a> - Public-Key RSA Cryptography<br />
+All about RSA public and private keys.</li>
+
+<li><a href="http://www.itu.int/ITU-T/studygroups/com17/languages/X.680-0207.pdf">X.680</a> ITU-T Recommendation<br />
+All about Abstract Syntax Notation One (ASN.1).</li>
+
+<li><a href="http://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf">X.690</a> ITU-T Recommendation<br />
+ITU-T Recommendation X.690 (2002) | ISO/IEC 8825-1:2002, ASN.1 encoding rules: Basic Encoding Rules (BER), Canonical Encoding Rules (CER) and Distinguished Encoding Rules (DER).</li>
+
+<li><a href="http://tools.ietf.org/html/rfc5246">RFC 5246</a> - Transport Layer Security (TLS) 1.2<br />
+Describes how to create a secure connection between a client and server.  Older versions of this standard were known as SSL (Secure Sockets Layer).</li>
+
+<li><a href="http://tools.ietf.org/html/rfc4648">RFC 4648</a> - The Base64 Encoding<br />
+How to convert your binary data to ASCII and back again.</li>
+
+<li><a href="http://tools.ietf.org/html/rfc7292">RFC 7292</a> - The PKCS #12 Format<br />
+All the gory details of the PKCS #12 file format.</li>
+
+<li><a href="http://www.openssl.org/docs/manmaster/crypto/pem.html#PEM-ENCRYPTION-FORMAT">RSA Private Key PEM format</a><br />
+A common PEM format used to transfer RSA private keys in a way that allows them to be encrypted.</li>
+
+</ul>
+
+<h2 id="references">Other References</h2>
+
+<ul>
+
+<li>The <a href="https://wikipedia.org/wiki/Public_key_infrastructure">wikipedia article</a> on PKI (Public Key Infrastructure).</li>
+
+<li>The <a href="https://www.mozilla.org/en-US/about/governance/policies/security-group/certs/policy/inclusion/">policy</a> for root certificate inclusion by Mozilla.</li>
+
+<li><a href="http://www.cacert.org/">CAcert</a>, the free, but its root is not pre-included in your browser, certificate authority.</li>
+
+</ul>
+
+</div>
+
+<div id="credit" class="last"><span>Copyright &#169; 2015 Kyle J. McKay.  All rights reserved.  See comments in page source.</span></div>
+
+<span class="aftermargin"></span></body>
+<!--
+</body>
+-->
+</html>

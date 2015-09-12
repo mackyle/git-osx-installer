@@ -182,7 +182,7 @@
 with the native OS X experience, this version of Git uses libcurl for all http/https/imap/imaps/smtp/smtps activity
 where libcurl has been compiled to use the OS X native Secure Transport instead of OpenSSL.  (This means that Git will use
 the standard root certificates from the normal system keychain locations for https/smtps/imaps authentication unless one
-of the various Git certificate configuration options is used to tell it otherwise.)</p>
+of the various Git certificate configuration options is used to tell it otherwise.)  Please note that even though libcurl is using the OS X native Secure Transport backend, the Secure Transport backend has been enhanced so that it <em>does not</em> suffer from the <a href="iscurlsick.html#problem">client certificate indigestion problem</a>.</p>
 
 <p>In practice there should be no difference in use between Git built this way and Git built to use curl/OpenSSL with one
 minor exception.</p>
@@ -270,7 +270,7 @@ GPLv3 but is an optional install (aggregated into the installer) and does not af
 GnuPG is linked with libusb and libusb-compat to provide smart card support and those are LGPLv2.1 making the
 effective GnuPG license restrictions still GPLv3.</p>
 
-<p>The installer will display ALL licences for all software included in ihe installer package.</p>
+<p>The installer will display ALL licences for all software included in the installer package.</p>
 
 <h2 id="seealso">See Also</h2>
 

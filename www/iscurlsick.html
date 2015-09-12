@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<!--
+"Is Your cURL Sick?" Page
+Copyright (C) 2015 Kyle J. McKay (mackyle a_t g_ma_il d_o_t _co_m)
+All rights reserved
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+ * The names of the copyright holders or contributors may not be used to
+   endorse or promote products derived from this software without specific
+   prior written permission.
+ 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!--
+<head>
+-->
+<head>
+  <meta charset='utf-8' />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <script type="text/javascript">var NREUMQ=[];NREUMQ.f=function(){}</script>
+
+  <title>Is Your cURL Sick?</title>
+
+  <style type="text/css">
+    body {
+      margin-top: 1.0em;
+      background-color: #f0efe7;
+      font-family: Times, "Times New Roman", serif;
+      color: black;
+    }
+    #container {
+      margin: 0 auto;
+      max-width: 90ex;
+      position: relative;
+    }
+    @media screen {
+      .last { margin-bottom: -1em;}
+      .aftermargin {
+        position: absolute;
+        height: 100%;
+        width: 1px;
+      }
+    }
+    h1 { font-size: 2em; color: black; margin-bottom: 0.1em; }
+    h1 .small { font-size: 0.4em; }
+    h1 a { text-decoration: none; }
+    h2 { font-size: 1.5em; color: black; }
+    h3 { /* text-align: center;*/ color: black; }
+    h1, h2, h3, th { font-family: Helvetica, Arial, FreeSans, sans-serif; font-weight: normal; }
+    a { color: black; }
+    .description { font-size: 1.2em; margin-bottom: 1em; margin-top: 1em; font-style: italic; margin-left: 3em; }
+    .download { float: right; }
+    tt, .nowrap { white-space: nowrap; font-size: 90%; }
+    .breakword { word-wrap: break-word; }
+    pre.breakword { white-space: pre-wrap; }
+    pre, ttx { font-family: Menlo, Monaco, Consolas, Courier, "Courier New", monospace;}
+    pre { font-size: 85%; padding: 0.5em 1ex; border: thin dotted silver; }
+    hr { border: 0; width: 80%; border-bottom: thin solid silver; }
+    p { text-align: justify; }
+    p.left { text-align: left; }
+    .inset { margin-left: 1ex; margin-right: 1ex; }
+    .footer { text-align:center; padding-top:2em; font-style: italic; }
+    ul.ulnone { list-style-type: none; }
+    li { margin-top: 0; margin-bottom: 0; }
+    .indent { display: block; margin-left: 5ex; margin-right: 5ex; text-align: left; }
+    .spacer05 { display: inline-block; height: 1em; width: 0.5ex; }
+    .spacer25 { display: inline-block; height: 1em; width: 2.5ex; }
+
+    .nobreak { white-space: nowrap; }
+    .hash td { font-size: 80%; line-height: 1.0; font-family: monospace; }
+    .hash tr > td:first-child { text-align: right; }
+    .hash tr > td:first-child:after { content: ':'; }
+
+    table.download-list {
+      border-collapse: separate;
+      border-spacing: 1.25ex 0;
+      width: 100%;
+      margin-bottom: 0.5em;
+    }
+
+    table.download-list > * > tr > td:first-child,
+    table.download-list > * > tr > td:first-child + td,
+    table.download-list > * > tr > td:first-child + td + td,
+    table.download-list > * > tr > td:first-child + td + td + td {
+      white-space: nowrap;
+    }
+
+    tr.header th {
+      text-align: left;
+      border-bottom: thin solid black;
+    }
+    tr.separator {
+      height: 0.25em;
+    }
+
+    #credit {
+      margin-top: 1.75em;
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+    #credit span {
+      color: gray;
+      font-size: 60%;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="container">
+
+<h1>Is Your cURL Sick?</h1>
+
+<div class="description">
+<p>How well does it digest standards-format certificates &amp; keys?</p>
+</div>
+
+<h2 id="summary">Summary</h2>
+
+<p><a href="http://curl.haxx.se/">cURL</a> (typically via its library,
+<a href="http://curl.haxx.se/libcurl/">libcurl</a>) provides connection, verification and data transport services to many different pieces of software including <a href="http://git-scm.com/">Git</a>.</p>
+
+<p>As part of the connection and verification step when creating a secure connection, certificates, certificate chains and certificate signatures may need to be verified.  Most versions of cURL include suitable defaults that allow secure connections to many servers to be verified without any special additional configuration.  But what happens if you need to supplement the defaults?</p>
+
+<p>This page discusses how easily (or not) cURL (and libcurl)&#x2019;s default configuration can be supplemented with additional certificates and, when necessary, the corresponding certificate keys.</p>
+
+<h2 id="quick">PKI Primer</h2>
+
+<p>If you already understand how the Public Key Infrastructure (PKI) works, proceed to the next section.  Otherwise you may find <a href="pkiprimer.html">this companion document</a> to be a helpful read.</p>
+
+<h2 id="backend">cURL&#x2019;s Backend</h2>
+
+<p>To perform the actual cryptographic operations needed for secure connections, cURL relies on a cryptographic library.  cURL may be built to use one of several cryptographic libraries, but once cURL has been built, the cryptographic library selection is "baked in" and may not be changed.</p>
+
+<p>To see which cryptographic backend cURL was built to use, run this command:</p>
+<pre>curl --version | sed -ne 1p | awk '{print $5}'</pre>
+
+<p>cURL backends differ in their support for user-supplied certificates and keys.</p>
+
+<h2 id="operation">Typical Operation and Defaults</h2>
+
+<p>When curl connects securely to a server, the server sends its credentials and curl verifies them against its pre-configured set of root certificates and aborts the connection if verification fails.  By default curl never sends any client certificate credentials.</p>
+
+<p>These defaults can be changed.  Curl can be told to ignore the server's credentials and connect no matter what, to use a different set of root certificates and/or to send client certificate credentials.</p>
+
+<p>Client certificate credentials are not widely used but if required by the server and a satisfactory set of client certificate credentials are not sent, the connection will be dropped immediately by the server.</p>
+
+<h2 id="roots">Planting New Roots</h2>
+
+<p>cURL generally supports user-selected root certificates.  No matter what backend is in use, they all support designating a single root certificate in standard DER or PEM format as well as multiple root certificates in concatenated PEM (PEMSEQ) format.</p>
+
+<p>Some backends support specifying multiple root certificates in a special directory format that depends on which backend is in use.</p>
+
+<h2 id="yanking">Yanking Your Chain</h2>
+
+<p>The X.509 PKIX Certificate standard (<a href="http://tools.ietf.org/html/rfc5280">RFC 5280</a>) requires a certificate chain to consist of at least two certificates &#x2013; a leaf certificate and a root certificate &#x2013; in order to be valid.</p>
+
+<p>The Transport Layer Security (TLS) 1.2 standard (<a href="http://tools.ietf.org/html/rfc5246">RFC 5246</a> formerly known as the Secure Sockets Layer (SSL) standard) requires the server to send the entire server certificate chain (leaf through root) to the client and, if the client is providing a client certificate, the client must send the entire client certificate chain to the server.  There is, however, an exception.  The root certificate (of either chain) may be omitted (presumably the receiver already has it in its list of trusted roots, but it will have to search for it when omitted).</p>
+
+<p>It&#x2019;s unlikely in the extreme that any commercially purchased leaf certificate would have a full certificate chain consisting of only two certificates (the leaf and root).  While client leaf certificates need not be commercially purchased, good security practices will make it similarly unlikely that such a client leaf certificate has a full certificate chain consisting of only two certificates.</p>
+
+<h2 id="client">Certifiable Clients</h2>
+
+<p>cURL allows the client certificate(s) to be configured.  However, some cURL backends only support setting a single client certificate (the leaf).</p>
+
+<p>Even if the root certificate of the client certificate chain is omitted (as permitted by the standard), many client certificate chains will still have at least two client certificates left (the leaf and one (or more) intermediate certificates).</p>
+
+<p>Attempting to make a secure connection to a server that requires such a client certificate chain using cURL built with a backend that only supports a single client certificate will <em>always</em> fail.</p>
+
+<h2 id="problem">Problem Backends</h2>
+
+<p>A cURL backend may have two different kinds of problems with client certificates:</p>
+<ol>
+<li>Client certificates and/or keys are not supported in the PEM or DER standard formats.</li>
+<li>Only the client leaf certificate may be specified, not the rest of the chain as required by the standard.</li>
+</ol>
+
+<p>While the first problem can be worked around (assuming one can figure out how to munge the PEM/DER standards-format certificate(s) and key data into whatever format the backend expects), the second problem cannot and is a fatal flaw.</p>
+
+<p>While it&#x2019;s relatively easy to test for standard formats support, checking for full client certificate chain support requires access to a suitably configured server.</p>
+
+<p>It turns out, however, that when the first problem is present, the second is also likely present.  So testing for the first problem will provide a good indication of whether or not the second is present.</p>
+
+<p>In order to provide multiple certificates for the client chain, the "PEM" format is required as the "DER" format can only provide a single certificate (or key).</p>
+
+<h4 id="curltest">cURL PEM Client Certificate Support Test</h4>
+
+<p>The following can be used to check your cURL to see what happens when you feed it PEM format client certificates:</p>
+
+<pre>
+touch /tmp/mt
+nc -l localhost 2443&amp;
+curl -sv --cert-type PEM --cert /tmp/mt --key /tmp/mt https://localhost:2443/
+</pre>
+
+<p id="results">If your cURL spews messages similar to these:</p>
+
+<pre id="fail" class="breakword">
+* WARNING: SSL: CURLOPT_SSLKEY is ignored by Secure Transport. The private key must be in the Keychain.
+* WARNING: SSL: The Security framework only supports loading identities that are in PKCS#12 format.
+</pre>
+
+<p>Then your cURL got sick and rejected the good PEM food.</p>
+
+<p>Users of OS X 10.9 (Mavericks) and later (including 10.10 etc.) please note that the system&#x2019;s cURL library (installed as <tt>/usr/lib/libcurl.4.dylib</tt>) is known to suffer from this malady.  A version of cURL that does not have this problem on OS X 10.9 (and later) can be downloaded and installed as part of the <a href="http://mackyle.github.io/git-osx-installer/">Git OS X Installer</a>.</p>
+
+<p>On the other hand, if you see messages like these:</p>
+
+<pre id="success">
+* Connected to localhost (::1) port 2443 (#0)
+* unable to use client certificate (no key found or wrong pass phrase?)
+</pre>
+
+<p>Or even like these:</p>
+
+<pre>
+* Connected to localhost (127.0.0.1) port 2443 (#0)
+* unable to load certificate data file '/tmp/mt'
+</pre>
+
+<p>Then your cURL is perfectly happy on a diet of PEM client certificates.</p>
+
+<h4 id="gittest">Git Tested Too</h4>
+
+<p>Git uses the cURL library for secure connections.  If you wish to determine whether or
+not Git can properly consume PEM format client certificates, the actual cURL library that
+Git&#x2019;s been linked with must be tested.  Testing the cURL library that&#x2019;s
+linked to the cURL command line client may give different results as that may, in fact,
+not be the same version of the cURL library that Git is linked to.</p>
+
+<p>The following can be used to check the cURL library your Git client is linked with to see what happens when you feed it PEM format client certificates:</p>
+
+<pre>
+touch /tmp/mt
+nc -l localhost 2443&amp;
+GIT_SSL_CERT=/tmp/mt GIT_SSL_KEY=/tmp/mt GIT_CURL_VERBOSE=1 \
+  git ls-remote https://localhost:2443/
+</pre>
+
+<p class="last">The same <a href="#results">results shown above</a> apply to this test as well.  If your Git suffers from PEM client certificate indigestion and you are using OS X (any version of Git that links to the system&#x2019;s cURL library on OS X 10.9 or later will have this problem), a version of Git that does not suffer from this malady can be downloaded and installed using the <a href="http://mackyle.github.io/git-osx-installer/">Git OS X Installer</a>.</p>
+
+</div>
+
+<span class="aftermargin"></span></body>
+<!--
+</body>
+-->
+</html>

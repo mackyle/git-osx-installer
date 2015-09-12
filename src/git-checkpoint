@@ -17,7 +17,35 @@ fi
 # If run as "git checkpoint" then GIT_DIR would already be set,
 # but just in case we're run directly, set it.
 [ -n "$GIT_DIR" ] || GIT_DIR="$(git rev-parse --git-dir)" || exit 1
-id="$(git stash create "$@")" || exit 1
+symref=
+if ! git cat-file -e HEAD >/dev/null 2>&1; then
+	symref="$(git symbolic-ref HEAD 2>/dev/null || :)"
+	msg=
+	case "$symref" in
+		"refs/heads/"*)
+			msg="On branch ${symref#refs/heads/}: Initial commit"
+			;;
+		"refs/tags/"*)
+			msg="On tag ${symref#refs/tags/}: Initial commit"
+			;;
+		"refs/"*)
+			msg="On ref ${symref#refs/}: Initial commit"
+			;;
+		*)
+			symref=
+			;;
+	esac
+	if [ -n "$symref" ]; then
+		# Make a new unborn commit to stash on top of
+		mtree="$(: | git hash-object -t tree -w --stdin)"
+		mcommit="$(git commit-tree -m "$msg" "$mtree")"
+		git update-ref --no-deref HEAD "$mcommit"
+	fi
+fi
+status=0
+id="$(git stash create "$@")" || status=$?
+[ -z "$symref" ] || git symbolic-ref HEAD "$symref"
+[ $status -eq 0 ] || exit 1
 [ -n "$id" ] || { echo "No local changes to save" >&2; exit 1; }
 mkdir -p "$GIT_DIR/logs/refs" && \
 >> "$GIT_DIR/logs/refs/stash" && \

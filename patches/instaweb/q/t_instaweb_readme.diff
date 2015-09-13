@@ -13,10 +13,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 42ebac04..b17d49f1 100755
+index f4f61f70..5edbe366 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -708,6 +708,12 @@ EOF
+@@ -719,6 +719,12 @@ EOF
  our \$mimetypes_file = "$etcdir/mime.types";
  EOF
  	fi

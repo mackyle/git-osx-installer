@@ -1,0 +1,31 @@
+Subject: [PATCH] git-instaweb: default to local bind
+
+Default to binding to the local host address if
+instaweb.local is not set.  There is no change in
+behavior if instaweb.local is already set.
+
+Defaulting to true (the old behavior) is much less
+secure.
+
+To restore the old default, set instaweb.local to
+false in the global config file.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ git-instaweb.sh | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 5edbe366..8d6b009f 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -25,6 +25,7 @@ SUBDIRECTORY_OK=Yes
+ 
+ fqgitdir="$GIT_DIR"
+ local="$(git config --bool --get instaweb.local)"
++: "${local:=true}"
+ httpd="$(git config --get instaweb.httpd)"
+ root="$(git config --get instaweb.gitwebdir)"
+ port=$(git config --get instaweb.port)
+---

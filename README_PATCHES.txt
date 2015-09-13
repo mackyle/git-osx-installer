@@ -98,6 +98,7 @@ Git Patches
   - `patches/instaweb/q/t_instaweb_ipv6.diff`
   - `patches/instaweb/q/t_instaweb_fcgi.diff`
   - `patches/instaweb/q/t_instaweb_readme.diff`
+  - `patches/instaweb/q/t_instaweb_default-to-local.diff`
 
   My own patches to improve the usability of git instaweb by making it run
   from within a git checkout that is not at the top-level of the working tree,
@@ -105,7 +106,9 @@ Git Patches
   of mime.types (since there isn't such a file in OS X), enable pathinfo mode,
   blame and better rename detection, add a 'graphiclog' link to the pages that
   uses git-browser to show a graphic representation of commit ancestry, to bind
-  to both IPv4 and IPv6 addresses and finally to enable readme blob display.
+  to both IPv4 and IPv6 addresses and browse to localhost instead of 127.0.0.1,
+  to enable readme blob display and finally to default to binding only to the
+  localhost address if `instaweb.local` has not been set at all.
   The ipv6 patch is only effective when using lighttpd as the web server (which
   is the default).  The fcgi patch enables FCGI mode if the FCGI perl module is
   present.  Have not been posted elsewhere.

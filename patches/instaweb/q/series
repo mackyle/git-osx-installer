@@ -6,3 +6,4 @@ t_instaweb_git-browser.diff -p1
 t_instaweb_ipv6.diff -p1
 t_instaweb_fcgi.diff -p1
 t_instaweb_readme.diff -p1
+t_instaweb_default-to-local.diff -p1

@@ -20,10 +20,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 66 insertions(+), 3 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 70e4d858..42ebac04 100755
+index 2c0c5223..f4f61f70 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
-@@ -201,6 +201,31 @@ GITWEB_CONFIG="$fqgitdir/gitweb/gitweb_config.perl"
+@@ -212,6 +212,31 @@ GITWEB_CONFIG="$fqgitdir/gitweb/gitweb_config.perl"
  GITBROWSER_CONFIG="$fqgitdir/gitweb/git-browser.conf"
  export GIT_EXEC_PATH GIT_DIR GITWEB_CONFIG GITBROWSER_CONFIG
  
@@ -55,7 +55,7 @@ index 70e4d858..42ebac04 100755
  webrick_conf () {
  	# webrick seems to have no way of passing arbitrary environment
  	# variables to the underlying CGI executable, so we wrap the
-@@ -252,14 +277,17 @@ EOF
+@@ -263,14 +288,17 @@ EOF
  }
  
  lighttpd_conf () {
@@ -74,7 +74,7 @@ index 70e4d858..42ebac04 100755
  server.indexfiles = ( "gitweb.cgi" )
  server.pid-file = "$fqgitdir/pid"
  server.errorlog = "$fqgitdir/gitweb/$httpd_only/error.log"
-@@ -269,9 +297,33 @@ server.force-lowercase-filenames = "disable"
+@@ -280,9 +308,33 @@ server.force-lowercase-filenames = "disable"
  # variable above and uncomment this
  #accesslog.filename = "$fqgitdir/gitweb/$httpd_only/access.log"
  
@@ -110,7 +110,7 @@ index 70e4d858..42ebac04 100755
  
  # mimetype mapping
  mimetype.assign             = (
-@@ -605,8 +657,19 @@ EOF
+@@ -616,8 +668,19 @@ EOF
  }
  
  gitweb_conf() {

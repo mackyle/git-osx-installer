@@ -52,7 +52,7 @@ index cd194d05..8aab6c99 100644
  GITWEB-BUILD-OPTIONS: FORCE
  	@rm -f $@+
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 29da752d..18e180e8 100755
+index 5244bb7d..748f580a 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -203,6 +203,10 @@ our @diff_opts = ('-M'); # taken from git_commit
@@ -66,7 +66,7 @@ index 29da752d..18e180e8 100755
  # Path to the highlight executable to use (must be the one from
  # http://www.andre-simon.de due to assumptions about parameters and output).
  # Useful if highlight is not installed on your webserver's PATH.
-@@ -4298,9 +4302,10 @@ sub run_highlighter {
+@@ -4330,9 +4334,10 @@ sub run_highlighter {
  	my ($fd, $syntax) = @_;
  	return $fd unless $fd && !eof($fd) && defined $highlight_bin && defined $syntax;
  
@@ -80,7 +80,7 @@ index 29da752d..18e180e8 100755
  		or die_error(500, "Couldn't open file or run syntax highlighter");
  	if (eof $hifd) {
  		# just in case, should not happen as we tested !eof($fd) above
-@@ -8009,12 +8014,13 @@ sub git_snapshot {
+@@ -8041,12 +8046,13 @@ sub git_snapshot {
  	my %co = parse_commit($hash);
  	exit_if_unmodified_since($co{'committer_epoch'}) if %co;
  
@@ -96,7 +96,7 @@ index 29da752d..18e180e8 100755
  	}
  
  	$filename =~ s/(["\\])/\\$1/g;
-@@ -8029,7 +8035,7 @@ sub git_snapshot {
+@@ -8061,7 +8067,7 @@ sub git_snapshot {
  		%co ? (-last_modified => $latest_date{'rfc2822'}) : (),
  		-status => '200 OK');
  

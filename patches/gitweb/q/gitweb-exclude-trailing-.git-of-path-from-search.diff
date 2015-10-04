@@ -12,10 +12,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 6 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f6bbd571..e8e6cfb8 100755
+index 4a28a114..b37c4900 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -3504,8 +3504,10 @@ sub search_projects_list {
+@@ -3537,8 +3537,10 @@ sub search_projects_list {
  		}
  
  		if ($search_re) {
@@ -27,7 +27,7 @@ index f6bbd571..e8e6cfb8 100755
  				$pr->{'descr_long'} =~ /$search_re/;
  		}
  
-@@ -6398,9 +6400,11 @@ sub git_project_list_rows {
+@@ -6431,9 +6433,11 @@ sub git_project_list_rows {
  			}
  			print "</td>\n";
  		}

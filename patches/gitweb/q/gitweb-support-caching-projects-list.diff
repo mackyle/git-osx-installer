@@ -108,7 +108,7 @@ index 841e7dad..2ed86bf3 100644
  Some optional features and policies
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 76815232..4c122c69 100755
+index 4e50ed69..dcd2317c 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -19,6 +19,7 @@ use File::Find qw();
@@ -146,7 +146,7 @@ index 76815232..4c122c69 100755
  # information about snapshot formats that gitweb is capable of serving
  our %known_snapshot_formats = (
  	# name => {
-@@ -1243,8 +1260,13 @@ sub handle_errors_html {
+@@ -1243,6 +1260,10 @@ sub handle_errors_html {
  }
  set_message(\&handle_errors_html);
  
@@ -156,11 +156,16 @@ index 76815232..4c122c69 100755
 +
  # dispatch
  sub dispatch {
-+	$shown_stale_message = 0;
  	if (!defined $action) {
- 		if (defined $hash) {
- 			$action = git_get_type($hash);
-@@ -3329,29 +3351,27 @@ sub git_get_last_activity {
+@@ -1354,6 +1375,7 @@ sub _reset_globals {
+ 	our $config_file = '';
+ 	our %config = ();
+ 	our $gitweb_project_owner = undef;
++	our $shown_stale_message = 0;
+ 	keys %known_snapshot_formats; # reset 'each' iterator
+ }
+ 
+@@ -3359,29 +3381,27 @@ sub git_get_last_activity {
  	if ($lastactivity_file && open($fd, "<", "$git_dir/$lastactivity_file")) {
  		my $activity = <$fd>;
  		close $fd;
@@ -197,7 +202,7 @@ index 76815232..4c122c69 100755
  }
  
  # Implementation note: when a single remote is wanted, we cannot use 'git
-@@ -5682,12 +5702,99 @@ sub project_info_needs_filling {
+@@ -5712,12 +5732,99 @@ sub project_info_needs_filling {
  	return;
  }
  
@@ -298,7 +303,7 @@ index 76815232..4c122c69 100755
  # that run unconditionally git command that requires repository, and
  # therefore do always check if project repository is invalid.
  #
-@@ -5700,6 +5807,66 @@ sub project_info_needs_filling {
+@@ -5730,6 +5837,66 @@ sub project_info_needs_filling {
  # NOTE: modifies $projlist, but does not remove entries from it
  sub fill_project_list_info {
  	my ($projlist, @wanted_keys) = @_;
@@ -365,7 +370,7 @@ index 76815232..4c122c69 100755
  	my @projects;
  	my $filter_set = sub { return @_; };
  	if (@wanted_keys) {
-@@ -5710,12 +5877,12 @@ sub fill_project_list_info {
+@@ -5740,12 +5907,12 @@ sub fill_project_list_info {
  	my $show_ctags = gitweb_check_feature('ctags');
   PROJECT:
  	foreach my $pr (@$projlist) {
@@ -380,7 +385,7 @@ index 76815232..4c122c69 100755
  		}
  		if (project_info_needs_filling($pr, $filter_set->('descr', 'descr_long'))) {
  			my $descr = git_get_project_description($pr->{'path'}) || "";
-@@ -5751,11 +5918,11 @@ sub sort_projects_list {
+@@ -5781,11 +5948,11 @@ sub sort_projects_list {
  		return sub { $a->{$key} cmp $b->{$key} };
  	}
  
@@ -394,7 +399,7 @@ index 76815232..4c122c69 100755
  				(defined $b->{$key} ? 1 : 0)
  		};
  	}
-@@ -5764,7 +5931,7 @@ sub sort_projects_list {
+@@ -5794,7 +5961,7 @@ sub sort_projects_list {
  		project => order_str('path'),
  		descr => order_str('descr_long'),
  		owner => order_str('owner'),
@@ -403,7 +408,7 @@ index 76815232..4c122c69 100755
  	);
  
  	my $ordering = $orderings{$order};
-@@ -5817,6 +5984,7 @@ sub git_project_list_rows {
+@@ -5847,6 +6014,7 @@ sub git_project_list_rows {
  	$from = 0 unless defined $from;
  	$to = $#$projlist if (!defined $to || $#$projlist < $to);
  
@@ -411,7 +416,7 @@ index 76815232..4c122c69 100755
  	my $alternate = 1;
  	for (my $i = $from; $i <= $to; $i++) {
  		my $pr = $projlist->[$i];
-@@ -5857,8 +6025,14 @@ sub git_project_list_rows {
+@@ -5887,8 +6055,14 @@ sub git_project_list_rows {
  		        print "<td><i>" . chop_and_escape_str($pr->{'owner'}, 15) . "</i></td>\n";
  		}
  		unless ($omit_age_column) {
@@ -428,7 +433,7 @@ index 76815232..4c122c69 100755
  		}
  		print"<td class=\"link\">" .
  		      $cgi->a({-href => href(project=>$pr->{'path'}, action=>"summary")}, "summary")   . " | " .
-@@ -5891,7 +6065,7 @@ sub git_project_list_body {
+@@ -5921,7 +6095,7 @@ sub git_project_list_body {
  		if ($tagfilter || $search_regexp);
  	# fill the rest
  	my @all_fields = ('descr', 'descr_long', 'ctags', 'category');

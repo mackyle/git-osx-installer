@@ -99,6 +99,8 @@ Git Patches
   - `patches/instaweb/q/t_instaweb_fcgi.diff`
   - `patches/instaweb/q/t_instaweb_readme.diff`
   - `patches/instaweb/q/t_instaweb_default-to-local.diff`
+  - `patches/instaweb/q/t_instaweb_no-kill-nothing.diff`
+  - `patches/instaweb/q/t_instaweb_auto-port.diff`
 
   My own patches to improve the usability of git instaweb by making it run
   from within a git checkout that is not at the top-level of the working tree,
@@ -107,11 +109,13 @@ Git Patches
   blame and better rename detection, add a 'graphiclog' link to the pages that
   uses git-browser to show a graphic representation of commit ancestry, to bind
   to both IPv4 and IPv6 addresses and browse to localhost instead of 127.0.0.1,
-  to enable readme blob display and finally to default to binding only to the
-  localhost address if `instaweb.local` has not been set at all.
-  The ipv6 patch is only effective when using lighttpd as the web server (which
-  is the default).  The fcgi patch enables FCGI mode if the FCGI perl module is
-  present.  Have not been posted elsewhere.
+  to enable readme blob display, to default to binding only to the localhost
+  address if `instaweb.local` has not been set at all, to avoid attempting to
+  kill using a process id of "" and finally to attempt to automatically select
+  an available port to listen on if one was not specified and the first chosen
+  port is not available.  The ipv6 patch is only effective when using lighttpd
+  as the web server (which is the default).  The fcgi patch enables FCGI mode
+  if the FCGI perl module is present.  Have not been posted elsewhere.
 
 * Add submodule support to gitweb:
 
@@ -178,6 +182,26 @@ Lighttpd Patches
 * Avoid spurious testing failures on darwin
 
   - `patches/lighttpd/q/t_darwin_no-test-shutdown.diff`
+
+* Avoid testing unsupported crypt md5 on darwin
+
+  - `patches/lighttpd/q/t_darwin_no-crypt-md5.diff`
+
+* Show the correct crypt status in -V output
+
+  - `patches/lighttpd/q/t_features_crypt.diff`
+
+* Properly zero sockaddr structures before use
+
+  - `patches/lighttpd/q/t_net_zero-sockaddr.diff`
+
+* Provide an idle timeout option
+
+  - `patches/lighttpd/q/t_server_idle-timeout.diff`
+
+* A couple of other lighttpd patches are included to
+  avoid having to maintain multiple patch series, but
+  their changes are not relevant to the Git OS X Installer.
 
 
 GnuPG Patches

@@ -10,10 +10,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index b629a989..e6685380 100755
+index 48f56639..f8e406cc 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -1768,7 +1768,7 @@ sub quot_cec {
+@@ -1797,7 +1797,7 @@ sub quot_cec {
  	);
  	my $chr = ( (exists $es{$cntrl})
  		    ? $es{$cntrl}

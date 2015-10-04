@@ -14,10 +14,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 50 insertions(+), 19 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 4d378c33..dcf82491 100755
+index 812ee989..48f56639 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -2213,13 +2213,13 @@ sub format_ref_marker {
+@@ -2245,13 +2245,13 @@ sub format_ref_marker {
  					hash=>$dest
  				)}, $name);
  
@@ -33,7 +33,7 @@ index 4d378c33..dcf82491 100755
  	} else {
  		return "";
  	}
-@@ -4595,17 +4595,19 @@ sub format_log_nav {
+@@ -4627,17 +4627,19 @@ sub format_log_nav {
  ## functions printing or outputting HTML: div
  
  sub git_print_header_div {
@@ -58,7 +58,7 @@ index 4d378c33..dcf82491 100755
  }
  
  sub format_repo_url {
-@@ -6202,8 +6204,8 @@ sub git_log_body {
+@@ -6235,8 +6237,8 @@ sub git_log_body {
  		my $ref = format_ref_marker($refs, $commit);
  		git_print_header_div('commit',
  		               "<span class=\"age\">$co{'age_string'}</span>" .
@@ -69,7 +69,7 @@ index 4d378c33..dcf82491 100755
  		print "<div class=\"title_text\">\n" .
  		      "<div class=\"log_link\">\n" .
  		      $cgi->a({-href => href(action=>"commit", hash=>$commit)}, "commit") .
-@@ -7595,11 +7597,11 @@ sub git_tree {
+@@ -7628,11 +7630,11 @@ sub git_tree {
  			or die_error(404, "Reading tree failed");
  	}
  
@@ -83,7 +83,7 @@ index 4d378c33..dcf82491 100755
  		my @views_nav = ();
  		if (defined $file_name) {
  			push @views_nav,
-@@ -7616,7 +7618,7 @@ sub git_tree {
+@@ -7649,7 +7651,7 @@ sub git_tree {
  		}
  		git_print_page_nav('tree','', $hash_base, undef, undef,
  		                   join(' | ', @views_nav));
@@ -92,7 +92,7 @@ index 4d378c33..dcf82491 100755
  	} else {
  		undef $hash_base;
  		print "<div class=\"page_nav\">\n";
-@@ -7960,9 +7962,9 @@ sub git_commit {
+@@ -7993,9 +7995,9 @@ sub git_commit {
  	                   $formats_nav);
  
  	if (defined $co{'parent'}) {
@@ -104,7 +104,7 @@ index 4d378c33..dcf82491 100755
  	}
  	print "<div class=\"title_text\">\n" .
  	      "<table class=\"object_header\">\n";
-@@ -8372,7 +8374,7 @@ sub git_commitdiff {
+@@ -8405,7 +8407,7 @@ sub git_commitdiff {
  
  		git_header_html(undef, $expires);
  		git_print_page_nav('commitdiff','', $hash,$co{'tree'},$hash, $formats_nav);

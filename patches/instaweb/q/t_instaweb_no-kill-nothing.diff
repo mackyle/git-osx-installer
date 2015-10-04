@@ -1,0 +1,36 @@
+Subject: [PATCH] git-instaweb: do not run kill without a pid
+
+If the server start up fails for some reason (such as port already
+in use) it may have created a pid file but left it empty.
+
+Treat an empty pid file the same way as no pid file.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ git-instaweb.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 8d6b009f..b4bbf3b4 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -106,7 +106,7 @@ resolve_full_httpd () {
+ }
+ 
+ start_httpd () {
+-	if test -f "$fqgitdir/pid"; then
++	if test -s "$fqgitdir/pid"; then
+ 		say "Instance already running. Restarting..."
+ 		stop_httpd
+ 	fi
+@@ -149,7 +149,7 @@ EOF
+ }
+ 
+ stop_httpd () {
+-	test -f "$fqgitdir/pid" && kill $(cat "$fqgitdir/pid")
++	test -s "$fqgitdir/pid" && kill $(cat "$fqgitdir/pid")
+ 	rm -f "$fqgitdir/pid"
+ }
+ 
+---

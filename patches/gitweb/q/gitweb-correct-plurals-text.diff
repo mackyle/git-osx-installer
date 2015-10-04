@@ -6,10 +6,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index dcf82491..937177c3 100755
+index cd5c8dcf..812ee989 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -6052,11 +6052,12 @@ sub git_project_list_rows {
+@@ -6082,11 +6082,12 @@ sub git_project_list_rows {
  			print "<td>";
  			if ($pr->{'forks'}) {
  				my $nforks = scalar @{$pr->{'forks'}};

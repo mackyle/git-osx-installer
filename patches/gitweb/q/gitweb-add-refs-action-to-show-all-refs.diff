@@ -13,7 +13,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 54 insertions(+), 7 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 0177ff45..0d5eb5e5 100755
+index c5a5fe61..71b1d97c 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -141,6 +141,10 @@ our $project_list_default_category = "";
@@ -27,7 +27,7 @@ index 0177ff45..0d5eb5e5 100755
  # show repository only if this file exists
  # (only effective if this variable evaluates to true)
  our $export_ok = "++GITWEB_EXPORT_OK++";
-@@ -864,6 +868,7 @@ our %actions = (
+@@ -860,6 +864,7 @@ our %actions = (
  	"log" => \&git_log,
  	"patch" => \&git_patch,
  	"patches" => \&git_patches,
@@ -35,7 +35,7 @@ index 0177ff45..0d5eb5e5 100755
  	"remotes" => \&git_remotes,
  	"rss" => \&git_rss,
  	"atom" => \&git_atom,
-@@ -3788,12 +3793,15 @@ sub git_get_heads_list {
+@@ -3779,12 +3784,15 @@ sub git_get_heads_list {
  sub git_get_tags_list {
  	my $limit = shift;
  	my @tagslist;
@@ -53,7 +53,7 @@ index 0177ff45..0d5eb5e5 100755
  		or return;
  	while (my $line = <$fd>) {
  		my %ref_item;
-@@ -3804,7 +3812,8 @@ sub git_get_tags_list {
+@@ -3795,7 +3803,8 @@ sub git_get_tags_list {
  		my ($creator, $epoch, $tz) =
  			($creatorinfo =~ /^(.*) ([0-9]+) (.*)$/);
  		$ref_item{'fullname'} = $name;
@@ -63,7 +63,7 @@ index 0177ff45..0d5eb5e5 100755
  
  		$ref_item{'type'} = $type;
  		$ref_item{'id'} = $id;
-@@ -4356,7 +4365,7 @@ sub git_print_page_nav {
+@@ -4347,7 +4356,7 @@ sub git_print_page_nav {
  	my ($current, $suppress, $head, $treehead, $treebase, $extra) = @_;
  	$extra = '' if !defined $extra; # pager or formats
  
@@ -72,7 +72,7 @@ index 0177ff45..0d5eb5e5 100755
  	if ($suppress) {
  		@navs = grep { $_ ne $suppress } @navs;
  	}
-@@ -6043,11 +6052,21 @@ sub git_history_body {
+@@ -6034,11 +6043,21 @@ sub git_history_body {
  
  sub git_tags_body {
  	# uses global variable $project
@@ -95,7 +95,7 @@ index 0177ff45..0d5eb5e5 100755
  	my $alternate = 1;
  	for (my $i = $from; $i <= $to; $i++) {
  		my $entry = $taglist->[$i];
-@@ -6057,6 +6076,7 @@ sub git_tags_body {
+@@ -6048,6 +6067,7 @@ sub git_tags_body {
  		if (defined $comment) {
  			$comment_short = chop_str($comment, 30, 5);
  		}
@@ -103,7 +103,7 @@ index 0177ff45..0d5eb5e5 100755
  		if ($alternate) {
  			print "<tr class=\"dark\">\n";
  		} else {
-@@ -6068,11 +6088,11 @@ sub git_tags_body {
+@@ -6059,11 +6079,11 @@ sub git_tags_body {
  		} else {
  			print "<td></td>\n";
  		}
@@ -117,7 +117,7 @@ index 0177ff45..0d5eb5e5 100755
  		if (defined $comment) {
  			print format_subject_html($comment, $comment_short,
  			                          href(action=>"tag", hash=>$tag{'id'}));
-@@ -6089,6 +6109,7 @@ sub git_tags_body {
+@@ -6080,6 +6100,7 @@ sub git_tags_body {
  		      $cgi->a({-href => href(action=>$tag{'reftype'}, hash=>$tag{'refid'})}, $tag{'reftype'});
  		if ($tag{'reftype'} eq "commit") {
  			print " | " . $cgi->a({-href => href(action=>"shortlog", hash=>$tag{'fullname'})}, "log");
@@ -125,7 +125,7 @@ index 0177ff45..0d5eb5e5 100755
  		} elsif ($tag{'reftype'} eq "blob") {
  			print " | " . $cgi->a({-href => href(action=>"blob_plain", hash=>$tag{'refid'})}, "raw");
  		}
-@@ -7005,6 +7026,24 @@ sub git_tags {
+@@ -6990,6 +7011,24 @@ sub git_tags {
  	git_footer_html();
  }
  
@@ -151,7 +151,7 @@ index 0177ff45..0d5eb5e5 100755
  	my $head = git_get_head_hash($project);
  	git_header_html();
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index cc2ada29..420c99fa 100644
+index 77e272e3..6528ce2a 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
 @@ -176,6 +176,14 @@ table.tags a.subject {

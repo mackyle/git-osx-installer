@@ -15,8 +15,8 @@ to not actually run in FCGI mode.  And someday pigs might fly.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  Documentation/gitweb.conf.txt |  5 +++
- gitweb/gitweb.perl            | 77 +++++++++++++++++++++++++++++--------------
- 2 files changed, 58 insertions(+), 24 deletions(-)
+ gitweb/gitweb.perl            | 79 ++++++++++++++++++++++++++++++-------------
+ 2 files changed, 60 insertions(+), 24 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
 index 2ed86bf3..1942a63e 100644
@@ -35,7 +35,7 @@ index 2ed86bf3..1942a63e 100644
  Other variables
  ~~~~~~~~~~~~~~~
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index d13e5d00..174a3a28 100755
+index d0868d23..fbeae474 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -452,7 +452,8 @@ our %feature = (
@@ -60,7 +60,7 @@ index d13e5d00..174a3a28 100755
  # read and parse gitweb config file given by its parameter.
  # returns true on success, false on recoverable error, allowing
  # to chain this subroutine, using first file that exists.
-@@ -1297,6 +1303,7 @@ sub reset_timer {
+@@ -1296,6 +1302,7 @@ sub reset_timer {
  }
  
  our $first_request = 1;
@@ -68,7 +68,7 @@ index d13e5d00..174a3a28 100755
  sub run_request {
  	reset_timer();
  
-@@ -1313,10 +1320,7 @@ EOT
+@@ -1312,10 +1319,7 @@ EOT
  	}
  
  	evaluate_uri();
@@ -80,7 +80,7 @@ index d13e5d00..174a3a28 100755
  	if ($per_request_config) {
  		if (ref($per_request_config) eq 'CODE') {
  			$per_request_config->();
-@@ -1343,10 +1347,24 @@ our $is_last_request = sub { 1 };
+@@ -1342,10 +1346,24 @@ our $is_last_request = sub { 1 };
  our ($pre_dispatch_hook, $post_dispatch_hook, $pre_listen_hook);
  our $CGI = 'CGI';
  our $cgi;
@@ -104,8 +104,8 @@ index d13e5d00..174a3a28 100755
 +	$first_request = 0;
  	my $request_number = 0;
  	# let each child service 100 requests
- 	our $is_last_request = sub { ++$request_number > 100 };
-@@ -1354,30 +1372,41 @@ sub configure_as_fcgi {
+ 	our $is_last_request = sub { ++$request_number >= 100 };
+@@ -1353,24 +1371,29 @@ sub configure_as_fcgi {
  sub evaluate_argv {
  	my $script_name = $ENV{'SCRIPT_NAME'} || $ENV{'SCRIPT_FILENAME'} || __FILE__;
  	configure_as_fcgi()
@@ -151,13 +151,19 @@ index d13e5d00..174a3a28 100755
 +	}
  }
  
+ # Any "our" variable that could possibly influence correct handling of
+@@ -1392,9 +1415,17 @@ sub _reset_globals {
+ }
+ 
  sub run {
 -	evaluate_argv();
 -
 +	evaluate_gitweb_config();
 +	evaluate_git_version();
-+	my ($mu, $hl, $subroutine) = ($my_uri, $home_link, '');
-+	$subroutine .= '$my_uri = $mu;' if defined $my_uri && $my_uri ne '';
++	my ($ml, $mi, $bu, $hl, $subroutine) = ($my_url, $my_uri, $base_url, $home_link, '');
++	$subroutine .= '$my_url = $ml;' if defined $my_url && $my_url ne '';
++	$subroutine .= '$my_uri = $mi;' if defined $my_uri; # this one can be ""
++	$subroutine .= '$base_url = $bu;' if defined $base_url && $base_url ne '';
 +	$subroutine .= '$home_link = $hl;' if defined $home_link && $home_link ne '';
 +	$evaluate_uri_force = eval "sub {$subroutine}" if $subroutine;
  	$first_request = 1;

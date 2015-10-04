@@ -6,10 +6,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 12 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index ef7f2a69..d13e5d00 100755
+index e39a4822..d0868d23 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -1300,6 +1300,18 @@ our $first_request = 1;
+@@ -1299,6 +1299,18 @@ our $first_request = 1;
  sub run_request {
  	reset_timer();
  

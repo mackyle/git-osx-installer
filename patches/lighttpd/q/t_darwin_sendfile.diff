@@ -14,7 +14,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/src/network_backends.h b/src/network_backends.h
-index 8233c488..3b98c3d9 100644
+index 8233c488..f7b8bc55 100644
 --- a/src/network_backends.h
 +++ b/src/network_backends.h
 @@ -17,12 +17,26 @@
@@ -28,8 +28,8 @@ index 8233c488..3b98c3d9 100644
  # endif
  # define USE_SENDFILE "freebsd-sendfile"
  # define USE_FREEBSD_SENDFILE
-+# include <sys/uio.h>
 +# ifdef __APPLE__
++#  include <sys/uio.h>
 +#  include <sys/types.h>
 +#  include <sys/socket.h>
 +#  include <limits.h>

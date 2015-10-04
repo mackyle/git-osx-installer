@@ -28,10 +28,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 0f46da17..32edb88f 100755
+index f8fb19fc..4676bd26 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -7544,6 +7544,8 @@ sub git_blame_common {
+@@ -7592,6 +7592,8 @@ sub git_blame_common {
  		return;
  	}
  
@@ -40,7 +40,7 @@ index 0f46da17..32edb88f 100755
  	# page header
  	git_header_html();
  	my $formats_nav =
-@@ -7552,7 +7554,7 @@ sub git_blame_common {
+@@ -7600,7 +7602,7 @@ sub git_blame_common {
  		" | ";
  	if ($format eq 'incremental') {
  		$formats_nav .=
@@ -49,7 +49,7 @@ index 0f46da17..32edb88f 100755
  			        "blame") . " (non-incremental)";
  	} else {
  		$formats_nav .=
-@@ -7574,7 +7576,7 @@ sub git_blame_common {
+@@ -7622,7 +7624,7 @@ sub git_blame_common {
  	if ($format eq 'incremental') {
  		print "<noscript>\n<div class=\"error\"><center><b>\n".
  		      "This page requires JavaScript to run.\n Use ".

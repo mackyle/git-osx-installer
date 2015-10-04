@@ -10,10 +10,10 @@ Signed-off-by: Petr Baudis <pasky@suse.cz>
  1 file changed, 5 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index a8009d8d..ef7f2a69 100755
+index 5407d2c5..7d27ce50 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -4071,17 +4071,11 @@ sub get_page_title {
+@@ -4101,17 +4101,11 @@ sub get_page_title {
  }
  
  sub get_content_type_html {

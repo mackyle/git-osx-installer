@@ -1,0 +1,70 @@
+Subject: [PATCH] gitweb.perl: use die not goto
+
+Using "goto DONE_GITWEB" instead of throwing an exception
+with die causes any optimized CGI processing (mod_perl,
+FCGI, PSGI, etc.) to be aborted prematurely.
+
+This can happen for various reasons that are not fatal,
+rather they are simply indicating that all output has
+been written for the current request (perhaps an object
+wasn't found) and the current request is done.
+
+These conditions are part of normal CGI processing and
+SHOULD NOT abort the script entirely, rather just finish
+up the current request.
+
+What happens when the script is aborted entirely is that
+the host process (mod_perl, mod_fcgid, etc.) must detect
+the error and then spawn another copy of the script.
+
+That all takes time and devastates throughput unnecessarily.
+
+Instead throw an exception using die in these cases and
+catch it with eval to indicate that the current request
+has ended and the next should begin.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ gitweb/gitweb.perl | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 09647b15..68f52ec5 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -1352,7 +1352,7 @@ sub run {
+ 		$pre_dispatch_hook->()
+ 			if $pre_dispatch_hook;
+ 
+-		run_request();
++		eval {run_request()};
+ 
+ 		$post_dispatch_hook->()
+ 			if $post_dispatch_hook;
+@@ -1361,7 +1361,6 @@ sub run {
+ 		last REQUEST if ($is_last_request->());
+ 	}
+ 
+- DONE_GITWEB:
+ 	1;
+ }
+ 
+@@ -4401,7 +4400,7 @@ EOF
+ 	print "</div>\n";
+ 
+ 	git_footer_html();
+-	goto DONE_GITWEB
++	CORE::die
+ 		unless ($opts{'-error_handler'});
+ }
+ 
+@@ -7520,7 +7519,7 @@ sub exit_if_unmodified_since {
+ 			print $cgi->header(
+ 				-last_modified => $latest_date{'rfc2822'},
+ 				-status => '304 Not Modified');
+-			goto DONE_GITWEB;
++			CORE::die;
+ 		}
+ 	}
+ }
+---

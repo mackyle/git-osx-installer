@@ -10,7 +10,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f79414e9..4d378c33 100755
+index fbeae474..949d5de4 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -805,6 +805,20 @@ sub evaluate_gitweb_config {
@@ -34,15 +34,15 @@ index f79414e9..4d378c33 100755
  # Get loadavg of system, to compare against $maxload.
  # Currently it requires '/proc/loadavg' present to get loadavg;
  # if it is not present it returns 0, which means no load checking.
-@@ -1399,6 +1413,7 @@ sub evaluate_argv {
+@@ -1416,6 +1430,7 @@ sub _reset_globals {
  
  sub run {
  	evaluate_gitweb_config();
 +	evaluate_encoding();
  	evaluate_git_version();
- 	my ($mu, $hl, $subroutine) = ($my_uri, $home_link, '');
- 	$subroutine .= '$my_uri = $mu;' if defined $my_uri && $my_uri ne '';
-@@ -1649,7 +1664,7 @@ sub to_utf8 {
+ 	my ($ml, $mi, $bu, $hl, $subroutine) = ($my_url, $my_uri, $base_url, $home_link, '');
+ 	$subroutine .= '$my_url = $ml;' if defined $my_url && $my_url ne '';
+@@ -1681,7 +1696,7 @@ sub to_utf8 {
  	if (utf8::is_utf8($str) || utf8::decode($str)) {
  		return $str;
  	} else {

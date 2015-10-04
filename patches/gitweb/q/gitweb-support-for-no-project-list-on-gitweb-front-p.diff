@@ -32,7 +32,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  4 files changed, 79 insertions(+), 11 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index 7c7c7eb9..841e7dad 100644
+index b96ac72a..dbbfc185 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
 @@ -424,6 +424,15 @@ $default_projects_order::
@@ -72,10 +72,10 @@ index cd9c8951..e87a461b 100644
  summary::
  	Displays summary about given repository.  This is the default command if
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 5aa78166..76815232 100755
+index 8a6f3441..7cbd498f 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -207,6 +207,11 @@ our $prevent_xss = 0;
+@@ -202,6 +202,11 @@ our $prevent_xss = 0;
  # [Default: highlight]
  our $highlight_bin = "++HIGHLIGHT_BIN++";
  
@@ -87,7 +87,7 @@ index 5aa78166..76815232 100755
  # information about snapshot formats that gitweb is capable of serving
  our %known_snapshot_formats = (
  	# name => {
-@@ -888,6 +893,7 @@ our %actions = (
+@@ -883,6 +888,7 @@ our %actions = (
  	"object" => \&git_object,
  	# those below don't need $project
  	"opml" => \&git_opml,
@@ -95,7 +95,7 @@ index 5aa78166..76815232 100755
  	"project_list" => \&git_project_list,
  	"project_index" => \&git_project_index,
  );
-@@ -1249,13 +1255,13 @@ sub dispatch {
+@@ -1244,13 +1250,13 @@ sub dispatch {
  		} elsif (defined $project) {
  			$action = 'summary';
  		} else {
@@ -111,7 +111,7 @@ index 5aa78166..76815232 100755
  	    !$project) {
  		die_error(400, "Project needed");
  	}
-@@ -5632,7 +5638,7 @@ sub git_project_search_form {
+@@ -5591,7 +5597,7 @@ sub git_project_search_form {
  
  	my $limit = '';
  	if ($project_filter) {
@@ -120,7 +120,7 @@ index 5aa78166..76815232 100755
  	}
  
  	print "<div class=\"projsearch\">\n";
-@@ -5649,9 +5655,16 @@ sub git_project_search_form {
+@@ -5608,9 +5614,16 @@ sub git_project_search_form {
  	      "</span>\n" .
  	      $cgi->submit(-name => 'btnS', -value => 'Search') .
  	      $cgi->end_form() . "\n" .
@@ -138,7 +138,7 @@ index 5aa78166..76815232 100755
  	print "</div>\n";
  }
  
-@@ -5890,7 +5903,7 @@ sub git_project_list_body {
+@@ -5849,7 +5862,7 @@ sub git_project_list_body {
  	if ($from > $to) {
  		print "<center>\n".
  		      "<b>No such projects found</b><br />\n".
@@ -147,7 +147,7 @@ index 5aa78166..76815232 100755
  		      "</center>\n<br />\n";
  		return;
  	}
-@@ -6572,7 +6585,8 @@ sub git_search_grep_body {
+@@ -6531,7 +6544,8 @@ sub git_search_grep_body {
  ## ======================================================================
  ## actions
  
@@ -157,7 +157,7 @@ index 5aa78166..76815232 100755
  	my $order = $input_params{'order'};
  	if (defined $order && $order !~ m/none|project|descr|owner|age/) {
  		die_error(400, "Unknown order parameter");
-@@ -6580,18 +6594,54 @@ sub git_project_list {
+@@ -6539,18 +6553,54 @@ sub git_project_list {
  
  	my @list = git_get_projects_list($project_filter, $strict_export);
  	if (!@list) {

@@ -47,6 +47,8 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  send-email--libcurl.c      | 393 +++++++++++++++++++++++++++++++++++++++++++++
  t/t9001-send-email.sh      |  20 +--
  4 files changed, 696 insertions(+), 94 deletions(-)
+ create mode 100644 git-send-email--libcurl.pl
+ create mode 100644 send-email--libcurl.c
 
 diff --git a/git-send-email--libcurl.pl b/git-send-email--libcurl.pl
 new file mode 100644

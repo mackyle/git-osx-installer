@@ -1,0 +1,75 @@
+Subject: [PATCH] gitweb: avoid stale variable contents
+
+When gitweb is running in an optimized CGI processing mode
+(mod_perl, FCGI, PSGI, etc.), multiple requests are served
+by the same invocation of gitweb.cgi.
+
+It is crucial for proper operation that remnants from the
+previous request are not allowed to taint subsequent requests.
+
+In particular, there are a number of "our" variables that
+need to be expliictly cleared in order to prevent this from
+happening and possibly corrupting subsequent requests.
+
+The snapshot action is particularly susceptible to corruption
+without these precautions.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ gitweb/gitweb.perl | 33 ++++++++++++++++++++++++++++++++-
+ 1 file changed, 32 insertions(+), 1 deletion(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 68f52ec5..4e50ed69 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -1340,6 +1340,23 @@ sub evaluate_argv {
+ 	);
+ }
+ 
++# Any "our" variable that could possibly influence correct handling of
++# a CGI request MUST be reset in this subroutine
++sub _reset_globals {
++	# Note that $t0 and $number_of_git_commands are handled by reset_timer
++	our %input_params = ();
++	our ($action, $project, $file_name, $file_parent, $hash, $hash_parent, $hash_base,
++	     $hash_parent_base, @extra_options, $page, $searchtype, $search_use_regexp,
++	     $searchtext, $search_regexp, $project_filter) = ();
++	our $git_dir = undef;
++	our (@snapshot_fmts, $git_avatar, @extra_branch_refs) = ();
++	our %avatar_cache = ();
++	our $config_file = '';
++	our %config = ();
++	our $gitweb_project_owner = undef;
++	keys %known_snapshot_formats; # reset 'each' iterator
++}
++
+ sub run {
+ 	evaluate_argv();
+ 
+@@ -1351,9 +1368,23 @@ sub run {
+ 	while ($cgi = $CGI->new()) {
+ 		$pre_dispatch_hook->()
+ 			if $pre_dispatch_hook;
++		{
++			# most globals can simply be reset
++			_reset_globals;
+ 
+-		eval {run_request()};
++			# evaluate_path_info corrupts %known_snapshot_formats
++			# so we need a deepish copy of it -- note that
++			# _reset_globals already took care of resetting its
++			# hash iterator that evaluate_path_info also leaves
++			# in an indeterminate state
++			my %formats = ();
++			while (my ($k,$v) = each(%known_snapshot_formats)) {
++				$formats{$k} = {%{$known_snapshot_formats{$k}}};
++			}
++			local *known_snapshot_formats = \%formats;
+ 
++			eval {run_request()};
++		}
+ 		$post_dispatch_hook->()
+ 			if $post_dispatch_hook;
+ 		$first_request = 0;
+---

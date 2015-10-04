@@ -1,0 +1,131 @@
+Subject: [PATCH] server.c: support -i <secs> idle timeout option
+
+After <secs> of no activity the server will initiate a graceful
+shutdown.  Defaults to off (0).
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ src/server.c | 49 +++++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 39 insertions(+), 10 deletions(-)
+
+diff --git a/src/server.c b/src/server.c
+index 6200c94c..9c9840f5 100644
+--- a/src/server.c
++++ b/src/server.c
+@@ -526,6 +526,7 @@ static void show_help (void) {
+ "usage:\n" \
+ " -f <name>  filename of the config-file\n" \
+ " -m <name>  module directory (default: "LIBRARY_DIR")\n" \
++" -i <secs>  graceful shutdown after <secs> of inactivity\n" \
+ " -p         print the parsed config-file in internal form, and exit\n" \
+ " -t         test the config-file, and exit\n" \
+ " -D         don't go to background (default: go to background)\n" \
+@@ -548,6 +549,8 @@ int main (int argc, char **argv) {
+ 	int num_childs = 0;
+ 	int pid_fd = -1, fd;
+ 	size_t i;
++	time_t idle_timeout = 0, server_activity = time(NULL);
++	int timed_out = 0;
+ #ifdef HAVE_SIGACTION
+ 	struct sigaction act;
+ #endif
+@@ -583,7 +586,7 @@ int main (int argc, char **argv) {
+ #endif
+ 	srv->srvconf.dont_daemonize = 0;
+ 
+-	while(-1 != (o = getopt(argc, argv, "f:m:hvVDpt"))) {
++	while(-1 != (o = getopt(argc, argv, "f:m:i:hvVDpt"))) {
+ 		switch(o) {
+ 		case 'f':
+ 			if (srv->config_storage) {
+@@ -601,6 +604,18 @@ int main (int argc, char **argv) {
+ 		case 'm':
+ 			buffer_copy_string(srv->srvconf.modules_dir, optarg);
+ 			break;
++		case 'i': {
++			char *endptr;
++			long timeout = strtol(optarg, &endptr, 0);
++			if (!*optarg || *endptr || timeout < 0) {
++				log_error_write(srv, __FILE__, __LINE__, "ss",
++						"Invalid idle timeout value:", optarg);
++				server_free(srv);
++				return -1;
++			}
++			idle_timeout = (time_t)timeout;
++			break;
++		}
+ 		case 'p': print_config = 1; break;
+ 		case 't': test_config = 1; break;
+ 		case 'D': srv->srvconf.dont_daemonize = 1; break;
+@@ -1487,6 +1502,7 @@ int main (int argc, char **argv) {
+ 						"polls:", n);
+ 			}
+ #endif
++			server_activity = time(NULL);
+ 			fd_ndx = -1;
+ 			do {
+ 				fdevent_handler handler;
+@@ -1527,6 +1543,14 @@ int main (int argc, char **argv) {
+ 					strerror(errno));
+ 		}
+ 
++		if (idle_timeout && time(NULL) - server_activity >= idle_timeout) {
++			log_error_write(srv, __FILE__, __LINE__, "sDs", "[note] idle timeout", (int)idle_timeout,
++					"s exceeded, graceful shutdown started");
++			timed_out = 1;
++			graceful_shutdown = 1;
++			break;
++		}
++
+ 		for (ndx = 0; ndx < srv->joblist->used; ndx++) {
+ 			connection *con = srv->joblist->ptr[ndx];
+ 			handler_t r;
+@@ -1549,7 +1573,7 @@ int main (int argc, char **argv) {
+ 	}
+ 
+ 	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
+-	    0 == graceful_shutdown && 0 <= pid_fd) {
++	    (0 == graceful_shutdown || timed_out) && 0 <= pid_fd) {
+ 		if (0 != ftruncate(pid_fd, 0)) {
+ 			log_error_write(srv, __FILE__, __LINE__, "sbds",
+ 					"ftruncate failed for:",
+@@ -1564,7 +1588,7 @@ int main (int argc, char **argv) {
+ 	}
+ 	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
+ 	    buffer_string_is_empty(srv->srvconf.changeroot) &&
+-	    0 == graceful_shutdown) {
++	    (0 == graceful_shutdown || timed_out)) {
+ 		if (0 != unlink(srv->srvconf.pid_file->ptr)) {
+ 			if (errno != EACCES && errno != EPERM) {
+ 				log_error_write(srv, __FILE__, __LINE__, "sbds",
+@@ -1576,16 +1600,21 @@ int main (int argc, char **argv) {
+ 		}
+ 	}
+ 
++	if (timed_out) {
++		log_error_write(srv, __FILE__, __LINE__, "s",
++				"server stopped by idle timeout");
++	} else {
+ #ifdef HAVE_SIGACTION
+-	log_error_write(srv, __FILE__, __LINE__, "sdsd", 
+-			"server stopped by UID =",
+-			last_sigterm_info.si_uid,
+-			"PID =",
+-			last_sigterm_info.si_pid);
++		log_error_write(srv, __FILE__, __LINE__, "sdsd",
++				"server stopped by UID =",
++				last_sigterm_info.si_uid,
++				"PID =",
++				last_sigterm_info.si_pid);
+ #else
+-	log_error_write(srv, __FILE__, __LINE__, "s", 
+-			"server stopped");
++		log_error_write(srv, __FILE__, __LINE__, "s",
++				"server stopped");
+ #endif
++	}
+ 
+ 	/* clean-up */
+ 	log_error_close(srv);
+---

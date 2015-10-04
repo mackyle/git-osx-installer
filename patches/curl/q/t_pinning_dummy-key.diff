@@ -14,6 +14,8 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  tests/data/test2035          |   2 +-
  tests/data/test2038          |   2 +-
  4 files changed, 11 insertions(+), 2 deletions(-)
+ create mode 100644 tests/certs/dummykey.pub.der
+ create mode 100644 tests/certs/dummykey.pub.pem
 
 diff --git a/tests/certs/dummykey.pub.der b/tests/certs/dummykey.pub.der
 new file mode 100644

@@ -3,6 +3,17 @@ Git OS X Installer Change Log
 =============================
 
 
+------------------------------------------
+Git 2.3.10 Installer - released 2015-10-06
+------------------------------------------
+
+* Git v2.3.10
+  - update from version 2.3.9
+
+* TopGit 0.17
+  - update from version 0.16
+
+
 -----------------------------------------
 Git 2.3.9 Installer - released 2015-09-13
 -----------------------------------------
@@ -33,6 +44,7 @@ Git 2.3.9 Installer - released 2015-09-13
 
 * libidn 1.30
   - update from version 1.29
+
 
 -----------------------------------------
 Git 2.3.3 Installer - released 2015-03-19

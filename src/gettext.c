@@ -1,7 +1,7 @@
 /*
 
 gettext.c - gettext equivalents for Mac OS X
-Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
+Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -19,9 +19,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 */
 
-/* If GIT_TEXTDOMAINDIR then a bundle named git-messages.bundle should be
+/* If GIT_TEXTDOMAINDIR is set then a bundle named git-messages.bundle should be
  * located there containing a Contents/Resources/<lang>.lproj/Localizable.strings
- * file for each supported messages localization.
+ # file and an optional Contents/Resources/<lang>.lproj/Plurals.plist file for
+ # each supported messages localization.
  * If GIT_TEXTDOMAINDIR is not set then it typically defaults to something
  * like $prefix/share/locale from the build settings.
  * If GIT_USE_PREFERENCES_LOCALE is true then LANG, LC_ALL, LC_MESSAGES
@@ -58,7 +59,9 @@ static iconv_t ic;
 static CFBundleRef bndl;
 static CFStringRef localestr;
 static CFURLRef localestringsurl;
+static CFURLRef localepluralsurl;
 static int gettext_inited;
+static unsigned plurals[3] = {1, 0, 1};
 static CFDictionaryRef localedict;
 static CFMutableDictionaryRef localeiconvdict;
 
@@ -194,9 +197,28 @@ void git_setup_gettext(void)
 		}
 		CFRelease(bl);
 	}
-	if (localestr)
+	if (localestr) {
 		localestringsurl = CFBundleCopyResourceURLForLocalization(bndl,
 			CFSTR("Localizable"), CFSTR("strings"), NULL, localestr);
+		localepluralsurl = CFBundleCopyResourceURLForLocalization(bndl,
+			CFSTR("Plurals"), CFSTR("plist"), NULL, localestr);
+	}
+}
+
+static CFPropertyListRef create_plist_from_url(CFURLRef url)
+{
+	CFPropertyListRef pl = NULL;
+	if (url) {
+		CFDataRef xml;
+		SInt32 err;
+		if (CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
+		    url, &xml, NULL, NULL, &err)) {
+			 pl = CFPropertyListCreateFromXMLData(
+				kCFAllocatorDefault, xml, kCFPropertyListImmutable, NULL);
+			CFRelease(xml);
+		}
+	}
+	return pl;
 }
 
 static void git_init_gettext(void)
@@ -204,24 +226,50 @@ static void git_init_gettext(void)
 	if (gettext_inited) return;
 	gettext_inited = 1;
 	if (localestringsurl) {
-		CFDataRef xml;
-		SInt32 err;
-		if (CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
-		    localestringsurl, &xml, NULL, NULL, &err)) {
-			CFPropertyListRef pl = CFPropertyListCreateFromXMLData(
-				kCFAllocatorDefault, xml, kCFPropertyListImmutable, NULL);
-			CFRelease(xml);
-			if (pl) {
-				if (CFGetTypeID(pl) == CFDictionaryGetTypeID())
-					localedict = pl;
-				else
-					CFRelease(pl);
-			}
+		CFPropertyListRef pl = create_plist_from_url(localestringsurl);
+		if (pl) {
+			if (CFGetTypeID(pl) == CFDictionaryGetTypeID())
+				localedict = pl;
+			else
+				CFRelease(pl);
 		}
 	}
 	if (localedict) {
 		localeiconvdict = CFDictionaryCreateMutable(kCFAllocatorDefault,
 			CFDictionaryGetCount(localedict), &kCFTypeDictionaryKeyCallBacks, NULL);
+	}
+	if (localepluralsurl) {
+		CFPropertyListRef pl = create_plist_from_url(localepluralsurl);
+		if (pl) {
+			if (CFGetTypeID(pl) == CFArrayGetTypeID()) {
+				CFArrayRef a = (CFArrayRef)pl;
+				if (CFArrayGetCount(a) == 3) {
+					int bad = 0;
+					unsigned vals[3];
+					CFIndex i;
+					for (i=0; i<3; ++i) {
+						int n;
+						CFTypeRef val = CFArrayGetValueAtIndex(a, i);
+						if (CFGetTypeID(val) != CFNumberGetTypeID()) {
+							bad = 1;
+							break;
+						}
+						if (!CFNumberGetValue((CFNumberRef)val, kCFNumberIntType, &n) ||
+						    n < 0 || n > 1) {
+							bad = 1;
+							break;
+						}
+						vals[i] = (unsigned)n;
+					}
+					if (!bad) {
+						plurals[0] = vals[0];
+						plurals[1] = vals[1];
+						plurals[2] = vals[2];
+					}
+				}
+			}
+			CFRelease(pl);
+		}
 	}
 }
 
@@ -239,7 +287,7 @@ static CFStringRef get_dict_str(CFDictionaryRef d, CFStringRef k)
 	return v && CFGetTypeID(v) == CFStringGetTypeID() ? v : NULL;
 }
 
-char *gettext(const char *msgid)
+const char *gettext(const char *msgid)
 {
 	CFStringRef key;
 	CFStringRef valstr;
@@ -317,6 +365,21 @@ char *gettext(const char *msgid)
 		CFRelease(key);
 	}
 	return (char *)msgid;
+}
+
+const char *ngettext(const char *msgid, const char *plu, unsigned long n)
+{
+	const char *input, *ans;
+
+	if (!gettext_inited)
+		git_init_gettext();
+	if (n > 2)
+		n = 2;
+	input = plurals[n] ? plu : msgid;
+	ans = gettext(input);
+	if (ans == input)
+		ans = (n != 1) ? plu : msgid;
+	return ans;
 }
 
 #include "gettext-culled.c"

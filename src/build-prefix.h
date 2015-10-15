@@ -1,7 +1,7 @@
 /*
 
 build-prefix.h - build prefix header for building git
-Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
+Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -45,8 +45,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define N_(s) (s)
 #undef Q_
 #define Q_(s,p,n) ngettext((s),(p),(n))
-extern void git_setup_gettext(void);
-extern char *gettext(const char *msgid);
-extern int gettext_width(const char *s);
 #undef ngettext
-#define ngettext(s,p,n) (((n)==1)?gettext(s):gettext(p))
+extern void git_setup_gettext(void);
+extern const char *gettext(const char *msgid);
+extern const char *ngettext(const char *msgid, const char *plu, unsigned long n);
+extern int gettext_width(const char *s);

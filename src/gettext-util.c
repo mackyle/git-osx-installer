@@ -1,7 +1,7 @@
 /*
 
 gettext-util.c - git gettext utility for Mac OS X
-Copyright (C) 2014 Kyle J. McKay.  All rights reserved.
+Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -24,10 +24,21 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int main(int argc, char **argv)
 {
-	const char usage[] = "Usage: git gettext MSGID";
-	if (argc != 2)
+	const char usage[] = "Usage: git gettext MSGID [MSGID_PLURAL N]";
+	long n = 0;
+	if (argc != 2 && argc != 4)
 		die("%s", usage);
+	if (argc == 4) {
+		char *end;
+		n = strtol(argv[3], &end, 10);
+		if (!argv[3][0] || *end || n < 0)
+			die("%s", usage);
+	}
 	git_setup_gettext();
-	printf("%s", gettext(argv[1]));
+	if (argc == 4) {
+		printf("%s", ngettext(argv[1], argv[2], (unsigned long)n));
+	} else {
+		printf("%s", gettext(argv[1]));
+	}
 	return 0;
 }

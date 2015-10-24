@@ -20,7 +20,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 66 insertions(+), 3 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 2c0c5223..f4f61f70 100755
+index 36005a34..3feba755 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -212,6 +212,31 @@ GITWEB_CONFIG="$fqgitdir/gitweb/gitweb_config.perl"

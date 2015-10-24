@@ -39,7 +39,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  3 files changed, 251 insertions(+), 20 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index 841e7dad..2ed86bf3 100644
+index 0784b7d2..bad4bfd7 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
 @@ -428,7 +428,8 @@ $frontpage_no_project_list::

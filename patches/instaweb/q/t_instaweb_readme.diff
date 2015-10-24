@@ -13,7 +13,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index f4f61f70..5edbe366 100755
+index 3feba755..fe1d2a49 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -719,6 +719,12 @@ EOF

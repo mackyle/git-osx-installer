@@ -275,7 +275,7 @@ index 00000000..31a78b63
 +
 +1;
 diff --git a/git-send-email.perl b/git-send-email.perl
-index a18a7959..0f34a72a 100755
+index e1e9b146..fdcb364d 100755
 --- a/git-send-email.perl
 +++ b/git-send-email.perl
 @@ -26,8 +26,12 @@ use Data::Dumper;
@@ -317,7 +317,7 @@ index a18a7959..0f34a72a 100755
  		    "smtp-pass:s" => \$smtp_authpass,
  		    "smtp-ssl" => sub { $smtp_encryption = 'ssl' },
  		    "smtp-encryption=s" => \$smtp_encryption,
-@@ -924,8 +929,10 @@ sub make_message_id {
+@@ -925,8 +930,10 @@ sub make_message_id {
  		require Sys::Hostname;
  		$du_part = 'user@' . Sys::Hostname::hostname();
  	}
@@ -329,7 +329,7 @@ index a18a7959..0f34a72a 100755
  	#print "new message id = $message_id\n"; # Was useful for debugging
  }
  
-@@ -1089,12 +1096,12 @@ sub smtp_host_string {
+@@ -1090,12 +1097,12 @@ sub smtp_host_string {
  	}
  }
  
@@ -345,7 +345,7 @@ index a18a7959..0f34a72a 100755
  	}
  
  	# Workaround AUTH PLAIN/LOGIN interaction defect
-@@ -1107,47 +1114,36 @@ sub smtp_auth_maybe {
+@@ -1108,47 +1115,36 @@ sub smtp_auth_maybe {
  	# TODO: Authentication may fail not because credentials were
  	# invalid but due to other reasons, in which we should not
  	# reject credentials.
@@ -408,7 +408,7 @@ index a18a7959..0f34a72a 100755
  	}
  }
  
-@@ -1263,65 +1259,61 @@ Message-Id: $message_id
+@@ -1264,65 +1260,61 @@ Message-Id: $message_id
  			die "The required SMTP server is not properly defined."
  		}
  
@@ -519,7 +519,7 @@ index a18a7959..0f34a72a 100755
  		print (($dry_run ? "Dry-" : "")."OK. Log says:\n");
  		if (!file_name_is_absolute($smtp_server)) {
  			print "Server: $smtp_server\n";
-@@ -1334,8 +1326,7 @@ Message-Id: $message_id
+@@ -1335,8 +1327,7 @@ Message-Id: $message_id
  		}
  		print $header, "\n";
  		if ($smtp) {
@@ -529,7 +529,7 @@ index a18a7959..0f34a72a 100755
  		} else {
  			print "Result: OK\n";
  		}
-@@ -1593,7 +1584,7 @@ sub cleanup_compose_files {
+@@ -1594,7 +1585,7 @@ sub cleanup_compose_files {
  	unlink($compose_filename, $compose_filename . ".final") if $compose;
  }
  
@@ -938,7 +938,7 @@ index 00000000..9dabea3f
 +	return 0;
 +}
 diff --git a/t/t9001-send-email.sh b/t/t9001-send-email.sh
-index 05130554..14f18bd9 100755
+index 7be14a4e..09fd92b3 100755
 --- a/t/t9001-send-email.sh
 +++ b/t/t9001-send-email.sh
 @@ -146,6 +146,7 @@ cat >expected-show-all-headers <<\EOF

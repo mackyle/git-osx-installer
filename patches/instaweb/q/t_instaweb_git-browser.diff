@@ -7,7 +7,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 19 insertions(+), 2 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 5ac32127..6897e0b8 100755
+index 75c2450e..d8178c31 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -106,6 +106,7 @@ start_httpd () {

@@ -61,9 +61,48 @@ static CFStringRef localestr;
 static CFURLRef localestringsurl;
 static CFURLRef localepluralsurl;
 static int gettext_inited;
+static unsigned pluralsformula = 0;
 static unsigned plurals[3] = {1, 0, 1};
 static CFDictionaryRef localedict;
 static CFMutableDictionaryRef localeiconvdict;
+
+static CFStringRef get_dict_str(CFDictionaryRef d, CFStringRef k);
+
+static unsigned n_to_i(unsigned long n, unsigned formula)
+{
+	if (!formula || formula > 2) {
+		return n == 1 ? 0 : 1;
+	}
+	if (formula == 1) {
+		if (n > 2)
+			n = 2;
+		return plurals[n];
+	}
+	return (n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);
+}
+
+static void setup_formula(const char *f)
+{
+	/* default is like english (i.e. "n!=1" and "(n!=1)") */
+	plurals[0] = 1;
+	plurals[1] = 0;
+	plurals[2] = 1;
+	pluralsformula = 0;
+	if (!strcmp(f,"n<=1?0:1") || !strcmp(f,"(n<=1?0:1)")) {
+		plurals[0] = 0;
+		plurals[1] = 0;
+		plurals[2] = 1;
+		pluralsformula = 1;
+	} else if (!strcmp(f,"0") || !strcmp(f,"(0)")) {
+		plurals[0] = 0;
+		plurals[1] = 0;
+		plurals[2] = 0;
+		pluralsformula = 1;
+	} else if (!strcmp(f,"n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2") ||
+		   !strcmp(f,"(n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2)")) {
+		pluralsformula = 2;
+	}
+}
 
 static char *strlcpyuc(char *dst, const char *src, size_t cnt)
 {
@@ -265,7 +304,37 @@ static void git_init_gettext(void)
 						plurals[0] = vals[0];
 						plurals[1] = vals[1];
 						plurals[2] = vals[2];
+						pluralsformula = 1;
 					}
+				}
+			} else if (CFGetTypeID(pl) == CFDictionaryGetTypeID()) {
+				CFDictionaryRef d = (CFDictionaryRef)pl;
+				CFStringRef f = get_dict_str(d, CFSTR("formula"));
+				char *val = NULL;
+				if (f) {
+					size_t s;
+					s = (size_t)CFStringGetMaximumSizeForEncoding(CFStringGetLength(f),
+						kCFStringEncodingUTF8) + 1;
+					val = (char *)malloc(s);
+					if (val) {
+						if (!CFStringGetCString(f, val, (CFIndex)s, kCFStringEncodingUTF8)) {
+							free(val);
+							val = NULL;
+						}
+					}
+				}
+				if (val) {
+					const char *src = val;
+					char *dst = val;
+					size_t l;
+					for (l = strlen(val) + 1; l; --l, ++src) {
+					    if (*src == ' ' || *src == '\t' || *src == '\n' || *src == '\r')
+						    continue;
+					    *dst++ = tolc(*src);
+					}
+					if (*val)
+						setup_formula(val);
+					free(val);
 				}
 			}
 			CFRelease(pl);
@@ -287,7 +356,34 @@ static CFStringRef get_dict_str(CFDictionaryRef d, CFStringRef k)
 	return v && CFGetTypeID(v) == CFStringGetTypeID() ? v : NULL;
 }
 
-const char *gettext(const char *msgid)
+static CFStringRef create_lookup_key(const char *str, unsigned idx)
+{
+	char *newstr, *p;
+	size_t l;
+	CFStringRef ans;
+
+	if (!str || idx > 9)
+		return NULL;
+	if (idx <= 1 && *str != '~')
+		return CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, str,
+			kCFStringEncodingUTF8, kCFAllocatorNull);
+	l = strlen(str);
+	if (!(newstr = (char *)malloc(l + 3)))
+		return NULL;
+	p = newstr;
+	*p++ = '~';
+	if (idx >= 2) {
+		*p++ = '0' + (char)idx;
+	}
+	memcpy(p, str, l+1);
+	ans = CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, newstr,
+			kCFStringEncodingUTF8, kCFAllocatorMalloc);
+	if (!ans)
+		free(newstr);
+	return ans;
+}
+
+static const char *gettext_internal(const char *msgid, unsigned idx)
 {
 	CFStringRef key;
 	CFStringRef valstr;
@@ -301,8 +397,7 @@ const char *gettext(const char *msgid)
 	if (!msgid || !*msgid || !localeiconvdict || (!is_utf8_codeset && !icok))
 		return (char *)msgid;
 
-	key = CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, msgid,
-		kCFStringEncodingUTF8, kCFAllocatorNull);
+	key = create_lookup_key(msgid, idx);
 	if (!key)
 		return (char *)msgid;
 	val = (char *)CFDictionaryGetValue(localeiconvdict, key);
@@ -367,18 +462,23 @@ const char *gettext(const char *msgid)
 	return (char *)msgid;
 }
 
+const char *gettext(const char *msgid)
+{
+	return gettext_internal(msgid, 0);
+}
+
 const char *ngettext(const char *msgid, const char *plu, unsigned long n)
 {
 	const char *input, *ans;
+	unsigned idx;
 
 	if (!gettext_inited)
 		git_init_gettext();
-	if (n > 2)
-		n = 2;
-	input = plurals[n] ? plu : msgid;
-	ans = gettext(input);
+	idx = n_to_i(n, pluralsformula);
+	input = (idx != 1) ? msgid : plu;
+	ans = gettext_internal(input, idx);
 	if (ans == input)
-		ans = (n != 1) ? plu : msgid;
+		ans = !n_to_i(n, 0) ? msgid : plu;
 	return ans;
 }
 

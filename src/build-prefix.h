@@ -50,3 +50,4 @@ extern void git_setup_gettext(void);
 extern const char *gettext(const char *msgid);
 extern const char *ngettext(const char *msgid, const char *plu, unsigned long n);
 extern int gettext_width(const char *s);
+const char *get_preferred_languages(void);

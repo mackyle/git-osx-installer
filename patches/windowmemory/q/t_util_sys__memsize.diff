@@ -1,0 +1,129 @@
+Subject: [PATCH] sys-utils:: add sys_memsize function
+
+On systems where the amount of virtual memory far exceeds the
+amount of actual real memory, it may be helpful to restrict the
+default maximum amount of memory Git uses for various operations
+in order to avoid memory thrashing.
+
+To do this Git must be able to determine the actual amount of
+physical memory available (or a very close approximation).
+
+Introduce a new sys_memsize function that attempts to determine
+the actual amount of physical memory available on the machine.
+
+Although the implementation shares many commonalities with the
+online_cpus function provided in thread-utils, thread-utils will
+only be included when NO_PTHREADS is NOT defined.
+
+However, the sys_memsize function may still be needed to set
+reasonable default memory limits even when only running with a
+single thread so it must be located elsewhere.
+
+Therefore place the new sys_memsize function in new sys-utils.h
+and sys-utils.c files instead.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ Makefile    |  1 +
+ sys-utils.c | 63 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ sys-utils.h |  7 +++++++
+ 3 files changed, 71 insertions(+)
+ create mode 100644 sys-utils.c
+ create mode 100644 sys-utils.h
+
+diff --git a/Makefile b/Makefile
+index 8700db8d..f592a58f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -782,6 +782,7 @@ LIB_OBJS += streaming.o
+ LIB_OBJS += string-list.o
+ LIB_OBJS += submodule.o
+ LIB_OBJS += symlinks.o
++LIB_OBJS += sys-utils.o
+ LIB_OBJS += tag.o
+ LIB_OBJS += trace.o
+ LIB_OBJS += trailer.o
+diff --git a/sys-utils.c b/sys-utils.c
+new file mode 100644
+index 00000000..c08bbb1b
+--- /dev/null
++++ b/sys-utils.c
+@@ -0,0 +1,63 @@
++#include "cache.h"
++#include "sys-utils.h"
++
++uint64_t sys_memsize(void)
++{
++/*
++ * Try the various memory size APIs in decreasing order of highest
++ * resolution (64 bits) to lowest resolution (32 bits or less).
++ */
++
++#if defined(_SC_PHYS_PAGES) || defined(_SC_AIX_REALMEM)
++	long phys_pages;
++#endif
++
++#ifdef GIT_WINDOWS_NATIVE
++	MEMORYSTATUSEX statex;
++	statex.dwLength = sizeof(statex);
++
++	if (GlobalMemoryStatusEx(&statex))
++		return (uint64_t)statex.ullTotalPhys;
++#elif defined(HAVE_BSD_SYSCTL)
++#  if defined(HW_MEMSIZE) || defined(HW_PHYSMEM64) || defined(HW_PHYSMEM)
++	int mib[2];
++	size_t len;
++#    if defined(HW_MEMSIZE) || defined(HW_PHYSMEM64)
++	uint64_t memsize;
++#    endif
++#    if defined(HW_PHYSMEM)
++	int physmem;
++#    endif
++
++	mib[0] = CTL_HW;
++#    ifdef HW_MEMSIZE
++	mib[1] = HW_MEMSIZE;
++	len = sizeof(memsize);
++	if (!sysctl(mib, 2, &memsize, &len, NULL, 0))
++		return memsize;
++#    endif
++#    ifdef HW_PHYSMEM64
++	mib[1] = HW_PHYSMEM64;
++	len = sizeof(memsize);
++	if (!sysctl(mib, 2, &memsize, &len, NULL, 0))
++		return memsize;
++#    endif
++#  endif /* HW_MEMSIZE || HW_PHYSMEM64 || HW_PHYSMEM */
++#endif /* HAVE_BSD_SYSCTL */
++#ifdef _SC_PHYS_PAGES
++	if ((phys_pages = (long)sysconf(_SC_PHYS_PAGES)) > 0)
++		return (uint64_t)phys_pages * (uint64_t)getpagesize();
++#endif /* _SC_PHYS_PAGES */
++#ifdef _SC_AIX_REALMEM
++	if ((phys_pages = (long)sysconf(_SC_AIX_REALMEM)) > 0)
++		return (uint64_t)phys_pages * (uint64_t)1024;
++#endif /* _SC_AIX_REALMEM */
++#if defined(HAVE_BSD_SYSCTL) && defined(HW_PHYSMEM)
++	mib[1] = HW_PHYSMEM;
++	len = sizeof(physmem);
++	if (!sysctl(mib, 2, &physmem, &len, NULL, 0) && physmem > 0)
++		return physmem;
++#endif /* defined(HAVE_BSD_SYSCTL) && defined(HW_NCPU) */
++
++	return 0;
++}
+diff --git a/sys-utils.h b/sys-utils.h
+new file mode 100644
+index 00000000..89a95186
+--- /dev/null
++++ b/sys-utils.h
+@@ -0,0 +1,7 @@
++#ifndef SYS_UTILS_H
++#define SYS_UTILS_H
++
++/* returns 0 if system memory size cannot be determined */
++uint64_t sys_memsize(void);
++
++#endif /* SYS_UTILS_H */
+---

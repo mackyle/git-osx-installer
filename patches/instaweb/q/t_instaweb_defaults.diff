@@ -9,7 +9,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 13 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index b9366a56..5ac32127 100755
+index 27572efd..75c2450e 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -257,6 +257,7 @@ server.modules = ( "mod_setenv", "mod_cgi" )

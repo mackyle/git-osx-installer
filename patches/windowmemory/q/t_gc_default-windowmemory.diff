@@ -1,6 +1,3 @@
-From d66c71f9a6939151e70820aab725f90a5c037081 Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Wed, 31 Dec 2014 10:07:44 -0800
 Subject: [PATCH] pack-objects.c: change pack.windowmemory default
 
 The default value of pack.windowmemory = 0 allows unlimited memory
@@ -10,34 +7,63 @@ bring the system to its knees.
 
 Instead of using a default pack.windowmemory = 0 value, use a default
 value of system-memory-size / 2 / number-of-packing-threads but cap
-it to no more than 2G - 1 on a 32-bit address space.
+it to no more than SSIZE_MAX to avoid potential arithmetic issues.
 
 The memory thrashing behavior can still be restored by explicitly
 setting pack.windowmemory = 0 in a config file or using an explicit
 --window-memory=0 option.
 
-Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
----
- builtin/pack-objects.c | 41 +++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 39 insertions(+), 2 deletions(-)
+However, if the system memory size cannot be determined, the default
+value will still be unlimited memory use.
 
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ Documentation/config.txt |  6 ++++--
+ builtin/pack-objects.c   | 33 +++++++++++++++++++++++++++++++--
+ 2 files changed, 35 insertions(+), 4 deletions(-)
+
+diff --git a/Documentation/config.txt b/Documentation/config.txt
+index 2e919f0d..6201bfd0 100644
+--- a/Documentation/config.txt
++++ b/Documentation/config.txt
+@@ -1918,8 +1918,10 @@ pack.windowMemory::
+ 	The maximum size of memory that is consumed by each thread
+ 	in linkgit:git-pack-objects[1] for pack window memory when
+ 	no limit is given on the command line.  The value can be
+-	suffixed with "k", "m", or "g".  When left unconfigured (or
+-	set explicitly to 0), there will be no limit.
++	suffixed with "k", "m", or "g".  When left unconfigured the
++	default is based on the system's memory size and the number of
++	packing threads in use.  If set explicitly to 0 (or the system's
++	memory size cannot be determined), there will be no limit.
+ 
+ pack.compression::
+ 	An integer -1..9, indicating the compression level for objects
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index c3a75166..686133e1 100644
+index c067107a..2c4d2375 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
-@@ -23,6 +23,11 @@
+@@ -19,11 +19,18 @@
+ #include "refs.h"
+ #include "streaming.h"
+ #include "thread-utils.h"
++#include "sys-utils.h"
+ #include "pack-bitmap.h"
  #include "reachable.h"
  #include "sha1-array.h"
  #include "argv-array.h"
-+#ifdef __APPLE__
-+#  include <sys/types.h>
-+#  include <sys/sysctl.h>
-+#  include <AvailabilityMacros.h>
-+#endif
  
++#if SSIZE_MAX <= LONG_MAX
++#define WINDOW_MEMORY_MAX ((long)SSIZE_MAX)
++#else
++#define WINDOW_MEMORY_MAX LONG_MAX
++#endif
++
  static const char *pack_usage[] = {
  	N_("git pack-objects --stdout [options...] [< ref-list | < object-list]"),
-@@ -73,7 +78,7 @@ static unsigned long delta_cache_size = 0;
+ 	N_("git pack-objects [options...] base-name [< ref-list | < object-list]"),
+@@ -73,7 +80,7 @@ static unsigned long delta_cache_size = 0;
  static unsigned long max_delta_cache_size = 256 * 1024 * 1024;
  static unsigned long cache_max_small_delta_size = 1000;
  
@@ -46,42 +72,32 @@ index c3a75166..686133e1 100644
  
  /*
   * stats
-@@ -2560,6 +2565,34 @@ static void get_object_list(int ac, const char **av)
+@@ -2558,6 +2565,24 @@ static void get_object_list(int ac, const char **av)
  	sha1_array_clear(&recent_objects);
  }
  
 +static void set_default_window_memory_limit(void)
 +{
-+#if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 1020
-+	int mib[2];
-+	size_t len;
-+	uint64_t memsize;
-+#endif
++	uint64_t memsize = sys_memsize();
 +
 +	window_memory_limit = 0;
-+#if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 1020
-+	mib[0] = CTL_HW;
-+	mib[1] = HW_MEMSIZE;
-+	len = sizeof(memsize);
-+	if (!sysctl(mib, 2, &memsize, &len, NULL, 0)) {
++	if (memsize > 0) {
 +		memsize /= 2U;
 +		if (!delta_search_threads)	/* --threads=0 means autodetect */
 +			delta_search_threads = online_cpus();
 +		if (delta_search_threads > 1)
-+			memsize /= (unsigned)delta_search_threads;
-+#ifndef __LP64__
-+		if (memsize >= 2U * 1024U * 1024U * 1024U)
-+			memsize = 2U * 1024U * 1024U * 1024U - 1U;
-+#endif
-+		window_memory_limit = (unsigned long)memsize;
++			memsize /= (uint64_t)delta_search_threads;
++		if (memsize > (uint64_t)WINDOW_MEMORY_MAX)
++			window_memory_limit = WINDOW_MEMORY_MAX;
++		else
++			window_memory_limit = (unsigned long)memsize;
 +	}
-+#endif
 +}
 +
  static int option_parse_index_version(const struct option *opt,
  				      const char *arg, int unset)
  {
-@@ -2746,9 +2779,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+@@ -2744,9 +2769,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
  		delta_search_threads = online_cpus();
  
  #ifdef NO_PTHREADS

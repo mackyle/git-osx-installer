@@ -10,7 +10,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index a8542fb2..b9366a56 100755
+index 2fcdf392..27572efd 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -607,6 +607,12 @@ our \$highlight_bin = "$hlbin";

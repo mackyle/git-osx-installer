@@ -40,27 +40,12 @@ Git Patches
   My own patches to make `git-send-email.perl` use libcurl instead of
   OpenSSL.  Has not been posted elsewhere.
 
-* Support Tcl 8.4 for git-gui
-
-  - `patches/km/git-gui-tcl-8_4.txt`
-
-  My own patch to make git-gui actually work with Tcl 8.4 which is all
-  it's supposed to require.  Posted to the list and picked up at:
-  <http://thread.gmane.org/gmane.comp.version-control.git/262055>.
-  Included in Git 2.4.0 now.
-
-* Support auto threads detection on older OS X
-
-  - `patches/km/thread-utils-osx.txt`
-
-  My own patch to make thread-utils.c online_cpus function return the
-  correct value on older Mac OS X versions.  Included in Git 2.4.0 now.
-
 * Use a different pack.windowmemory default setting instead of 0
 
-  - `patches/km/window-memory-default.txt`
+  - `patches/windowmemory/q/t_util_sys__memsize.diff`
+  - `patches/windowmemory/q/t_gc_default-windowmemory.diff`
 
-  My own patch to change the pack.windowmemory default from 0 (meaning
+  My own patches to change the pack.windowmemory default from 0 (meaning
   unlimited) to a sane default that should avoid memory thrashing especially
   when running gc --aggressive with a 64-bit address space.  Has not been
   posted elsewhere.
@@ -80,13 +65,6 @@ Git Patches
 
   Both patches included in the thread and discussion at:
   <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
-
-* Backport contrib/hooks/pre-auto-gc-battery update
-
-  - `patches/pa/pre-auto-gc-newer-osx.txt`
-
-  A backport of c54c7b37 that first appeared in Git 2.4.6 that updates
-  the checking for newer osxen.
 
 * Improve usability of git-instaweb:
 

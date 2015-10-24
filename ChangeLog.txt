@@ -4,6 +4,17 @@ Git OS X Installer Change Log
 
 
 ------------------------------------------
+Git 2.4.10 Installer - reissued 2015-10-??
+------------------------------------------
+
+* Git v2.4.10
+  - update from version 2.3.10
+  - drop thread-utils.c fix (included in v2.4.0)
+  - drop git-gui Tcl 8.4 fix (included in v2.4.0)
+  - drop contrib/pre-auto-gc-battery fix backport (included in v2.4.0)
+
+
+------------------------------------------
 Git 2.3.10 Installer - reissued 2015-10-16
 ------------------------------------------
 

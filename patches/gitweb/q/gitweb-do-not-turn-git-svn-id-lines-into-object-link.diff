@@ -13,7 +13,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 00388b5e..4a28a114 100755
+index fe894a1d..cb64c27f 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -2352,7 +2352,7 @@ sub format_log_line_html {

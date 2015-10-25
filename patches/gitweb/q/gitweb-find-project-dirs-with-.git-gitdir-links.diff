@@ -11,7 +11,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 37 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 4676bd26..0ca50c39 100755
+index b1ecafb8..2b985184 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -3404,6 +3404,43 @@ sub git_get_projects_list {

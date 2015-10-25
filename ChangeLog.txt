@@ -9,6 +9,8 @@ Git 2.4.10 Installer - reissued 2015-10-??
 
 * Git v2.4.10
   - update from version 2.3.10
+  - the new ru.po translations work properly in all their plural forms
+  - include git-mw and git-remote-mediawiki from contrib/mw-to-git
   - drop thread-utils.c fix (included in v2.4.0)
   - drop git-gui Tcl 8.4 fix (included in v2.4.0)
   - drop contrib/pre-auto-gc-battery fix backport (included in v2.4.0)

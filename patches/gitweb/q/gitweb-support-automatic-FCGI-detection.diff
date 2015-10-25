@@ -35,7 +35,7 @@ index bad4bfd7..a65f19dc 100644
  Other variables
  ~~~~~~~~~~~~~~~
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index d0868d23..fbeae474 100755
+index 5c2ab6ac..15a8bcbc 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -452,7 +452,8 @@ our %feature = (

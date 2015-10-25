@@ -6,7 +6,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 80 insertions(+), 54 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 069873c4..697fdd1c 100755
+index 896f2ceb..5928ed3f 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -17,6 +17,7 @@ use Encode;

@@ -72,7 +72,7 @@ index cd9c8951..e87a461b 100644
  summary::
  	Displays summary about given repository.  This is the default command if
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 8a6f3441..7cbd498f 100755
+index c6442a2a..1ff6e9ac 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -202,6 +202,11 @@ our $prevent_xss = 0;

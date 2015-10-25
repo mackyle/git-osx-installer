@@ -12,11 +12,11 @@ a README.html file that consists of only XML <!-- comments -->.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  gitweb/gitweb.perl       | 52 +++++++++++++++++++++++++++++++++++++++++++-----
- gitweb/static/gitweb.css | 44 ++++++++++++++++++++++++++++++++++------
- 2 files changed, 85 insertions(+), 11 deletions(-)
+ gitweb/static/gitweb.css | 48 ++++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 89 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 75936080..f8fb19fc 100755
+index 1cca889c..08691a75 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -200,6 +200,13 @@ our $fallback_encoding = 'latin1';
@@ -93,7 +93,7 @@ index 75936080..f8fb19fc 100755
  
  	# we need to request one more than 16 (0..15) to check if
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 50efe9a0..b46617f0 100644
+index 50efe9a0..61d7bd00 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
 @@ -8,11 +8,15 @@ body {
@@ -114,7 +114,18 @@ index 50efe9a0..b46617f0 100644
  	color: #880000;
  }
  
-@@ -131,14 +135,42 @@ span.title {
+@@ -37,6 +41,10 @@ img.blob {
+ 	max-width: 100%;
+ }
+ 
++div.header, div.title {
++	clear: both;
++}
++
+ a.list img.avatar {
+ 	border-style: none;
+ }
+@@ -131,14 +139,42 @@ span.title {
  	display: block;
  }
  

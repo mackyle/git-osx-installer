@@ -68,7 +68,6 @@ Git Patches
 
 * Improve usability of git-instaweb:
 
-  - `patches/instaweb/q/t_instaweb_subdir.diff`
   - `patches/instaweb/q/t_instaweb_highlight.diff`
   - `patches/instaweb/q/t_instaweb_mimetypes.diff`
   - `patches/instaweb/q/t_instaweb_defaults.diff`
@@ -80,20 +79,20 @@ Git Patches
   - `patches/instaweb/q/t_instaweb_no-kill-nothing.diff`
   - `patches/instaweb/q/t_instaweb_auto-port.diff`
 
-  My own patches to improve the usability of git instaweb by making it run
-  from within a git checkout that is not at the top-level of the working tree,
-  enable source highlighting if highlight is available, use the installed copy
-  of mime.types (since there isn't such a file in OS X), enable pathinfo mode,
-  blame and better rename detection, add a 'graphiclog' link to the pages that
-  uses git-browser to show a graphic representation of commit ancestry, to bind
-  to both IPv4 and IPv6 addresses and browse to localhost instead of 127.0.0.1,
-  to enable readme blob display, to default to binding only to the localhost
-  address if `instaweb.local` has not been set at all, to avoid attempting to
-  kill using a process id of "" and finally to attempt to automatically select
-  an available port to listen on if one was not specified and the first chosen
-  port is not available.  The ipv6 patch is only effective when using lighttpd
-  as the web server (which is the default).  The fcgi patch enables FCGI mode
-  if the FCGI perl module is present.  Have not been posted elsewhere.
+  My own patches to improve the usability of git instaweb by enabling source
+  highlighting if highlight is available, using the installed copy of
+  mime.types (since there isn't such a file in OS X), enabling pathinfo mode,
+  blame and better rename detection, adding a 'graphiclog' link to the pages
+  that uses git-browser to show a graphic representation of commit ancestry,
+  binding to both IPv4 and IPv6 addresses and browsing to localhost instead of
+  127.0.0.1, enabling readme blob display, defaulting to binding only to the
+  localhost address if `instaweb.local` has not been set at all, avoiding
+  attempting to kill using a process id of "" and finally attempting to
+  automatically select an available port to listen on if one was not specified
+  and the first chosen port is not available.  The ipv6 patch is only effective
+  when using lighttpd as the web server (which is the default).  The fcgi patch
+  enables FCGI mode when the needed FCGI perl module is present.  Have not been
+  posted elsewhere.
 
 * Add submodule support to gitweb:
 

@@ -6,7 +6,25 @@
   <link rel="alternate" type="text/html" href="/git-osx-installer/"/>
   <id>urn:uuid:8c3cdd92-11f4-44d4-a90b-ae20c7f2a963</id>
   <published>2015-01-02T03:00:00-08:00</published>
-  <updated>2015-10-16T14:00:00-07:00</updated>
+  <updated>2015-10-27T16:00:00-07:00</updated>
+
+  <entry>
+    <title>Git 2.4.10 OS X Installer</title>
+    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.4.10_in"/>
+    <id>urn:uuid:2219b95d-c84a-4185-bb6c-23fd4f3e451a</id>
+    <published>2015-10-27T16:00:00-07:00</published>
+    <updated>2015-10-27T16:00:00-07:00</updated>
+    <summary>Mac OS X 10.4+ universal installer for Git version 2.4.10</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.4.10</p>
+        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.4.10-osx-installer.dmg">git-2.4.10-osx-installer.dmg</a><br/>
+        <span>MD5: </span><tt>3550c8079f6923cdbac4923f45fe16ac</tt><br/>
+        <span>SHA1: </span><tt>59aa26e0ba61bac0ab23b81ea1b7172bf33f704a</tt><br/>
+        <span>SHA256: </span><tt>8100a9757005737427cf5977f61e090c2472662cf69f570a434093d9db1714b2</tt><br/>
+      </div>
+    </content>
+  </entry>
 
   <entry>
     <title>Git 2.3.10 OS X Installer</title>

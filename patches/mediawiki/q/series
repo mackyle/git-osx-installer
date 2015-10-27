@@ -1,0 +1,4 @@
+t_mediawiki_no-dupes.diff -p1
+t_mediawiki_namespaces.diff -p1
+t_mediawiki_max-revision.diff -p1
+t_mediawiki_mediaimport.diff -p1

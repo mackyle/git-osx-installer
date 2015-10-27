@@ -66,6 +66,25 @@ Git Patches
   Both patches included in the thread and discussion at:
   <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
 
+* Make git-remote-mediawiki work properly:
+
+  - `patches/mediawiki/q/t_mediawiki_no-dupes.diff`
+  - `patches/mediawiki/q/t_mediawiki_namespaces.diff`
+  - `patches/mediawiki/q/t_mediawiki_max-revision.diff`
+  - `patches/mediawiki/q/t_mediawiki_mediaimport.diff`
+
+  My own patches to make git-remote-mediawiki work properly.  The no-dupes
+  patch avoids importing more than one copy of the same history (typically it
+  would import two copies).  The max-revision patch allows it to actually find
+  the correct maximum revision so that a fetchStrategy of 'by_rev' can work
+  properly.  The namespaces patch allows a 'by_rev' fetchStrategy to fetch an
+  update regardless of what namespace it's located in when no pages or
+  categories have been set to otherwise limit the import.  Finally the
+  mediaimport patch allows it to actually find the media to import when the
+  mediaimport flag is set to true and the media has a timestamp that does not
+  exactly match the page's down to the last second.  Have not been posted
+  elsewhere.
+
 * Improve usability of git-instaweb:
 
   - `patches/instaweb/q/t_instaweb_highlight.diff`

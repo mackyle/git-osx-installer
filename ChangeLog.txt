@@ -4,7 +4,7 @@ Git OS X Installer Change Log
 
 
 ------------------------------------------
-Git 2.4.10 Installer - released 2015-10-25
+Git 2.4.10 Installer - released 2015-10-27
 ------------------------------------------
 
 * Git v2.4.10

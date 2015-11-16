@@ -1,4 +1,4 @@
-Subject: [PATCH] git-remote-mediawiki.perl: avoid redundant imports
+Subject: [PATCH] git-remote-mediawiki: avoid redundant imports
 
 Previously the git-remote mechanism would request an import of HEAD
 and then an import of whatever it pointed to.

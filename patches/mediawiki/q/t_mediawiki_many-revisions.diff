@@ -1,0 +1,146 @@
+Subject: [PATCH] git-remote-mediawiki: handle many revisions with 'by_rev'
+
+When fetching using the fetchStrategy 'by_rev', the mw_import_revids
+function is called using [$fetch_from..$last_remote] as an argument.
+
+If the difference between $last_remote and $fetch_from is large it can
+easily explode Perl's memory causing an immediate failure.
+
+While it would be possible to call the mw_import_revids function repeatedly
+with batches of rev ids, that would not produce the nicest output for the
+user.
+
+Instead introduce a simple interval class that can be initialized either
+with an array of items or using a from, to, step interface that avoids
+the problem while allowing the full range to be passed to mw_import_revids.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ contrib/mw-to-git/git-remote-mediawiki.perl | 67 +++++++++++++++++++++++++----
+ 1 file changed, 59 insertions(+), 8 deletions(-)
+
+diff --git a/contrib/mw-to-git/git-remote-mediawiki.perl b/contrib/mw-to-git/git-remote-mediawiki.perl
+index 0e865220..ffe2f465 100755
+--- a/contrib/mw-to-git/git-remote-mediawiki.perl
++++ b/contrib/mw-to-git/git-remote-mediawiki.perl
+@@ -1,16 +1,67 @@
+ #! /usr/bin/perl
+ 
+-# Copyright (C) 2011
++# Copyright (C) 2011, 2015
+ #     Jérémie Nikaes <jeremie.nikaes@ensimag.imag.fr>
+ #     Arnaud Lacurie <arnaud.lacurie@ensimag.imag.fr>
+ #     Claire Fousse <claire.fousse@ensimag.imag.fr>
+ #     David Amouyal <david.amouyal@ensimag.imag.fr>
+ #     Matthieu Moy <matthieu.moy@grenoble-inp.fr>
++#     Kyle J. McKay <mackyle@gmail.com>
+ # License: GPL v2 or later
+ 
+ # Gateway between Git and MediaWiki.
+ # Documentation & bugtracker: https://github.com/moy/Git-Mediawiki/
+ 
++package Interval;
++
++sub new {
++	shift; # ignore class
++	my $self = {array => \@_};
++	return bless $self;
++}
++
++sub interval {
++	shift; # ignore class
++	my ($first, $last, $step) = @_;
++	$step or $step = 1;
++	my $self = {first => $first, last => $last, step => $step};
++	return bless $self;
++}
++
++sub reset {
++	my $self = shift;
++	delete $self->{index};
++	return $self;
++}
++
++sub count {
++	my $self = shift;
++	return defined($self->{array})
++		? scalar(@{$self->{array}})
++		: ($self->{last} >= $self->{first}
++			? int(($self->{last} - $self->{first}) / $self->{step}) + 1
++			: 0);
++}
++
++sub next {
++	my $self = shift;
++	my $ans;
++	my $index = $self->{index};
++	if (defined($self->{array})) {
++		defined($index) or $index = 0;
++		$ans = ${$self->{array}}[$index];
++		defined($ans) and ++$index;
++	} else {
++		defined($index) or $index = $self->{first};
++		$ans = $index <= $self->{last} ? $index : undef;
++		defined($ans) and $index += $self->{step};
++	}
++	$self->{index} = $index;
++	return $ans;
++}
++
++package main;
++
+ use strict;
+ use MediaWiki::API;
+ use Git;
+@@ -851,9 +902,9 @@ sub mw_import_ref_by_pages {
+ 	my ($n, @revisions) = fetch_mw_revisions(\@pages, $fetch_from);
+ 
+ 	@revisions = sort {$a->{revid} <=> $b->{revid}} @revisions;
+-	my @revision_ids = map { $_->{revid} } @revisions;
++	my $revision_ids = Interval->new(map { $_->{revid} } @revisions);
+ 
+-	return mw_import_revids($fetch_from, \@revision_ids, \%pages_hash);
++	return mw_import_revids($fetch_from, $revision_ids, \%pages_hash);
+ }
+ 
+ sub mw_import_ref_by_revs {
+@@ -862,8 +913,8 @@ sub mw_import_ref_by_revs {
+ 	my %pages_hash = get_mw_pages();
+ 
+ 	my $last_remote = get_last_global_remote_rev();
+-	my @revision_ids = $fetch_from..$last_remote;
+-	return mw_import_revids($fetch_from, \@revision_ids, \%pages_hash);
++	my $revision_ids = Interval->interval($fetch_from, $last_remote);
++	return mw_import_revids($fetch_from, $revision_ids, \%pages_hash);
+ }
+ 
+ # Import revisions given in second argument (array of integers).
+@@ -880,7 +931,7 @@ sub mw_import_revids {
+ 
+ 	my $user_defined = @tracked_pages || @tracked_categories;
+ 
+-	foreach my $pagerevid (@{$revision_ids}) {
++	while (defined(my $pagerevid = $revision_ids->next)) {
+ 	        # Count page even if we skip it, since we display
+ 		# $n/$total and $total includes skipped pages.
+ 		$n++;
+@@ -915,7 +966,7 @@ sub mw_import_revids {
+ 		my $page_title = $result_page->{title};
+ 
+ 		if ($user_defined && !exists($pages->{$page_title})) {
+-			print {*STDERR} "${n}/", scalar(@{$revision_ids}),
++			print {*STDERR} "${n}/", $revision_ids->count,
+ 				": Skipping revision #$rev->{revid} of ${page_title}\n";
+ 			next;
+ 		}
+@@ -948,7 +999,7 @@ sub mw_import_revids {
+ 		# If this is a revision of the media page for new version
+ 		# of a file do one common commit for both file and media page.
+ 		# Else do commit only for that page.
+-		print {*STDERR} "${n}/", scalar(@{$revision_ids}), ": Revision #$rev->{revid} of $commit{title}\n";
++		print {*STDERR} "${n}/", $revision_ids->count, ": Revision #$rev->{revid} of $commit{title}\n";
+ 		import_file_revision(\%commit, ($fetch_from == 1), $n_actual, \%mediafile);
+ 	}
+ 
+---

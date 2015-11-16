@@ -72,6 +72,8 @@ Git Patches
   - `patches/mediawiki/q/t_mediawiki_namespaces.diff`
   - `patches/mediawiki/q/t_mediawiki_max-revision.diff`
   - `patches/mediawiki/q/t_mediawiki_mediaimport.diff`
+  - `patches/mediawiki/q/t_mediawiki_many-revisions.difff`
+  - `patches/mediawiki/q/t_mediawiki_empty-commit.diff`
 
   My own patches to make git-remote-mediawiki work properly.  The no-dupes
   patch avoids importing more than one copy of the same history (typically it
@@ -79,11 +81,14 @@ Git Patches
   the correct maximum revision so that a fetchStrategy of 'by_rev' can work
   properly.  The namespaces patch allows a 'by_rev' fetchStrategy to fetch an
   update regardless of what namespace it's located in when no pages or
-  categories have been set to otherwise limit the import.  Finally the
-  mediaimport patch allows it to actually find the media to import when the
-  mediaimport flag is set to true and the media has a timestamp that does not
-  exactly match the page's down to the last second.  Have not been posted
-  elsewhere.
+  categories have been set to otherwise limit the import.  The mediaimport
+  patch allows it to actually find the media to import when the mediaimport
+  flag is set to true and the media has a timestamp that does not exactly match
+  the page's down to the last second.  The many-revisions patch allows a
+  fetchStrategy of 'by_rev' to succeed when the number of revisions that need
+  to be fetched is very larg.  And finally the empty-commit patch preserves
+  a MediaWiki revision that only has a comment when can happen if the revision
+  data has somehow been obliterated.  Have not been posted elsewhere.
 
 * Improve usability of git-instaweb:
 
@@ -133,6 +138,14 @@ Git Patches
 
   [1] <http://repo.or.cz/w/girocco.git>  
   [2] <http://repo.or.cz/w/git/gitweb.git/blob/girocco:README_FIRST.txt>
+
+* contrib/git-log-times:
+
+  - `patches/km/contrib-git-log-times.txt`
+
+  My own patch that adds contrib/git-log-times a git log --oneline alternative
+  that includes dates, times and initials.  See the README file in the patch.
+  Has not been posted elsewhere.
 
 
 Curl Patches

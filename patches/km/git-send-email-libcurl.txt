@@ -42,20 +42,20 @@ value to render it opaque.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- git-send-email--libcurl.pl | 218 +++++++++++++++++++++++++
- git-send-email.perl        | 159 +++++++++---------
- send-email--libcurl.c      | 393 +++++++++++++++++++++++++++++++++++++++++++++
- t/t9001-send-email.sh      |  20 +--
- 4 files changed, 696 insertions(+), 94 deletions(-)
+ git-send-email--libcurl.pl | 385 +++++++++++++++++++++++++++
+ git-send-email.perl        | 162 ++++++------
+ send-email--libcurl.c      | 633 +++++++++++++++++++++++++++++++++++++++++++++
+ t/t9001-send-email.sh      |  20 +-
+ 4 files changed, 1106 insertions(+), 94 deletions(-)
  create mode 100644 git-send-email--libcurl.pl
  create mode 100644 send-email--libcurl.c
 
 diff --git a/git-send-email--libcurl.pl b/git-send-email--libcurl.pl
 new file mode 100644
-index 00000000..31a78b63
+index 00000000..86dded08
 --- /dev/null
 +++ b/git-send-email--libcurl.pl
-@@ -0,0 +1,218 @@
+@@ -0,0 +1,385 @@
 +=comment
 +
 +send-email--libcurl.pl -- libcURL helper for git-send-email.perl
@@ -82,8 +82,42 @@ index 00000000..31a78b63
 +use File::Basename;
 +use Cwd 'realpath';
 +use IPC::Open2;
++use Exporter 'import';
++use vars qw($VERSION @EXPORT);
++BEGIN {*VERSION = \1.0}
++@EXPORT = qw(
++	CURLE_OK
++	CURLE_UNSUPPORTED_PROTOCOL
++	CURLE_URL_MALFORMAT
++	CURLE_COULDNT_RESOLVE_HOST
++	CURLE_COULDNT_CONNECT
++	CURLE_HTTP_RETURNED_ERROR
++	CURLE_UPLOAD_FAILED
++	CURLE_OUT_OF_MEMORY
++	CURLE_OPERATION_TIMEDOUT
++	CURLE_UNKNOWN_OPTION
++	CURLE_GOT_NOTHING
++	CURLE_LOGIN_DENIED
++	CURLE_AGAIN
++	CURLE_SSL_PINNEDPUBKEYNOTMATCH
++);
 +
-+our $helper = realpath(dirname($0).'/git-send-email--libcurl');
++sub CURLE_OK()				{ 0}
++sub CURLE_UNSUPPORTED_PROTOCOL()	{ 1}
++sub CURLE_URL_MALFORMAT()		{ 3}
++sub CURLE_COULDNT_RESOLVE_HOST()	{ 6}
++sub CURLE_COULDNT_CONNECT()		{ 7}
++sub CURLE_HTTP_RETURNED_ERROR()		{22}
++sub CURLE_UPLOAD_FAILED()		{25}
++sub CURLE_OUT_OF_MEMORY()		{27}
++sub CURLE_OPERATION_TIMEDOUT()		{28}
++sub CURLE_UNKNOWN_OPTION()		{48}
++sub CURLE_GOT_NOTHING()			{52}
++sub CURLE_LOGIN_DENIED()		{67}
++sub CURLE_AGAIN()			{81}
++sub CURLE_SSL_PINNEDPUBKEYNOTMATCH()	{90}
++
++our $helper = realpath(dirname(realpath(__FILE__)).'/git-send-email--libcurl');
 +die "Missing $helper\n" unless -x $helper;
 +
 +sub spawn {
@@ -110,10 +144,10 @@ index 00000000..31a78b63
 +	my $tag = shift;
 +	my $val = shift;
 +	die "Invalid tag: '$tag'\n" unless length($tag) == 4;
-+	print {$self->{'chldin'}} $tag.pack('N',$val);
++	printf {$self->{'chldin'}} "%s", $tag.pack('N',$val);
 +	my $data;
 +	my $result = read($self->{'chldout'}, $data, 4);
-+	die "Read result from helper failed\n" unless $result && $result == 4;
++	die "Read result '$tag' from helper failed\n" unless $result && $result == 4;
 +	return unpack('N', $data);
 +}
 +
@@ -126,7 +160,7 @@ index 00000000..31a78b63
 +	return "" unless $strlen;
 +	my $data;
 +	my $result = read($self->{'chldout'}, $data, $strlen);
-+	die "Read result from helper failed\n" unless $result && $result == $strlen;
++	die "Read result '$tag' from helper failed\n" unless $result && $result == $strlen;
 +	return $data;
 +}
 +
@@ -136,11 +170,17 @@ index 00000000..31a78b63
 +	my $tag = shift;
 +	my $str = shift;
 +	die "Invalid tag: '$tag'\n" unless length($tag) == 4;
-+	print {$self->{'chldin'}} $tag.pack('N',length($str)).$str;
++	printf {$self->{'chldin'}} "%s", $tag.pack('N',length($str)).$str;
 +	my $data;
 +	my $result = read($self->{'chldout'}, $data, 4);
-+	die "Read result from helper failed\n" unless $result && $result == 4;
++	die "Read result '$tag' from helper failed\n" unless $result && $result == 4;
 +	return unpack('N', $data);
++}
++
++sub version {
++	my $self = shift;
++	my $ans = $self->_get_val('vers', 0);
++	return (($ans >> 16) & 0xff) . '.' . (($ans >> 8) & 0xff) . '.' . ($ans & 0xff);
 +}
 +
 +sub strerror {
@@ -154,6 +194,11 @@ index 00000000..31a78b63
 +	return $self->_get_val('prfm', 0);
 +}
 +
++sub reset {
++	my $self = shift;
++	return $self->_get_val('rset', 0);
++}
++
 +sub errbuf {
 +	my $self = shift;
 +	return $self->_get_string('errb', 0);
@@ -164,9 +209,40 @@ index 00000000..31a78b63
 +	return $self->_get_string('lsth', 0);
 +}
 +
++# Note that any gzip/deflate content encoding will be automatically decoded
++sub body {
++	my $self = shift;
++	return $self->_get_string('wdta', 0);
++}
++
++# These are the headers returned from the server returned as an array of
++# header lines (any \s+$ removed) as sent to cURL's CURLOPT_HEADERFUNCTION
++# note the first "header" may actually be an HTTP respose such as:
++#    HTTP/1.1 200 OK
++sub headers {
++	my $self = shift;
++	my $hdrblob = $self->_get_string('hdta', 0);
++	my @ans = ();
++	foreach my $hdr (split(/\x00+/, $hdrblob)) {
++		$hdr =~ s/\s+$//os;
++		push(@ans, $hdr) if $hdr ne '';
++	}
++	return @ans;
++}
++
 +sub getinfo_response_code {
 +	my $self = shift;
 +	return $self->_get_val('rspc', 0);
++}
++
++sub getinfo_redirect_url {
++	my $self = shift;
++	return $self->_get_string('rurl', 0);
++}
++
++sub getinfo_content_type {
++	my $self = shift;
++	return $self->_get_string('ctyp', 0);
 +}
 +
 +sub setopt_ssl_verifyhost {
@@ -193,6 +269,36 @@ index 00000000..31a78b63
 +	return $self->_get_val('nopg', $bool ? 1 : 0);
 +}
 +
++sub setopt_port {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_val('port', $val);
++}
++
++sub setopt_timeout {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_val('tmot', $val);
++}
++
++sub setopt_httpget {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('hget', $bool ? 1 : 0);
++}
++
++sub setopt_nobody {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('nbdy', $bool ? 1 : 0);
++}
++
++sub setopt_post {
++	my $self = shift;
++	my $bool = shift;
++	return $self->_get_val('post', $bool ? 1 : 0);
++}
++
 +sub setopt_upload {
 +	my $self = shift;
 +	my $bool = shift;
@@ -207,6 +313,26 @@ index 00000000..31a78b63
 +	return $self->_get_val('ussl', $val);
 +}
 +
++# Whether to use a ~/.netrc file or not
++# 0 = never, 1 = required, -1 = optional fallback
++sub setopt_netrc {
++	my $self = shift;
++	my $val = shift;
++	return $self->_get_val('ntrc', $val);
++}
++
++sub setopt_useragent {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('agnt', $val);
++}
++
++sub setopt_proxy {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('prxy', $val);
++}
++
 +sub setopt_cainfo {
 +	my $self = shift;
 +	my $val = shift;
@@ -217,6 +343,18 @@ index 00000000..31a78b63
 +	my $self = shift;
 +	my $val = shift;
 +	return $self->_set_string('capa', $val);
++}
++
++sub setopt_sslcert {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('cert', $val);
++}
++
++sub setopt_sslkey {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('key_', $val);
 +}
 +
 +sub setopt_mail_auth {
@@ -260,6 +398,28 @@ index 00000000..31a78b63
 +	return $self->_set_string('data', $val);
 +}
 +
++# May be set to the empty string to activate cookies without external files
++# If set to a non-empty string then both COOKIEFILE and COOKIEJAR will be set
++sub setopt_cookiefile {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('cook', $val);
++}
++
++# ignores anything other than 'ALL', 'SESS', 'FLUSH', or 'RELOAD' in
++# a case-insensitive way
++sub setopt_cookielist {
++	my $self = shift;
++	my $cmd = shift;
++	if (defined($cmd)) {
++		$cmd = uc($cmd);
++		if ($cmd eq "ALL" || $cmd eq "SESS" || $cmd eq "FLUSH" || $cmd eq "RELOAD") {
++			return $self->_set_string('ckls', $cmd);
++		}
++	}
++	return 0;
++}
++
 +sub setopt_url {
 +	my $self = shift;
 +	my $val = shift;
@@ -273,12 +433,19 @@ index 00000000..31a78b63
 +	return $self->_set_string('rcpt', $strings);
 +}
 +
++sub setopt_httpheader {
++	use bytes;
++	my $self = shift;
++	my $strings = join('', map($_.pack('C',0), @_));
++	return $self->_set_string('hdrs', $strings);
++}
++
 +1;
 diff --git a/git-send-email.perl b/git-send-email.perl
-index e1e9b146..fdcb364d 100755
+index e1e9b146..e6b4829b 100755
 --- a/git-send-email.perl
 +++ b/git-send-email.perl
-@@ -26,8 +26,12 @@ use Data::Dumper;
+@@ -26,8 +26,15 @@ use Data::Dumper;
  use Term::ANSIColor;
  use File::Temp qw/ tempdir tempfile /;
  use File::Spec::Functions qw(catfile);
@@ -286,12 +453,15 @@ index e1e9b146..fdcb364d 100755
  use Error qw(:try);
  use Git;
 +use File::Basename;
-+require(dirname($0).'/git-send-email--libcurl.pl');
-+use constant CURLE_LOGIN_DENIED => 67;
++use Cwd 'realpath';
++BEGIN {
++require(realpath(dirname(realpath(__FILE__))).'/git-send-email--libcurl.pl');
++WWW::Curl::Libcurl->import;
++}
  
  Getopt::Long::Configure qw/ pass_through /;
  
-@@ -54,7 +58,7 @@ git send-email [options] <file | directory | rev-list options >
+@@ -54,7 +61,7 @@ git send-email [options] <file | directory | rev-list options >
      --[no-]bcc              <str>  * Email Bcc:
      --subject               <str>  * Email "Subject:"
      --in-reply-to           <str>  * Email "In-Reply-To:"
@@ -300,7 +470,7 @@ index e1e9b146..fdcb364d 100755
      --[no-]annotate                * Review each patch that will be sent in an editor.
      --compose                      * Open an editor for introduction.
      --compose-encoding      <str>  * Encoding to assume for introduction.
-@@ -228,7 +232,7 @@ my %config_bool_settings = (
+@@ -228,7 +235,7 @@ my %config_bool_settings = (
      "validate" => [\$validate, 1],
      "multiedit" => [\$multiedit, undef],
      "annotate" => [\$annotate, undef],
@@ -309,7 +479,7 @@ index e1e9b146..fdcb364d 100755
  );
  
  my %config_settings = (
-@@ -304,6 +308,7 @@ my $rc = GetOptions("h" => \$help,
+@@ -304,6 +311,7 @@ my $rc = GetOptions("h" => \$help,
  		    "smtp-server-option=s" => \@smtp_server_options,
  		    "smtp-server-port=s" => \$smtp_server_port,
  		    "smtp-user=s" => \$smtp_authuser,
@@ -317,7 +487,7 @@ index e1e9b146..fdcb364d 100755
  		    "smtp-pass:s" => \$smtp_authpass,
  		    "smtp-ssl" => sub { $smtp_encryption = 'ssl' },
  		    "smtp-encryption=s" => \$smtp_encryption,
-@@ -925,8 +930,10 @@ sub make_message_id {
+@@ -925,8 +933,10 @@ sub make_message_id {
  		require Sys::Hostname;
  		$du_part = 'user@' . Sys::Hostname::hostname();
  	}
@@ -329,7 +499,7 @@ index e1e9b146..fdcb364d 100755
  	#print "new message id = $message_id\n"; # Was useful for debugging
  }
  
-@@ -1090,12 +1097,12 @@ sub smtp_host_string {
+@@ -1090,12 +1100,12 @@ sub smtp_host_string {
  	}
  }
  
@@ -345,7 +515,7 @@ index e1e9b146..fdcb364d 100755
  	}
  
  	# Workaround AUTH PLAIN/LOGIN interaction defect
-@@ -1108,47 +1115,36 @@ sub smtp_auth_maybe {
+@@ -1108,47 +1118,36 @@ sub smtp_auth_maybe {
  	# TODO: Authentication may fail not because credentials were
  	# invalid but due to other reasons, in which we should not
  	# reject credentials.
@@ -408,7 +578,7 @@ index e1e9b146..fdcb364d 100755
  	}
  }
  
-@@ -1264,65 +1260,61 @@ Message-Id: $message_id
+@@ -1264,65 +1263,61 @@ Message-Id: $message_id
  			die "The required SMTP server is not properly defined."
  		}
  
@@ -519,7 +689,7 @@ index e1e9b146..fdcb364d 100755
  		print (($dry_run ? "Dry-" : "")."OK. Log says:\n");
  		if (!file_name_is_absolute($smtp_server)) {
  			print "Server: $smtp_server\n";
-@@ -1335,8 +1327,7 @@ Message-Id: $message_id
+@@ -1335,8 +1330,7 @@ Message-Id: $message_id
  		}
  		print $header, "\n";
  		if ($smtp) {
@@ -529,7 +699,7 @@ index e1e9b146..fdcb364d 100755
  		} else {
  			print "Result: OK\n";
  		}
-@@ -1594,7 +1585,7 @@ sub cleanup_compose_files {
+@@ -1594,7 +1588,7 @@ sub cleanup_compose_files {
  	unlink($compose_filename, $compose_filename . ".final") if $compose;
  }
  
@@ -540,10 +710,10 @@ index e1e9b146..fdcb364d 100755
  	my $message = shift;
 diff --git a/send-email--libcurl.c b/send-email--libcurl.c
 new file mode 100644
-index 00000000..9dabea3f
+index 00000000..eb49e4e9
 --- /dev/null
 +++ b/send-email--libcurl.c
-@@ -0,0 +1,393 @@
+@@ -0,0 +1,633 @@
 +/*
 +
 +send-email--libcurl.c -- libcURL helper for git-send-email.perl
@@ -579,6 +749,12 @@ index 00000000..9dabea3f
 +
 +static int process_cmds(FILE *in, FILE *out, CURL *curl);
 +
++static void reset_curl(CURL *curl)
++{
++	curl_easy_reset(curl);
++	curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
++}
++
 +int main(int argc, char *const argv[])
 +{
 +	int result;
@@ -591,6 +767,7 @@ index 00000000..9dabea3f
 +	curl = curl_easy_init();
 +	if (!curl)
 +		return 3;
++	reset_curl(curl);
 +
 +	result = process_cmds(inbinary, outbinary, curl);
 +	curl_easy_cleanup(curl);
@@ -602,7 +779,7 @@ index 00000000..9dabea3f
 +	char *string = (char *)malloc(len + 1);
 +	if (!string)
 +		return 10;
-+	if (!fread(string, len, 1, in)) {
++	if (len && !fread(string, len, 1, in)) {
 +		free(string);
 +		return 11;
 +	}
@@ -637,7 +814,7 @@ index 00000000..9dabea3f
 +	int err = send_res(out, (CURLcode)l);
 +	if (err)
 +		return err;
-+	if (fwrite(p, l, 1, out) != 1)
++	if (l && fwrite(p, l, 1, out) != 1)
 +		return 12;
 +	fflush(out);
 +	return 0;
@@ -662,9 +839,13 @@ index 00000000..9dabea3f
 +	return max;
 +}
 +
++struct collect_s;
++static int append_collect(struct collect_s *clt, const void *p, size_t s);
++
 +typedef struct {
 +	char *line;
 +	size_t space;
++	struct collect_s *clt;
 +} hdrline_t;
 +
 +static size_t hdrfunc(char *ptr, size_t size, size_t nmemb, void *_cxt)
@@ -678,6 +859,9 @@ index 00000000..9dabea3f
 +	while (len && (ptr[len - 1] == '\r' || ptr[len - 1] == '\n'))
 +		--len;
 +	cxt->line[len] = '\0';
++	len = append_collect(cxt->clt, ptr, max);
++	if (!len || len != max || append_collect(cxt->clt, "", 1) != 1)
++		return 0;
 +	return max;
 +}
 +
@@ -701,18 +885,102 @@ index 00000000..9dabea3f
 +	return 0;
 +}
 +
-+static size_t writefunc(char *p, size_t s, size_t n, void *u)
++#define BLOCK_SIZE 32736
++typedef struct block_s {
++	struct block_s *next;
++	size_t offset;
++	char data[BLOCK_SIZE];
++} block_t;
++
++typedef struct collect_s {
++	block_t *first, *last;
++	size_t total;
++} collect_t;
++
++static void free_collect(collect_t *clt)
 +{
-+	(void)p;
-+	(void)u;
-+	return s * n;
++	block_t *block = clt->first;
++	while (block) {
++		block_t *link = block->next;
++		free(block);
++		block = link;
++	}
++	clt->first = NULL;
++	clt->last = NULL;
++	clt->total = 0;
++}
++
++static int append_collect(collect_t *clt, const void *p, size_t s)
++{
++	size_t left;
++	const char *ptr;
++
++	if (!p || !s)
++		return 0;
++
++	ptr = (const char *)p;
++	left = s;
++	while (left) {
++		size_t cpyamt;
++		if (!clt->first) {
++			clt->first = (block_t *)malloc(sizeof(block_t));
++			if (!clt->first)
++				return 0;
++			clt->first->next = NULL;
++			clt->first->offset = 0;
++			clt->last = clt->first;
++		}
++		if (clt->last->offset >= BLOCK_SIZE) {
++			block_t *next = (block_t *)malloc(sizeof(block_t));
++			if (!next)
++				return 0;
++			next->next = NULL;
++			next->offset = 0;
++			clt->last->next = next;
++			clt->last = next;
++		}
++		cpyamt = BLOCK_SIZE - clt->last->offset;
++		if (cpyamt > left)
++			cpyamt = left;
++		memcpy(clt->last->data + clt->last->offset, ptr, cpyamt);
++		clt->last->offset += cpyamt;
++		clt->total += cpyamt;
++		ptr += cpyamt;
++		left -= cpyamt;
++	}
++
++	return s;
++}
++
++static size_t writefunc(char *ptr, size_t size, size_t nmemb, void *_clt)
++{
++	return append_collect((collect_t *)_clt, ptr, size * nmemb);
++}
++
++static int send_collect(FILE *out, const collect_t *clt)
++{
++	const block_t *block = clt->first;
++	int err = send_res(out, (CURLcode)clt->total);
++	if (err)
++		return err;
++	while (block) {
++		if (block->offset) {
++			if (fwrite(block->data, block->offset, 1, out) != 1)
++				return 12;
++		}
++		block = block->next;
++	}
++	fflush(out);
++	return 0;
 +}
 +
 +enum {
 +	CURLCMD_PERFORM = -1000,
 +	CURLGET_ERRBUF,
 +	CURLGET_LASTHDR,
-+	CURLGET_STRERROR
++	CURLGET_STRERROR,
++	CURLCMD_RESET,
++	CURLGET_VERSION
 +};
 +
 +typedef struct {
@@ -721,27 +989,46 @@ index 00000000..9dabea3f
 +} cmd_lookup_t;
 +
 +static cmd_lookup_t commands[] = {
++	{{'a','g','n','t'}, CURLOPT_USERAGENT},
 +	{{'a','u','t','h'}, CURLOPT_MAIL_AUTH},
 +	{{'c','a','i','n'}, CURLOPT_CAINFO},
 +	{{'c','a','p','a'}, CURLOPT_CAPATH},
++	{{'c','e','r','t'}, CURLOPT_SSLCERT},
++	{{'c','k','l','s'}, CURLOPT_COOKIELIST},
++	{{'c','o','o','k'}, CURLOPT_COOKIEFILE},
++	{{'c','t','y','p'}, CURLINFO_CONTENT_TYPE},
 +	{{'d','a','t','a'}, CURLOPT_READDATA},
 +	{{'e','r','r','b'}, CURLGET_ERRBUF},
 +	{{'f','r','o','m'}, CURLOPT_MAIL_FROM},
++	{{'h','d','r','s'}, CURLOPT_HTTPHEADER},
++	{{'h','d','t','a'}, CURLOPT_HEADERDATA},
++	{{'h','g','e','t'}, CURLOPT_HTTPGET},
++	{{'k','e','y','_'}, CURLOPT_SSLKEY},
 +	{{'l','s','t','h'}, CURLGET_LASTHDR},
 +	{{'m','e','c','h'}, CURLOPT_LOGIN_OPTIONS},
++	{{'n','b','d','y'}, CURLOPT_NOBODY},
 +	{{'n','o','p','g'}, CURLOPT_NOPROGRESS},
++	{{'n','t','r','c'}, CURLOPT_NETRC},
++	{{'p','o','r','t'}, CURLOPT_PORT},
++	{{'p','o','s','t'}, CURLOPT_POST},
 +	{{'p','r','f','m'}, CURLCMD_PERFORM},
++	{{'p','r','x','y'}, CURLOPT_PROXY},
 +	{{'p','s','w','d'}, CURLOPT_PASSWORD},
 +	{{'r','c','p','t'}, CURLOPT_MAIL_RCPT},
++	{{'r','s','e','t'}, CURLCMD_RESET},
 +	{{'r','s','p','c'}, CURLINFO_RESPONSE_CODE},
++	{{'r','u','r','l'}, CURLINFO_REDIRECT_URL},
 +	{{'s','t','r','e'}, CURLGET_STRERROR},
++	{{'t','m','o','t'}, CURLOPT_TIMEOUT},
 +	{{'u','p','l','d'}, CURLOPT_UPLOAD},
 +	{{'u','r','l','_'}, CURLOPT_URL},
 +	{{'u','s','e','r'}, CURLOPT_USERNAME},
 +	{{'u','s','s','l'}, CURLOPT_USE_SSL},
 +	{{'v','e','r','b'}, CURLOPT_VERBOSE},
++	{{'v','e','r','s'}, CURLGET_VERSION},
 +	{{'v','h','s','t'}, CURLOPT_SSL_VERIFYHOST},
-+	{{'v','p','e','r'}, CURLOPT_SSL_VERIFYPEER}
++	{{'v','p','e','r'}, CURLOPT_SSL_VERIFYPEER},
++	{{'w','d','t','a'}, CURLOPT_WRITEDATA}
 +};
 +
 +static int cmp_cmd(const void *_e1, const void *_e2)
@@ -771,7 +1058,11 @@ index 00000000..9dabea3f
 +	char *data = NULL;
 +	size_t datalen = 0;
 +	struct curl_slist *recipients = NULL;
++	struct curl_slist *httpheaders = NULL;
++	collect_t hdata, wdata;
 +
++	memset(&hdata, 0, sizeof(hdata));
++	memset(&wdata, 0, sizeof(wdata));
 +	errbuf[0] = '\0';
 +	hdrbuf[0] = '\0';
 +	while (!ferror(in) && !ferror(out) && fread(&cmd, sizeof(cmd), 1, in)) {
@@ -786,6 +1077,9 @@ index 00000000..9dabea3f
 +
 +		case CURLOPT_NOPROGRESS:
 +		case CURLOPT_SSL_VERIFYPEER:
++		case CURLOPT_HTTPGET:
++		case CURLOPT_NOBODY:
++		case CURLOPT_POST:
 +		case CURLOPT_UPLOAD:
 +		case CURLOPT_VERBOSE:
 +			res = curl_easy_setopt(curl, (CURLoption)opt,
@@ -800,8 +1094,18 @@ index 00000000..9dabea3f
 +		case CURLOPT_PASSWORD:
 +		case CURLOPT_URL:
 +		case CURLOPT_USERNAME:
++		case CURLOPT_PROXY:
++		case CURLOPT_COOKIELIST:
++		case CURLOPT_USERAGENT:
++		case CURLOPT_SSLCERT:
++		case CURLOPT_SSLKEY:
 +			res = handle_string_opt(curl, (CURLoption)opt,
 +						cmd.val, in, &err);
++			break;
++
++		case CURLOPT_PORT:
++		case CURLOPT_TIMEOUT:
++			res = curl_easy_setopt(curl, (CURLoption)opt, (long)cmd.val);
 +			break;
 +
 +		case CURLOPT_SSL_VERIFYHOST:
@@ -815,6 +1119,12 @@ index 00000000..9dabea3f
 +					(cmd.val ? CURLUSESSL_ALL : CURLUSESSL_NONE)));
 +			break;
 +
++		case CURLOPT_NETRC:
++			res = curl_easy_setopt(curl, CURLOPT_NETRC, (long)(
++				(cmd.val & 0x80000000) ? CURL_NETRC_OPTIONAL :
++					(cmd.val ? CURL_NETRC_REQUIRED : CURL_NETRC_IGNORED)));
++			break;
++
 +		case CURLOPT_READDATA:
 +			if (data)
 +				free(data);
@@ -823,6 +1133,26 @@ index 00000000..9dabea3f
 +				break;
 +			datalen = cmd.val;
 +			break;
++
++		case CURLOPT_COOKIEFILE:
++		{
++			char *string;
++			err = read_string(in, cmd.val, &string);
++			if (err)
++				break;
++			res = curl_easy_setopt(curl, CURLOPT_COOKIEFILE, string);
++			if (!res && *string)
++				res = curl_easy_setopt(curl, CURLOPT_COOKIEJAR, string);
++			free(string);
++			break;
++		}
++
++		case CURLGET_VERSION:
++		{
++			curl_version_info_data *data = curl_version_info(CURLVERSION_NOW);
++			res = data->version_num;
++			break;
++		}
 +
 +		case CURLGET_ERRBUF:
 +			stringval = errbuf;
@@ -836,14 +1166,35 @@ index 00000000..9dabea3f
 +			stringval = curl_easy_strerror((CURLcode) cmd.val);
 +			break;
 +
++		case CURLOPT_HEADERDATA:
++			err = send_collect(out, &hdata);
++			if (!err)
++				continue;
++			break;
++
++		case CURLOPT_WRITEDATA:
++			err = send_collect(out, &wdata);
++			if (!err)
++				continue;
++			break;
++
 +		case CURLINFO_RESPONSE_CODE:
 +		{
 +			long response;
-+			res = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE , &response);
++			res = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response);
 +			if (res)
 +			  res += 1000000;
 +			else
 +			  res = response;
++			break;
++		}
++
++		case CURLINFO_REDIRECT_URL:
++		case CURLINFO_CONTENT_TYPE:
++		{
++			char *string;
++			res = curl_easy_getinfo(curl, (CURLINFO)opt, &string);
++			stringval = res || !string ? "" : string;
 +			break;
 +		}
 +
@@ -871,6 +1222,52 @@ index 00000000..9dabea3f
 +			break;
 +		}
 +
++		case CURLOPT_HTTPHEADER:
++		{
++			const char *ptr;
++			if (httpheaders) {
++				curl_slist_free_all(httpheaders);
++				httpheaders = NULL;
++			}
++			err = read_string(in, cmd.val, &string);
++			if (err)
++				break;
++			ptr = string;
++			while (cmd.val) {
++				const char *nul = memchr(ptr, 0, cmd.val);
++				if (!nul)
++					return 13;
++				httpheaders = curl_slist_append(httpheaders, ptr);
++				cmd.val -= ++nul - ptr;
++				ptr = nul;
++			}
++			free(string);
++			res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, httpheaders);
++			break;
++		}
++
++		case CURLCMD_RESET:
++		{
++			free_collect(&wdata);
++			free_collect(&hdata);
++			if (httpheaders) {
++				curl_slist_free_all(httpheaders);
++				httpheaders = NULL;
++			}
++			if (recipients) {
++				curl_slist_free_all(recipients);
++				recipients = NULL;
++			}
++			if (data) {
++				free(data);
++				data = NULL;
++				datalen = 0;
++			}
++
++			reset_curl(curl);
++			break;
++		}
++
 +		case CURLCMD_PERFORM:
 +		{
 +			context_t cxt;
@@ -882,12 +1279,18 @@ index 00000000..9dabea3f
 +			errbuf[0] = '\0';
 +			lasthdr.line = hdrbuf;
 +			lasthdr.space = sizeof(hdrbuf);
++			lasthdr.clt = &hdata;
 +			hdrbuf[0] = '\0';
++			free_collect(&wdata);
++			free_collect(&hdata);
 +			res = curl_easy_setopt(curl,
 +					CURLOPT_ERRORBUFFER, errbuf);
 +			if (!res)
 +				res = curl_easy_setopt(curl,
 +					CURLOPT_INFILESIZE, (long)datalen);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_POSTFIELDSIZE, (long)datalen);
 +			if (!res)
 +				res = curl_easy_setopt(curl,
 +					CURLOPT_READDATA, &cxt);
@@ -900,6 +1303,9 @@ index 00000000..9dabea3f
 +			if (!res)
 +				res = curl_easy_setopt(curl,
 +					CURLOPT_XFERINFOFUNCTION, (void *)xferfunc);
++			if (!res)
++				res = curl_easy_setopt(curl,
++					CURLOPT_WRITEDATA, &wdata);
 +			if (!res)
 +				res = curl_easy_setopt(curl,
 +					CURLOPT_WRITEFUNCTION, (void *)writefunc);
@@ -927,6 +1333,10 @@ index 00000000..9dabea3f
 +			return err;
 +	}
 +
++	free_collect(&wdata);
++	free_collect(&hdata);
++	if (httpheaders)
++		curl_slist_free_all(httpheaders);
 +	if (recipients)
 +		curl_slist_free_all(recipients);
 +	if (data)

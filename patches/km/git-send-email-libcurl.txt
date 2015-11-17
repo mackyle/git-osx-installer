@@ -42,20 +42,20 @@ value to render it opaque.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- git-send-email--libcurl.pl | 385 +++++++++++++++++++++++++++
+ git-send-email--libcurl.pl | 404 ++++++++++++++++++++++++++++
  git-send-email.perl        | 162 ++++++------
- send-email--libcurl.c      | 633 +++++++++++++++++++++++++++++++++++++++++++++
+ send-email--libcurl.c      | 637 +++++++++++++++++++++++++++++++++++++++++++++
  t/t9001-send-email.sh      |  20 +-
- 4 files changed, 1106 insertions(+), 94 deletions(-)
+ 4 files changed, 1129 insertions(+), 94 deletions(-)
  create mode 100644 git-send-email--libcurl.pl
  create mode 100644 send-email--libcurl.c
 
 diff --git a/git-send-email--libcurl.pl b/git-send-email--libcurl.pl
 new file mode 100644
-index 00000000..86dded08
+index 00000000..aa48792f
 --- /dev/null
 +++ b/git-send-email--libcurl.pl
-@@ -0,0 +1,385 @@
+@@ -0,0 +1,404 @@
 +=comment
 +
 +send-email--libcurl.pl -- libcURL helper for git-send-email.perl
@@ -124,6 +124,7 @@ index 00000000..86dded08
 +	my ($pid, $chldout, $chldin);
 +	$pid = open2($chldout, $chldin, $helper, "--spawn");
 +	die "Cannot spawn $helper\n" unless $pid;
++	select((select($childin),$|=1)[0]);
 +	my $self = {};
 +	$self->{'pid'} = $pid;
 +	$self->{'chldin'} = $chldin;
@@ -138,6 +139,18 @@ index 00000000..86dded08
 +	close($self->{'chldout'});
 +}
 +
++sub _readall {
++	my $offset = 0;
++	my $remain = $_[2];
++	my $result;
++	{
++		$result = read($_[0], $_[1], $remain, $offset);
++		$offset += $result, $remain -= $result, redo
++			if $result && $result < $remain;
++	}
++	return $result ? $offset + $result : $result;
++}
++
 +sub _get_val {
 +	use bytes;
 +	my $self = shift;
@@ -146,7 +159,7 @@ index 00000000..86dded08
 +	die "Invalid tag: '$tag'\n" unless length($tag) == 4;
 +	printf {$self->{'chldin'}} "%s", $tag.pack('N',$val);
 +	my $data;
-+	my $result = read($self->{'chldout'}, $data, 4);
++	my $result = _readall($self->{'chldout'}, $data, 4);
 +	die "Read result '$tag' from helper failed\n" unless $result && $result == 4;
 +	return unpack('N', $data);
 +}
@@ -159,7 +172,7 @@ index 00000000..86dded08
 +	my $strlen = $self->_get_val($tag, $val);
 +	return "" unless $strlen;
 +	my $data;
-+	my $result = read($self->{'chldout'}, $data, $strlen);
++	my $result = _readall($self->{'chldout'}, $data, $strlen);
 +	die "Read result '$tag' from helper failed\n" unless $result && $result == $strlen;
 +	return $data;
 +}
@@ -172,7 +185,7 @@ index 00000000..86dded08
 +	die "Invalid tag: '$tag'\n" unless length($tag) == 4;
 +	printf {$self->{'chldin'}} "%s", $tag.pack('N',length($str)).$str;
 +	my $data;
-+	my $result = read($self->{'chldout'}, $data, 4);
++	my $result = _readall($self->{'chldout'}, $data, 4);
 +	die "Read result '$tag' from helper failed\n" unless $result && $result == 4;
 +	return unpack('N', $data);
 +}
@@ -343,6 +356,12 @@ index 00000000..86dded08
 +	my $self = shift;
 +	my $val = shift;
 +	return $self->_set_string('capa', $val);
++}
++
++sub setopt_pinnedpublickey {
++	my $self = shift;
++	my $val = shift;
++	return $self->_set_string('pink', $val);
 +}
 +
 +sub setopt_sslcert {
@@ -710,10 +729,10 @@ index e1e9b146..e6b4829b 100755
  	my $message = shift;
 diff --git a/send-email--libcurl.c b/send-email--libcurl.c
 new file mode 100644
-index 00000000..eb49e4e9
+index 00000000..dd8ebbb7
 --- /dev/null
 +++ b/send-email--libcurl.c
-@@ -0,0 +1,633 @@
+@@ -0,0 +1,637 @@
 +/*
 +
 +send-email--libcurl.c -- libcURL helper for git-send-email.perl
@@ -800,18 +819,20 @@ index 00000000..eb49e4e9
 +	return result;
 +}
 +
-+static int send_res(FILE *out, CURLcode res)
++#define send_res(f,r) send_res_ex((f),(r),(0))
++static int send_res_ex(FILE *out, CURLcode res, int noflush)
 +{
 +	uint32_t e = htonl((uint32_t)res);
 +	if (fwrite(&e, sizeof(e), 1, out) != 1)
 +		return 12;
-+	fflush(out);
++	if (!noflush)
++		fflush(out);
 +	return 0;
 +}
 +
 +static int send_string(FILE *out, const void *p, size_t l)
 +{
-+	int err = send_res(out, (CURLcode)l);
++	int err = send_res_ex(out, (CURLcode)l, 1);
 +	if (err)
 +		return err;
 +	if (l && fwrite(p, l, 1, out) != 1)
@@ -960,7 +981,7 @@ index 00000000..eb49e4e9
 +static int send_collect(FILE *out, const collect_t *clt)
 +{
 +	const block_t *block = clt->first;
-+	int err = send_res(out, (CURLcode)clt->total);
++	int err = send_res_ex(out, (CURLcode)clt->total, 1);
 +	if (err)
 +		return err;
 +	while (block) {
@@ -1009,6 +1030,7 @@ index 00000000..eb49e4e9
 +	{{'n','b','d','y'}, CURLOPT_NOBODY},
 +	{{'n','o','p','g'}, CURLOPT_NOPROGRESS},
 +	{{'n','t','r','c'}, CURLOPT_NETRC},
++	{{'p','i','n','k'}, CURLOPT_PINNEDPUBLICKEY},
 +	{{'p','o','r','t'}, CURLOPT_PORT},
 +	{{'p','o','s','t'}, CURLOPT_POST},
 +	{{'p','r','f','m'}, CURLCMD_PERFORM},
@@ -1099,6 +1121,7 @@ index 00000000..eb49e4e9
 +		case CURLOPT_USERAGENT:
 +		case CURLOPT_SSLCERT:
 +		case CURLOPT_SSLKEY:
++		case CURLOPT_PINNEDPUBLICKEY:
 +			res = handle_string_opt(curl, (CURLoption)opt,
 +						cmd.val, in, &err);
 +			break;

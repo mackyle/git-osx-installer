@@ -1068,7 +1068,8 @@ OSStatus cSSLCopyPeerTrust(SSLContextRef cxt, SecTrustRef *trust)
     return fnc.fSSLCopyPeerTrust(cxt, trust);
   if (fnc.fSSLGetPeerSecTrust) {
     OSStatus err = fnc.fSSLGetPeerSecTrust(cxt, trust);
-    if (!err) CFRetain(*trust);
+    if (!err && *trust)
+      CFRetain(*trust);
     return err;
   }
   return unimpErr;

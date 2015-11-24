@@ -93,7 +93,7 @@ index 1cca889c..08691a75 100755
  
  	# we need to request one more than 16 (0..15) to check if
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 50efe9a0..61d7bd00 100644
+index 3e4c4a93..d4567df7 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
 @@ -8,11 +8,15 @@ body {

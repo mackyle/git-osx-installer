@@ -1,4 +1,4 @@
-Subject: [PATCH] sys-utils:: add sys_memsize function
+Subject: [PATCH] sys-utils: add sys_memsize function
 
 On systems where the amount of virtual memory far exceeds the
 amount of actual real memory, it may be helpful to restrict the

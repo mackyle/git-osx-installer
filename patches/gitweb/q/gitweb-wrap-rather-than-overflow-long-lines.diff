@@ -15,7 +15,9 @@ only the lines that are actually part of the diff body are allowed
 to wrap with line continuation characters.
 
 In order for all of this wrapping to work properly, the browser
-needs to support the word-wrap:break-word CSS property.
+needs to support the word-wrap:break-word CSS property.  However,
+as long as the browser supports white-space:pre-wrap, much of the
+wrapping will work even without word-wrap:break-word.
 
 Also, while we're fixing wrapping problems, make the shortlog display
 wrap in a sane fashion when there are many refs to show for a commit.
@@ -40,7 +42,7 @@ index 6f061251..5b089e8b 100755
  	$line = "<div class=\"$diff_classes\">$line</div>\n";
  
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 670cb209..50efe9a0 100644
+index 670cb209..3e4c4a93 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
 @@ -146,6 +146,10 @@ div.title_text {
@@ -61,7 +63,7 @@ index 670cb209..50efe9a0 100644
 +}
 +
 +div.pre, div.diff {
- 	white-space: pre;
++	white-space: pre-wrap;
 +	word-wrap: break-word;
 +}
 +
@@ -80,7 +82,7 @@ index 670cb209..50efe9a0 100644
 +div.diff_body:before {
 +	position: absolute;
 +	left: -0.35ex;
-+	white-space: pre;
+ 	white-space: pre;
 +	content: " \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa\a  \21aa";
 +	clip: rect(auto, auto, auto, 1ex);
 +}

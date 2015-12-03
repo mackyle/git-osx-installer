@@ -16,7 +16,7 @@ Git 2.5.? Installer - released 2015-??-??
   - update from version 7.45.0
   - eliminate SSL session ID reuse failures on 10.4.x
 
-* TopGit 0.19
+* TopGit 0.19.1
   - update from version 0.18
 
 

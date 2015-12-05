@@ -16,6 +16,14 @@ Git 2.5.? Installer - released 2015-??-??
   - update from version 7.45.0
   - eliminate SSL session ID reuse failures on 10.4.x
 
+* lighttpd 1.4.38
+  - update from version 1.4.37
+  - drop darwin sendfile patch (included in 1.4.38)
+  - drop darwin test shutdown patch (included in 1.4.38)
+  - drop darwin test crypt md5 patch (included in 1.4.38)
+  - drop crypt status patch (included in 1.4.38)
+  - drop zero sockaddr structs patch (included in 1.4.38)
+
 * TopGit 0.19.1
   - update from version 0.18
 

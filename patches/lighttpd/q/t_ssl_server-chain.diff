@@ -109,7 +109,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  4 files changed, 54 insertions(+), 18 deletions(-)
 
 diff --git a/src/base.h b/src/base.h
-index 87bacfca..a58bf785 100644
+index 4c748a57..12c91d2f 100644
 --- a/src/base.h
 +++ b/src/base.h
 @@ -322,7 +322,7 @@ typedef struct {
@@ -122,10 +122,10 @@ index 87bacfca..a58bf785 100644
  #endif
  } specific_config;
 diff --git a/src/configfile.c b/src/configfile.c
-index 578957ac..8b0ba0ef 100644
+index 72dabb70..8d47ae61 100644
 --- a/src/configfile.c
 +++ b/src/configfile.c
-@@ -339,7 +339,7 @@ int config_setup_connection(server *srv, connection *con) {
+@@ -355,7 +355,7 @@ int config_setup_connection(server *srv, connection *con) {
  
  	PATCH(ssl_pemfile);
  #ifdef USE_OPENSSL
@@ -134,7 +134,7 @@ index 578957ac..8b0ba0ef 100644
  	PATCH(ssl_pemfile_pkey);
  #endif
  	PATCH(ssl_ca_file);
-@@ -413,7 +413,7 @@ int config_patch_connection(server *srv, connection *con, comp_key_t comp) {
+@@ -429,7 +429,7 @@ int config_patch_connection(server *srv, connection *con, comp_key_t comp) {
  			} else if (buffer_is_equal_string(du->key, CONST_STR_LEN("ssl.pemfile"))) {
  				PATCH(ssl_pemfile);
  #ifdef USE_OPENSSL

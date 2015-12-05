@@ -1,8 +1,3 @@
-t_darwin_sendfile.diff -p1
-t_darwin_no-test-shutdown.diff -p1
-t_darwin_no-crypt-md5.diff -p1
-t_features_crypt.diff -p1
-t_net_zero-sockaddr.diff -p1
 t_ssl_server-chain.diff -p1
 t_ssl_extra-vars.diff -p1
 t_ssl_cadn-file.diff -p1

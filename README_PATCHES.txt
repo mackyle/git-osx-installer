@@ -184,31 +184,6 @@ support Mac OS X 10.4 at all as released.
 Lighttpd Patches
 ----------------
 
-* Allow the darwin sendfile function to be used
-
-  - `patches/lighttpd/q/t_darwin_sendfile.diff`
-  - will be in next lighttpd release
-
-* Avoid spurious testing failures on darwin
-
-  - `patches/lighttpd/q/t_darwin_no-test-shutdown.diff`
-  - will be in next lighttpd release
-
-* Avoid testing unsupported crypt md5 on darwin
-
-  - `patches/lighttpd/q/t_darwin_no-crypt-md5.diff`
-  - will be in next lighttpd release
-
-* Show the correct crypt status in -V output
-
-  - `patches/lighttpd/q/t_features_crypt.diff`
-  - will be in next lighttpd release
-
-* Properly zero sockaddr structures before use
-
-  - `patches/lighttpd/q/t_net_zero-sockaddr.diff`
-  - will be in next lighttpd release
-
 * Provide an idle timeout option
 
   - `patches/lighttpd/q/t_server_idle-timeout.diff`

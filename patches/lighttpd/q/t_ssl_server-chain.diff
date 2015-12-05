@@ -291,7 +291,7 @@ index 24a435c2..fd77fc34 100644
  					"failed to initialize TLS servername callback, openssl library does not support TLS servername extension");
  			return -1;
 diff --git a/src/server.c b/src/server.c
-index e096de1b..9697010a 100644
+index 8a8a9254..997129d0 100644
 --- a/src/server.c
 +++ b/src/server.c
 @@ -315,7 +315,7 @@ static void server_free(server *srv) {

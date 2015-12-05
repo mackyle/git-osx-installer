@@ -6,7 +6,7 @@ This is compatible with Apache's mod_ssl variable of the same name.
 SSL_CLIENT_S_DN is set to the oneline version of the client certificate
 subject's distinguished name and may be used as a setting for the
 ssl.verifyclient.username config option.  When Apache's mod_ssl is 
-onfigured to use 'FakeBasicAuth' it uses the SSL_CLIENT_S_DN value for
+configured to use 'FakeBasicAuth' it uses the SSL_CLIENT_S_DN value for
 the username (that ultimately may end up in REMOTE_USER).  The value
 that will be set for SSL_CLIENT_S_DN may be determined using the
 `openssl x509 -noout -subject -in <cert.pem>` command.

@@ -6,14 +6,14 @@ shutdown.  Defaults to off (0).
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- src/server.c | 49 +++++++++++++++++++++++++++++++++++++++----------
- 1 file changed, 39 insertions(+), 10 deletions(-)
+ src/server.c | 44 ++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 36 insertions(+), 8 deletions(-)
 
 diff --git a/src/server.c b/src/server.c
-index 6200c94c..9c9840f5 100644
+index f0bcb0a0..942de5cd 100644
 --- a/src/server.c
 +++ b/src/server.c
-@@ -526,6 +526,7 @@ static void show_help (void) {
+@@ -531,6 +531,7 @@ static void show_help (void) {
  "usage:\n" \
  " -f <name>  filename of the config-file\n" \
  " -m <name>  module directory (default: "LIBRARY_DIR")\n" \
@@ -21,7 +21,7 @@ index 6200c94c..9c9840f5 100644
  " -p         print the parsed config-file in internal form, and exit\n" \
  " -t         test the config-file, and exit\n" \
  " -D         don't go to background (default: go to background)\n" \
-@@ -548,6 +549,8 @@ int main (int argc, char **argv) {
+@@ -553,6 +554,8 @@ int main (int argc, char **argv) {
  	int num_childs = 0;
  	int pid_fd = -1, fd;
  	size_t i;
@@ -30,7 +30,7 @@ index 6200c94c..9c9840f5 100644
  #ifdef HAVE_SIGACTION
  	struct sigaction act;
  #endif
-@@ -583,7 +586,7 @@ int main (int argc, char **argv) {
+@@ -588,7 +591,7 @@ int main (int argc, char **argv) {
  #endif
  	srv->srvconf.dont_daemonize = 0;
  
@@ -39,7 +39,7 @@ index 6200c94c..9c9840f5 100644
  		switch(o) {
  		case 'f':
  			if (srv->config_storage) {
-@@ -601,6 +604,18 @@ int main (int argc, char **argv) {
+@@ -606,6 +609,18 @@ int main (int argc, char **argv) {
  		case 'm':
  			buffer_copy_string(srv->srvconf.modules_dir, optarg);
  			break;
@@ -58,7 +58,7 @@ index 6200c94c..9c9840f5 100644
  		case 'p': print_config = 1; break;
  		case 't': test_config = 1; break;
  		case 'D': srv->srvconf.dont_daemonize = 1; break;
-@@ -1487,6 +1502,7 @@ int main (int argc, char **argv) {
+@@ -1541,6 +1556,7 @@ int main (int argc, char **argv) {
  						"polls:", n);
  			}
  #endif
@@ -66,40 +66,21 @@ index 6200c94c..9c9840f5 100644
  			fd_ndx = -1;
  			do {
  				fdevent_handler handler;
-@@ -1527,6 +1543,14 @@ int main (int argc, char **argv) {
+@@ -1581,6 +1597,13 @@ int main (int argc, char **argv) {
  					strerror(errno));
  		}
  
-+		if (idle_timeout && time(NULL) - server_activity >= idle_timeout) {
++		if (idle_timeout && !graceful_shutdown && time(NULL) - server_activity >= idle_timeout) {
 +			log_error_write(srv, __FILE__, __LINE__, "sDs", "[note] idle timeout", (int)idle_timeout,
-+					"s exceeded, graceful shutdown started");
++					"s exceeded, initiating graceful shutdown");
 +			timed_out = 1;
 +			graceful_shutdown = 1;
-+			break;
 +		}
 +
  		for (ndx = 0; ndx < srv->joblist->used; ndx++) {
  			connection *con = srv->joblist->ptr[ndx];
  			handler_t r;
-@@ -1549,7 +1573,7 @@ int main (int argc, char **argv) {
- 	}
- 
- 	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
--	    0 == graceful_shutdown && 0 <= pid_fd) {
-+	    (0 == graceful_shutdown || timed_out) && 0 <= pid_fd) {
- 		if (0 != ftruncate(pid_fd, 0)) {
- 			log_error_write(srv, __FILE__, __LINE__, "sbds",
- 					"ftruncate failed for:",
-@@ -1564,7 +1588,7 @@ int main (int argc, char **argv) {
- 	}
- 	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
- 	    buffer_string_is_empty(srv->srvconf.changeroot) &&
--	    0 == graceful_shutdown) {
-+	    (0 == graceful_shutdown || timed_out)) {
- 		if (0 != unlink(srv->srvconf.pid_file->ptr)) {
- 			if (errno != EACCES && errno != EPERM) {
- 				log_error_write(srv, __FILE__, __LINE__, "sbds",
-@@ -1576,16 +1600,21 @@ int main (int argc, char **argv) {
+@@ -1630,16 +1653,21 @@ int main (int argc, char **argv) {
  		}
  	}
  

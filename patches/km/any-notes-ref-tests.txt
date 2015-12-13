@@ -20,6 +20,7 @@ so instead just remove the refs/heads/master line.
 
 Suggested-by: Johan Herland <johan@herland.net>
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
 ---
  t/t3308-notes-merge.sh | 1 -
  1 file changed, 1 deletion(-)
@@ -36,3 +37,4 @@ index 24d82b49..f0feb64b 100755
  	test_must_fail git notes merge x: &&
  	test_must_fail git notes merge x:foo &&
  	test_must_fail git notes merge foo^{bar
+---

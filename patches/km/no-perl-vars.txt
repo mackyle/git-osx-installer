@@ -1,6 +1,3 @@
-From 2c84bfc662e26c0fd132599f911b6b6e7f452a80 Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Thu, 22 Jan 2015 13:20:20 -0800
 Subject: [PATCH] run-command.c: unset troublesome PERL env vars
 
 Unset troublesome PERL environment variables before exec'ing
@@ -15,15 +12,16 @@ uses the perl found in the current PATH rather than the compile-
 time perl.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
 ---
  run-command.c | 7 +++++++
  1 file changed, 7 insertions(+)
 
 diff --git a/run-command.c b/run-command.c
-index a4769996..bb86d737 100644
+index aad03ab7..cb99bbfd 100644
 --- a/run-command.c
 +++ b/run-command.c
-@@ -420,6 +420,13 @@ fail_pipe:
+@@ -416,6 +416,13 @@ fail_pipe:
  					unsetenv(*cmd->env);
  			}
  		}
@@ -37,4 +35,4 @@ index a4769996..bb86d737 100644
  		if (cmd->git_cmd)
  			execv_git_cmd(cmd->argv);
  		else if (cmd->use_shell)
---
+---

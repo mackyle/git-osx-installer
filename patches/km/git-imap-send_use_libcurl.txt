@@ -1,13 +1,11 @@
-From f26a5606d44e4749d2228c21960a420db853d172 Mon Sep 17 00:00:00 2001
-From: "Kyle J. McKay" <mackyle@gmail.com>
-Date: Fri, 6 Feb 2015 00:43:37 -0800
-Subject: [PATCH] imap-send.c: improved cURL and __APPLE__ support
+Subject: [PATCH] imap-send.c: improve cURL and __APPLE__ support
 
 If USE_CURL_FOR_IMAP_SEND is defined and NO_OPENSSL_IMAP is defined
 AND BOTH APPLE_COMMON_CRYPTO AND EVP_DecodeBlock are defined, then
 support CRAM-MD5 in the tunnel.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
 ---
  imap-send.c | 30 ++++++++++++++++++++----------
  1 file changed, 20 insertions(+), 10 deletions(-)

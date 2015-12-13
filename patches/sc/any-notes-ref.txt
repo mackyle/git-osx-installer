@@ -15,15 +15,16 @@ refs/remotes-notes or otherwise keep mergeable notes references outside
 of what would be contained in the notes push refspec.
 
 Signed-off-by: Scott Chacon <schacon@gmail.com>
+
 ---
  notes.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/notes.c b/notes.c
-index 2be4d7f3..ae96b99d 100644
+index d4652005..152373a1 100644
 --- a/notes.c
 +++ b/notes.c
-@@ -1292,7 +1292,7 @@ int copy_note(struct notes_tree *t,
+@@ -1293,7 +1293,7 @@ int copy_note(struct notes_tree *t,
  
  void expand_notes_ref(struct strbuf *sb)
  {
@@ -32,4 +33,4 @@ index 2be4d7f3..ae96b99d 100644
  		return; /* we're happy */
  	else if (starts_with(sb->buf, "notes/"))
  		strbuf_insert(sb, 0, "refs/", 5);
---
+---

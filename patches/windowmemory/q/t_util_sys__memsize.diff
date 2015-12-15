@@ -33,10 +33,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  create mode 100644 sys-utils.h
 
 diff --git a/Makefile b/Makefile
-index 8700db8d..f592a58f 100644
+index ce0cfe2a..10f0ef08 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -782,6 +782,7 @@ LIB_OBJS += streaming.o
+@@ -786,6 +786,7 @@ LIB_OBJS += streaming.o
  LIB_OBJS += string-list.o
  LIB_OBJS += submodule.o
  LIB_OBJS += symlinks.o

@@ -23,7 +23,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 64 insertions(+), 1 deletion(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index fd3ca594..0784b7d2 100644
+index d3e5876a..d0fde38c 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
 @@ -530,6 +530,28 @@ $omit_age_column::

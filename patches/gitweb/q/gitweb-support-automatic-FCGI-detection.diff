@@ -19,7 +19,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 60 insertions(+), 24 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index bad4bfd7..a65f19dc 100644
+index 7d4c6dfb..4673e93c 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
 @@ -629,6 +629,11 @@ This variable matters only when using persistent web environments that

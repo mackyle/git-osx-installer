@@ -70,15 +70,18 @@ static CFStringRef get_dict_str(CFDictionaryRef d, CFStringRef k);
 
 static unsigned n_to_i(unsigned long n, unsigned formula)
 {
-	if (!formula || formula > 2) {
-		return n == 1 ? 0 : 1;
+	switch (formula) {
+		case 1:
+			if (n > 2)
+				n = 2;
+			return plurals[n];
+		case 2:
+			return (n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);
+		case 3:
+			return (n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14) ? 2 : 3);
+		default:
+			return n == 1 ? 0 : 1;
 	}
-	if (formula == 1) {
-		if (n > 2)
-			n = 2;
-		return plurals[n];
-	}
-	return (n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);
 }
 
 static void setup_formula(const char *f)
@@ -101,6 +104,9 @@ static void setup_formula(const char *f)
 	} else if (!strcmp(f,"n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2") ||
 		   !strcmp(f,"(n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?1:2)")) {
 		pluralsformula = 2;
+	} else if (!strcmp(f,"n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?1:n%10==0||(n%10>=5&&n%10<=9)||(n%100>=11&&n%100<=14)?2:3") ||
+		   !strcmp(f,"(n%10==1&&n%100!=11?0:n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?1:n%10==0||(n%10>=5&&n%10<=9)||(n%100>=11&&n%100<=14)?2:3)")) {
+		pluralsformula = 3;
 	}
 }
 

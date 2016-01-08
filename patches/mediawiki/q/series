@@ -4,3 +4,4 @@ t_mediawiki_max-revision.diff -p1
 t_mediawiki_mediaimport.diff -p1
 t_mediawiki_many-revisions.diff -p1
 t_mediawiki_empty-commit.diff -p1
+t_mediawiki_skip-notfound-media.diff -p1

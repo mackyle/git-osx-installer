@@ -1,0 +1,53 @@
+Subject: [PATCH] git-remote-mediawiki: skip not found media
+
+When fetching media, if a suitable revision of an image for a page
+cannot be found using an imageinfo query, it's skipped without
+aborting the fetch.
+
+Provide the same behavior when actually fetching the image if the
+result of the fetch is an HTTP 404 (not found) or 403 (Forbidden)
+result code.
+
+HTTP result codes other than 403 and 404 will continue to abort the
+fetch in the same manner as they have done before.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ contrib/mw-to-git/git-remote-mediawiki.perl | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/contrib/mw-to-git/git-remote-mediawiki.perl b/contrib/mw-to-git/git-remote-mediawiki.perl
+index d146504e..f6ad6e8f 100755
+--- a/contrib/mw-to-git/git-remote-mediawiki.perl
++++ b/contrib/mw-to-git/git-remote-mediawiki.perl
+@@ -494,14 +494,15 @@ sub get_mw_mediafile_for_page_revision {
+ 	# If not defined it means there is no revision of the file for
+ 	# given timestamp.
+ 	if (defined($file->{imageinfo})) {
+-		$mediafile{title} = $filename;
+-
+ 		my $fileinfo = pop(@{$file->{imageinfo}});
+-		$mediafile{timestamp} = $fileinfo->{timestamp};
+ 		# Mediawiki::API's download function doesn't support https URLs
+ 		# and can't download old versions of files.
+-		print {*STDERR} "\tDownloading file $mediafile{title}, version $mediafile{timestamp}\n";
+-		$mediafile{content} = download_mw_mediafile($fileinfo->{url});
++		print {*STDERR} "\tDownloading file $filename, version $$fileinfo{timestamp}\n";
++		if (defined(my $mediacontent = download_mw_mediafile($fileinfo->{url}))) {
++			$mediafile{title} = $filename;
++			$mediafile{timestamp} = $fileinfo->{timestamp};
++			$mediafile{content} = $mediacontent;
++		}
+ 	}
+ 	return %mediafile;
+ }
+@@ -521,6 +522,7 @@ sub download_mw_mediafile {
+ 		print {*STDERR} "Error downloading mediafile from :\n";
+ 		print {*STDERR} "URL: ${download_url}\n";
+ 		print {*STDERR} 'Server response: ' . $response->code . q{ } . $response->message . "\n";
++		return undef if $response->code eq '404' || $response->code eq '403';
+ 		exit 1;
+ 	}
+ }
+---

@@ -74,6 +74,7 @@ Git Patches
   - `patches/mediawiki/q/t_mediawiki_mediaimport.diff`
   - `patches/mediawiki/q/t_mediawiki_many-revisions.difff`
   - `patches/mediawiki/q/t_mediawiki_empty-commit.diff`
+  - `patches/mediawiki/q/t_mediawiki_skip-notfound-media.diff`
 
   My own patches to make git-remote-mediawiki work properly.  The no-dupes
   patch avoids importing more than one copy of the same history (typically it
@@ -86,9 +87,11 @@ Git Patches
   flag is set to true and the media has a timestamp that does not exactly match
   the page's down to the last second.  The many-revisions patch allows a
   fetchStrategy of 'by_rev' to succeed when the number of revisions that need
-  to be fetched is very larg.  And finally the empty-commit patch preserves
-  a MediaWiki revision that only has a comment when can happen if the revision
-  data has somehow been obliterated.  Have not been posted elsewhere.
+  to be fetched is very larg.  The empty-commit patch preserves a MediaWiki
+  revision that only has a comment when can happen if the revision data has
+  somehow been obliterated.  And finally the skip-notfound-media patch treats
+  a 404 (and 403) error the same as an imageinfo query that finds nothing when
+  mediaimport has been enabled.  Have not been posted elsewhere.
 
 * Improve usability of git-instaweb:
 

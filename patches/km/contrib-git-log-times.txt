@@ -76,8 +76,8 @@ options including their leading '--'.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  contrib/git-log-times/README        | 243 ++++++++++++++++++++
- contrib/git-log-times/git-log-times | 428 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 671 insertions(+)
+ contrib/git-log-times/git-log-times | 429 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 672 insertions(+)
  create mode 100644 contrib/git-log-times/README
  create mode 100755 contrib/git-log-times/git-log-times
 
@@ -332,14 +332,14 @@ index 00000000..e7827206
 +(e.g. `git config log-times.defaults "--abbrev=8 --seconds"`).
 diff --git a/contrib/git-log-times/git-log-times b/contrib/git-log-times/git-log-times
 new file mode 100755
-index 00000000..31516d2b
+index 00000000..0543cc02
 --- /dev/null
 +++ b/contrib/git-log-times/git-log-times
-@@ -0,0 +1,428 @@
+@@ -0,0 +1,429 @@
 +#!/usr/bin/env perl
 +
 +# git-log-times.pl -- git log --oneline variation with dates, times and initials
-+# Copyright (C) 2015 Kyle J. McKay <mackyle@gmail.com>.  All rights reserved.
++# Copyright (C) 2015,2016 Kyle J. McKay <mackyle@gmail.com>.  All rights reserved.
 +
 +# License GPL v2
 +
@@ -394,7 +394,8 @@ index 00000000..31516d2b
 +my ($setusedecorate, $usedecorate);
 +sub use_decorate {
 +	return $usedecorate if $setusedecorate;
-+	my $do = qx(git config --get log.decorate 2>/dev/null);
++	my $do = qx(git config --get log.decorate 2>/dev/null) || "0";
++	chomp $do;
 +	return 0 if $do eq "0" || $do eq "false" || $do eq "off";
 +	return 0 if $do eq "auto" && ! -t STDOUT;
 +	return 1;

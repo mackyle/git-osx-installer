@@ -12,7 +12,7 @@ Git 2.5.? Installer - released 2015-??-??
   - git-mw and git-remote-mediawiki now work with https URLs and also on 10.4.x
   - include contrib/git-log-times alternative git log --online utility
 
-* cURL/libcURL 7.46.0
+* cURL/libcURL 7.47.0
   - update from version 7.45.0
   - eliminate SSL session ID reuse failures on 10.4.x
 

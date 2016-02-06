@@ -4,10 +4,10 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
-Git 2.6.? Installer - released 2016-??-??
+Git 2.6.5 Installer - released 2016-??-??
 -----------------------------------------
 
-* Git v2.6.?
+* Git v2.6.5
   - update from version 2.5.4
 
 * cURL/libcURL 7.47.0

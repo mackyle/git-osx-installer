@@ -1,4 +1,4 @@
-Subject: [PATCH] t/t3308-notes-merge.sh: succeed with relaxed notes refs
+Subject: [PATCH] t/t33*-notes.sh: succeed with relaxed notes refs
 
 With the recent change to allow notes refs to be located in
 the refs hierarchy in locations other than refs/notes/ the
@@ -18,13 +18,35 @@ another ref name that does not exist such as refs/heads/xmaster,
 but there are already several tests using non-existant refs
 so instead just remove the refs/heads/master line.
 
+In addition, there's an explicit --get-ref expansion test for
+refs/heads/master that now is left unchanged and the test
+must be updated accordingly.
+
 Suggested-by: Johan Herland <johan@herland.net>
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
+ t/t3301-notes.sh       | 4 ++--
  t/t3308-notes-merge.sh | 1 -
- 1 file changed, 1 deletion(-)
+ 2 files changed, 2 insertions(+), 3 deletions(-)
 
+diff --git a/t/t3301-notes.sh b/t/t3301-notes.sh
+index cd70274e..4cedcb86 100755
+--- a/t/t3301-notes.sh
++++ b/t/t3301-notes.sh
+@@ -1122,10 +1122,10 @@ test_expect_success 'git notes copy diagnoses too many or too few parameters' '
+ 	test_must_fail git notes copy one two three
+ '
+ 
+-test_expect_success 'git notes get-ref expands refs/heads/master to refs/notes/refs/heads/master' '
++test_expect_success 'git notes get-ref expands refs/heads/master to refs/heads/master' '
+ 	test_unconfig core.notesRef &&
+ 	sane_unset GIT_NOTES_REF &&
+-	test "$(git notes --ref=refs/heads/master get-ref)" = "refs/notes/refs/heads/master"
++	test "$(git notes --ref=refs/heads/master get-ref)" = "refs/heads/master"
+ '
+ 
+ test_expect_success 'git notes get-ref (no overrides)' '
 diff --git a/t/t3308-notes-merge.sh b/t/t3308-notes-merge.sh
 index 24d82b49..f0feb64b 100755
 --- a/t/t3308-notes-merge.sh

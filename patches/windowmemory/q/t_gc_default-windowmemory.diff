@@ -24,10 +24,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 35 insertions(+), 4 deletions(-)
 
 diff --git a/Documentation/config.txt b/Documentation/config.txt
-index a65cdd43..774db151 100644
+index fec0dea5..38a3303e 100644
 --- a/Documentation/config.txt
 +++ b/Documentation/config.txt
-@@ -1946,8 +1946,10 @@ pack.windowMemory::
+@@ -2020,8 +2020,10 @@ pack.windowMemory::
  	The maximum size of memory that is consumed by each thread
  	in linkgit:git-pack-objects[1] for pack window memory when
  	no limit is given on the command line.  The value can be
@@ -41,7 +41,7 @@ index a65cdd43..774db151 100644
  pack.compression::
  	An integer -1..9, indicating the compression level for objects
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index 80fe8c7d..4f0e8de4 100644
+index 1c63f8f2..28fc9f15 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
 @@ -19,11 +19,18 @@
@@ -61,8 +61,8 @@ index 80fe8c7d..4f0e8de4 100644
 +#endif
 +
  static const char *pack_usage[] = {
- 	N_("git pack-objects --stdout [options...] [< ref-list | < object-list]"),
- 	N_("git pack-objects [options...] base-name [< ref-list | < object-list]"),
+ 	N_("git pack-objects --stdout [<options>...] [< <ref-list> | < <object-list>]"),
+ 	N_("git pack-objects [<options>...] <base-name> [< <ref-list> | < <object-list>]"),
 @@ -73,7 +80,7 @@ static unsigned long delta_cache_size = 0;
  static unsigned long max_delta_cache_size = 256 * 1024 * 1024;
  static unsigned long cache_max_small_delta_size = 1000;
@@ -97,7 +97,7 @@ index 80fe8c7d..4f0e8de4 100644
  static int option_parse_index_version(const struct option *opt,
  				      const char *arg, int unset)
  {
-@@ -2744,9 +2769,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+@@ -2727,9 +2752,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
  		delta_search_threads = online_cpus();
  
  #ifdef NO_PTHREADS

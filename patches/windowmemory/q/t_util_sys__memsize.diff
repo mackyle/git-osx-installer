@@ -33,17 +33,17 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  create mode 100644 sys-utils.h
 
 diff --git a/Makefile b/Makefile
-index ce0cfe2a..10f0ef08 100644
+index 37e2d9e1..3a9da17d 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -786,6 +786,7 @@ LIB_OBJS += streaming.o
- LIB_OBJS += string-list.o
+@@ -798,6 +798,7 @@ LIB_OBJS += string-list.o
  LIB_OBJS += submodule.o
+ LIB_OBJS += submodule-config.o
  LIB_OBJS += symlinks.o
 +LIB_OBJS += sys-utils.o
  LIB_OBJS += tag.o
+ LIB_OBJS += tempfile.o
  LIB_OBJS += trace.o
- LIB_OBJS += trailer.o
 diff --git a/sys-utils.c b/sys-utils.c
 new file mode 100644
 index 00000000..c08bbb1b

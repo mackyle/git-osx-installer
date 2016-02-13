@@ -1,23 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+
     NOTE: stupid feedburner fails to insert an xml:base attribute
     when it republishes the feed so all the links become broken
     unless we explicitly add an xml:base attribute ourselves.
+
+    Unfortunately, even that's not good enough for feedburner as
+    when viewing the feed directly in a browser that does not
+    support feeds, the feedburner source includes a stylesheet
+    to reformat the feed.  That stylesheet, however, fails to
+    take into account the xml:feed attribute and again all the
+    links become broken.  :(
+
+    That means all the links MUST be absolute URIs instead of
+    relative absolute path references making pre-deployment
+    testing a real PITA!
+
 -->
-<feed xmlns="http://www.w3.org/2005/Atom" xml:base="http://mackyle.github.io/git-osx-installer/">
+<feed xmlns="http://www.w3.org/2005/Atom">
 
   <title>Git OS X Installer Updates</title>
   <author><name>Kyle J. McKay</name></author>
-  <link rel="self" type="application/atom+xml" href="/git-osx-installer/feed.atom"/>
-  <link rel="alternate" type="text/html" href="/git-osx-installer/"/>
+  <link rel="self" type="application/atom+xml" href="http://mackyle.github.io/git-osx-installer/feed.atom"/>
+  <link rel="alternate" type="text/html" href="http://mackyle.github.io/git-osx-installer/"/>
   <id>urn:uuid:8c3cdd92-11f4-44d4-a90b-ae20c7f2a963</id>
-  <icon>/git-osx-installer/gitosxinstaller-icon.png</icon>
-  <logo>/git-osx-installer/gitosxinstaller-logo.png</logo>
+  <icon>http://mackyle.github.io/git-osx-installer/gitosxinstaller-icon.png</icon>
+  <logo>http://mackyle.github.io/git-osx-installer/gitosxinstaller-logo.png</logo>
   <updated>2016-02-05T04:00:00-08:00</updated>
 
   <entry>
     <title>Git 2.5.4 OS X Installer</title>
-    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.5.4_in"/>
+    <link rel="alternate" type="text/html" href="http://mackyle.github.io/git-osx-installer/#gitosx-v2.5.4_in"/>
     <id>urn:uuid:494891bb-02d0-4889-80e9-51dba79fe2bd</id>
     <published>2016-02-05T04:00:00-08:00</published>
     <updated>2016-02-05T04:00:00-08:00</updated>
@@ -36,7 +49,7 @@
 
   <entry>
     <title>Git 2.4.10 OS X Installer</title>
-    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.4.10_in"/>
+    <link rel="alternate" type="text/html" href="http://mackyle.github.io/git-osx-installer/#gitosx-v2.4.10_in"/>
     <id>urn:uuid:2219b95d-c84a-4185-bb6c-23fd4f3e451a</id>
     <published>2015-10-27T16:00:00-07:00</published>
     <updated>2015-10-27T16:00:00-07:00</updated>
@@ -55,7 +68,7 @@
 
   <entry>
     <title>Git 2.3.10 OS X Installer</title>
-    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.3.10_in"/>
+    <link rel="alternate" type="text/html" href="http://mackyle.github.io/git-osx-installer/#gitosx-v2.3.10_in"/>
     <id>urn:uuid:6cfd30ff-6806-4689-ae9d-8646330a18d2</id>
     <published>2015-10-06T06:00:00-07:00</published>
     <updated>2015-10-16T14:00:00-07:00</updated>

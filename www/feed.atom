@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
+<!--
+    NOTE: stupid feedburner fails to insert an xml:base attribute
+    when it republishes the feed so all the links become broken
+    unless we explicitly add an xml:base attribute ourselves.
+-->
+<feed xmlns="http://www.w3.org/2005/Atom" xml:base="http://mackyle.github.io/git-osx-installer/">
 
   <title>Git OS X Installer Updates</title>
   <author><name>Kyle J. McKay</name></author>

@@ -7,7 +7,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 106 insertions(+), 58 deletions(-)
 
 diff --git a/lib/mk-ca-bundle.pl b/lib/mk-ca-bundle.pl
-index c2080e95..4c25b192 100755
+index 5a1435c5..f2bfe5d2 100755
 --- a/lib/mk-ca-bundle.pl
 +++ b/lib/mk-ca-bundle.pl
 @@ -8,6 +8,9 @@
@@ -19,7 +19,7 @@ index c2080e95..4c25b192 100755
 +# *
  # * This software is licensed as described in the file COPYING, which
  # * you should have received as part of this distribution. The terms
- # * are also available at http://curl.haxx.se/docs/copyright.html.
+ # * are also available at https://curl.haxx.se/docs/copyright.html.
 @@ -32,16 +35,33 @@
  #
  use Getopt::Std;

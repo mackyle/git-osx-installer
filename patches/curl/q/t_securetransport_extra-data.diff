@@ -7,11 +7,11 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/lib/urldata.h b/lib/urldata.h
-index fbed8f82..68d243f3 100644
+index e7341ac0..b1489701 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
-@@ -356,6 +356,11 @@ struct ssl_connect_data {
-   ssl_connect_state connecting_state;
+@@ -338,6 +338,11 @@ struct ssl_connect_data {
+   curl_socket_t ssl_sockfd;
    bool ssl_direction; /* true if writing, false if reading */
    size_t ssl_write_buffered_length;
 +  void *kh;
@@ -19,7 +19,7 @@ index fbed8f82..68d243f3 100644
 +  void *pa;
 +  unsigned cf;
 +  bool vh;
- #endif /* USE_DARWINSSL */
- };
- 
+ #elif defined(USE_SSL)
+ #error "SSL backend specific information missing from ssl_connect_data"
+ #endif
 ---

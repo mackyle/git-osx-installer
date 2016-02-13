@@ -10,7 +10,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/tests/runtests.pl b/tests/runtests.pl
-index 6def307d..b87e8766 100755
+index 3f4fbbd4..0266cf8f 100755
 --- a/tests/runtests.pl
 +++ b/tests/runtests.pl
 @@ -2366,6 +2366,7 @@ sub checksystem {

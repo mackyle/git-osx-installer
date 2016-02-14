@@ -43,10 +43,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
  git-send-email--libcurl.pl | 404 ++++++++++++++++++++++++++++
- git-send-email.perl        | 189 ++++++--------
+ git-send-email.perl        | 192 ++++++--------
  send-email--libcurl.c      | 637 +++++++++++++++++++++++++++++++++++++++++++++
  t/t9001-send-email.sh      |  20 +-
- 4 files changed, 1133 insertions(+), 117 deletions(-)
+ 4 files changed, 1136 insertions(+), 117 deletions(-)
  create mode 100644 git-send-email--libcurl.pl
  create mode 100644 send-email--libcurl.c
 
@@ -461,7 +461,7 @@ index 00000000..aa48792f
 +
 +1;
 diff --git a/git-send-email.perl b/git-send-email.perl
-index 72508bed..aeb31d2d 100755
+index 72508bed..26b72845 100755
 --- a/git-send-email.perl
 +++ b/git-send-email.perl
 @@ -26,8 +26,15 @@ use Data::Dumper;
@@ -611,7 +611,7 @@ index 72508bed..aeb31d2d 100755
  	}
  }
  
-@@ -1313,76 +1298,67 @@ Message-Id: $message_id
+@@ -1313,76 +1298,70 @@ Message-Id: $message_id
  			die "The required SMTP server is not properly defined."
  		}
  
@@ -648,6 +648,9 @@ index 72508bed..aeb31d2d 100755
 +				$smtp->setopt_noprogress(1);
 +			}
 +			$smtp->setopt_upload(1);
++		} else {
++			# attempt to avoid throttling issues when sending multiple messages
++			sleep(2);
  		}
 -		else {
 -			require Net::SMTP;
@@ -737,7 +740,7 @@ index 72508bed..aeb31d2d 100755
  		print (($dry_run ? "Dry-" : "")."OK. Log says:\n");
  		if (!file_name_is_absolute($smtp_server)) {
  			print "Server: $smtp_server\n";
-@@ -1395,8 +1371,7 @@ Message-Id: $message_id
+@@ -1395,8 +1374,7 @@ Message-Id: $message_id
  		}
  		print $header, "\n";
  		if ($smtp) {
@@ -747,7 +750,7 @@ index 72508bed..aeb31d2d 100755
  		} else {
  			print "Result: OK\n";
  		}
-@@ -1654,7 +1629,7 @@ sub cleanup_compose_files {
+@@ -1654,7 +1632,7 @@ sub cleanup_compose_files {
  	unlink($compose_filename, $compose_filename . ".final") if $compose;
  }
  

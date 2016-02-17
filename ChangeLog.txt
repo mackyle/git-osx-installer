@@ -13,6 +13,9 @@ Git 2.6.? Installer - released 2016-??-??
 * cURL/libcURL 7.47.1
   - update from version 7.46.0
 
+* TopGit 0.19.2
+  - update from version 0.19.1
+
 
 -----------------------------------------
 Git 2.5.4 Installer - released 2016-02-05

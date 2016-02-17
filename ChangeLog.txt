@@ -24,7 +24,7 @@ Git 2.5.? Installer - released 2015-??-??
   - drop crypt status patch (included in 1.4.38)
   - drop zero sockaddr structs patch (included in 1.4.38)
 
-* TopGit 0.19.1
+* TopGit 0.19.2
   - update from version 0.18
 
 

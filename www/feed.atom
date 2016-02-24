@@ -9,7 +9,7 @@
     when viewing the feed directly in a browser that does not
     support feeds, the feedburner source includes a stylesheet
     to reformat the feed.  That stylesheet, however, fails to
-    take into account the xml:feed attribute and again all the
+    take into account the xml:base attribute and again all the
     links become broken.  :(
 
     That means all the links MUST be absolute URIs instead of

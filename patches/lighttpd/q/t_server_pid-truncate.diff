@@ -17,14 +17,49 @@ pid of a process that is no longer running.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- src/server.c | 91 ++++++++++++++++++++++++++++++++++++++++++++++++++----------
- 1 file changed, 76 insertions(+), 15 deletions(-)
+ src/server.c | 70 ++++++++++++++++++++++++++++++++++++------------------------
+ 1 file changed, 42 insertions(+), 28 deletions(-)
 
 diff --git a/src/server.c b/src/server.c
-index c5845e2c..f0bcb0a0 100644
+index c5845e2c..409742e5 100644
 --- a/src/server.c
 +++ b/src/server.c
-@@ -718,6 +718,7 @@ int main (int argc, char **argv) {
+@@ -356,6 +356,34 @@ static void server_free(server *srv) {
+ 	free(srv);
+ }
+ 
++static void remove_pid_file(server *srv, int *pid_fd) {
++	if (!buffer_string_is_empty(srv->srvconf.pid_file) && 0 <= *pid_fd) {
++		if (0 != ftruncate(*pid_fd, 0)) {
++			log_error_write(srv, __FILE__, __LINE__, "sbds",
++					"ftruncate failed for:",
++					srv->srvconf.pid_file,
++					errno,
++					strerror(errno));
++		}
++	}
++	if (0 <= *pid_fd) {
++		close(*pid_fd);
++		*pid_fd = -1;
++	}
++	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
++	    buffer_string_is_empty(srv->srvconf.changeroot)) {
++		if (0 != unlink(srv->srvconf.pid_file->ptr)) {
++			if (errno != EACCES && errno != EPERM) {
++				log_error_write(srv, __FILE__, __LINE__, "sbds",
++						"unlink failed for:",
++						srv->srvconf.pid_file,
++						errno,
++						strerror(errno));
++			}
++		}
++	}
++}
++
+ static void show_version (void) {
+ #ifdef USE_OPENSSL
+ # define TEXT_SSL " (ssl)"
+@@ -718,6 +746,7 @@ int main (int argc, char **argv) {
  				return -1;
  			}
  		}
@@ -32,7 +67,7 @@ index c5845e2c..f0bcb0a0 100644
  	}
  
  	if (srv->event_handler == FDEVENT_HANDLER_SELECT) {
-@@ -1012,8 +1013,6 @@ int main (int argc, char **argv) {
+@@ -1012,8 +1041,6 @@ int main (int argc, char **argv) {
  			close(pid_fd);
  			return -1;
  		}
@@ -41,40 +76,15 @@ index c5845e2c..f0bcb0a0 100644
  	}
  
  	/* Close stderr ASAP in the child process to make sure that nothing
-@@ -1146,6 +1145,32 @@ int main (int argc, char **argv) {
+@@ -1146,6 +1173,7 @@ int main (int argc, char **argv) {
  				kill(0, SIGTERM);
  			}
  
-+			if (!buffer_string_is_empty(srv->srvconf.pid_file) && 0 <= pid_fd) {
-+				if (0 != ftruncate(pid_fd, 0)) {
-+					log_error_write(srv, __FILE__, __LINE__, "sbds",
-+							"ftruncate failed for:",
-+							srv->srvconf.pid_file,
-+							errno,
-+							strerror(errno));
-+				}
-+			}
-+			if (0 <= pid_fd) {
-+				close(pid_fd);
-+				pid_fd = -1;
-+			}
-+			if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
-+			    buffer_string_is_empty(srv->srvconf.changeroot)) {
-+				if (0 != unlink(srv->srvconf.pid_file->ptr)) {
-+					if (errno != EACCES && errno != EPERM) {
-+						log_error_write(srv, __FILE__, __LINE__, "sbds",
-+								"unlink failed for:",
-+								srv->srvconf.pid_file,
-+								errno,
-+								strerror(errno));
-+					}
-+				}
-+			}
-+
++			remove_pid_file(srv, &pid_fd);
  			log_error_close(srv);
  			network_close(srv);
  			connections_free(srv);
-@@ -1153,6 +1178,15 @@ int main (int argc, char **argv) {
+@@ -1153,6 +1181,15 @@ int main (int argc, char **argv) {
  			server_free(srv);
  			return 0;
  		}
@@ -90,7 +100,7 @@ index c5845e2c..f0bcb0a0 100644
  	}
  #endif
  
-@@ -1437,23 +1471,36 @@ int main (int argc, char **argv) {
+@@ -1437,23 +1474,11 @@ int main (int argc, char **argv) {
  						srv_socket->fd = -1;
  
  						/* network_close() will cleanup after us */
@@ -111,54 +121,30 @@ index c5845e2c..f0bcb0a0 100644
  				}
  
  				if (graceful_shutdown) {
-+					if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
-+					    0 <= pid_fd) {
-+						if (0 != ftruncate(pid_fd, 0)) {
-+							log_error_write(srv, __FILE__, __LINE__, "sbds",
-+									"ftruncate failed for:",
-+									srv->srvconf.pid_file,
-+									errno,
-+									strerror(errno));
-+						}
-+					}
-+					if (0 <= pid_fd) {
-+						close(pid_fd);
-+						pid_fd = -1;
-+					}
-+					if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
-+					    buffer_string_is_empty(srv->srvconf.changeroot)) {
-+						if (0 != unlink(srv->srvconf.pid_file->ptr)) {
-+							if (errno != EACCES && errno != EPERM) {
-+								log_error_write(srv, __FILE__, __LINE__, "sbds",
-+										"unlink failed for:",
-+										srv->srvconf.pid_file,
-+										errno,
-+										strerror(errno));
-+							}
-+						}
-+					}
++					remove_pid_file(srv, &pid_fd);
  					log_error_write(srv, __FILE__, __LINE__, "s", "[note] graceful shutdown started");
  				} else if (srv->conns->used >= srv->max_conns) {
  					log_error_write(srv, __FILE__, __LINE__, "s", "[note] sockets disabled, connection limit reached");
-@@ -1556,6 +1603,20 @@ int main (int argc, char **argv) {
+@@ -1555,19 +1580,8 @@ int main (int argc, char **argv) {
+ 		srv->joblist->used = 0;
  	}
  
- 	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
-+	    0 == graceful_shutdown && 0 <= pid_fd) {
-+		if (0 != ftruncate(pid_fd, 0)) {
-+			log_error_write(srv, __FILE__, __LINE__, "sbds",
-+					"ftruncate failed for:",
-+					srv->srvconf.pid_file,
-+					errno,
-+					strerror(errno));
-+		}
-+	}
-+	if (0 <= pid_fd) {
-+		close(pid_fd);
-+		pid_fd = -1;
-+	}
-+	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
- 	    buffer_string_is_empty(srv->srvconf.changeroot) &&
- 	    0 == graceful_shutdown) {
- 		if (0 != unlink(srv->srvconf.pid_file->ptr)) {
+-	if (!buffer_string_is_empty(srv->srvconf.pid_file) &&
+-	    buffer_string_is_empty(srv->srvconf.changeroot) &&
+-	    0 == graceful_shutdown) {
+-		if (0 != unlink(srv->srvconf.pid_file->ptr)) {
+-			if (errno != EACCES && errno != EPERM) {
+-				log_error_write(srv, __FILE__, __LINE__, "sbds",
+-						"unlink failed for:",
+-						srv->srvconf.pid_file,
+-						errno,
+-						strerror(errno));
+-			}
+-		}
+-	}
++	if (0 == graceful_shutdown)
++		remove_pid_file(srv, &pid_fd);
+ 
+ #ifdef HAVE_SIGACTION
+ 	log_error_write(srv, __FILE__, __LINE__, "sdsd", 
 ---

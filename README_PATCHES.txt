@@ -87,8 +87,8 @@ Git Patches
   flag is set to true and the media has a timestamp that does not exactly match
   the page's down to the last second.  The many-revisions patch allows a
   fetchStrategy of 'by_rev' to succeed when the number of revisions that need
-  to be fetched is very larg.  The empty-commit patch preserves a MediaWiki
-  revision that only has a comment when can happen if the revision data has
+  to be fetched is very large.  The empty-commit patch preserves a MediaWiki
+  revision that only has a comment which can happen if the revision data has
   somehow been obliterated.  And finally the skip-notfound-media patch treats
   a 404 (and 403) error the same as an imageinfo query that finds nothing when
   mediaimport has been enabled.  Have not been posted elsewhere.

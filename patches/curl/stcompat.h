@@ -478,7 +478,7 @@ Boolean CheckCertOkay(SecCertificateRef cert);
  * public keys will be automatically extracted and added to the pinning set.  */
 CFArrayRef CreatePubKeyArrayWithData(CFDataRef d, const errinfo_t *e);
 Boolean CheckPubKeyOkay(CFDataRef pubkey);
-/* Never returns a 0-element array, resturn NULL instead.  Input should
+/* Never returns a 0-element array, returns NULL instead.  Input should
  * be a semicolon-separated list of sha256//... where the ... part is the base64
  * encoding of the binary sha256 hash of a DER format public key. */
 CFArrayRef CreatePubKeySha256Array(const char *hashlist, const errinfo_t *e);

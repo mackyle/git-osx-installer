@@ -29,7 +29,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 41 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 6f061251..5b089e8b 100755
+index 1e391b44..8a785bd6 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -2842,7 +2842,7 @@ sub format_diff_line {

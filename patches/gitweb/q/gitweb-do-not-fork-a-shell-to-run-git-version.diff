@@ -14,7 +14,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index b6aa1c09..fe894a1d 100755
+index 31c53d88..23f30f0f 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -965,7 +965,14 @@ sub get_loadavg {

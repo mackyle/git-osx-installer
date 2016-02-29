@@ -18,7 +18,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 7 insertions(+)
 
 diff --git a/run-command.c b/run-command.c
-index 84e4ce66..e427bb17 100644
+index 13fa452e..3e2ef926 100644
 --- a/run-command.c
 +++ b/run-command.c
 @@ -411,6 +411,13 @@ fail_pipe:

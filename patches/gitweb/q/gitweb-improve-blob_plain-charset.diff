@@ -13,7 +13,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 103 insertions(+), 29 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 58497ff1..b6aa1c09 100755
+index af360453..31c53d88 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -175,7 +175,7 @@ our $strict_export = "++GITWEB_STRICT_EXPORT++";

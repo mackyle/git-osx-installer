@@ -12,7 +12,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 1423e68a..1cca889c 100755
+index a9ad2f84..3f98332c 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -45,7 +45,8 @@ sub evaluate_uri {

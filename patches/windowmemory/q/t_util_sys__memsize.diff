@@ -33,7 +33,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  create mode 100644 sys-utils.h
 
 diff --git a/Makefile b/Makefile
-index 37e2d9e1..3a9da17d 100644
+index fd19b544..dbb32adf 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -798,6 +798,7 @@ LIB_OBJS += string-list.o

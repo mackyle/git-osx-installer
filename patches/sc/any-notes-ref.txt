@@ -21,10 +21,10 @@ Signed-off-by: Scott Chacon <schacon@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/notes.c b/notes.c
-index eacd2a61..d4e98cec 100644
+index db779221..2d5c1646 100644
 --- a/notes.c
 +++ b/notes.c
-@@ -1293,7 +1293,7 @@ int copy_note(struct notes_tree *t,
+@@ -1296,7 +1296,7 @@ int copy_note(struct notes_tree *t,
  
  void expand_notes_ref(struct strbuf *sb)
  {

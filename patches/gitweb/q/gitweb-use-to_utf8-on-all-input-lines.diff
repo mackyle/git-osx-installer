@@ -17,7 +17,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 93 insertions(+), 46 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 5214c5e9..58497ff1 100755
+index f17dbf5d..af360453 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -1483,6 +1483,7 @@ our $CGI = 'CGI';

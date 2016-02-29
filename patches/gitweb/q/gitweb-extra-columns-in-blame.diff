@@ -16,7 +16,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  4 files changed, 101 insertions(+), 8 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index badb1c25..6c8f971a 100755
+index 789deba9..506f67ef 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -6816,7 +6816,11 @@ sub git_blame_common {

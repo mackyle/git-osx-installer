@@ -108,7 +108,7 @@ index d0fde38c..7d4c6dfb 100644
  Some optional features and policies
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index a8dbb2dd..350aab0c 100755
+index 2fab5246..6275fa45 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -19,6 +19,7 @@ use File::Find qw();

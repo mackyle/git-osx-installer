@@ -38,7 +38,7 @@ executable (git-log-times) and the README.
 P.S.  Now if only there were a way to get git add/reset/checkout/stage -p
       to use contrib/diff-highlight.  :)
 
-P.P.S. git am complains about 21 lines with whitespace errors.  They are
+P.P.S. git am complains about 23 lines with whitespace errors.  They are
        not whitespace errors.  The README is in markdown format and they
        are explicit line break instructions to markdown (2 trailing blanks).
        Removing them would corrupt the markdown output.
@@ -69,24 +69,24 @@ Other options specific to git-log-times may be shown by using the
 -h option (i.e. `git-log-times -h`).
 
 One or more default options which behave as though they are the
-first option arguments on the command line may be set by assigning
+first option argument(s) on the command line may be set by assigning
 them to the 'log-times.defaults' config value as space-separated
-options including their leading '--'.
+options each including its leading '-' or '--'.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- contrib/git-log-times/README        | 243 ++++++++++++++++++++
- contrib/git-log-times/git-log-times | 429 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 672 insertions(+)
+ contrib/git-log-times/README        | 249 +++++++++++++++++++++
+ contrib/git-log-times/git-log-times | 431 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 680 insertions(+)
  create mode 100644 contrib/git-log-times/README
  create mode 100755 contrib/git-log-times/git-log-times
 
 diff --git a/contrib/git-log-times/README b/contrib/git-log-times/README
 new file mode 100644
-index 00000000..e7827206
+index 00000000..3dccdc79
 --- /dev/null
 +++ b/contrib/git-log-times/README
-@@ -0,0 +1,243 @@
+@@ -0,0 +1,249 @@
 +git-log-times
 +=============
 +
@@ -280,11 +280,13 @@ index 00000000..e7827206
 +
 +   * `--two-initials`  
 +     only show at most two initials instead of the usual three  
-+     This is the default if `--initials=committer,author` is used.
++     This is the default if `--initials=author,committer` or
++     `--initials=committer,author` is used.
 +
 +   * `--three-initials`  
 +     show at most three initials  
-+     This is the default unless `--initials=committer,author` is used.
++     This is the default unless `--initials=author,committer` or
++     `--initials=committer,author` is used.
 +
 +   * `--no-initials`  
 +     omit the initials field entirely
@@ -312,6 +314,10 @@ index 00000000..e7827206
 +   * `--initials=committer`  
 +     show committer initials instead of author initials
 +
++   * `--initials=author,committer`  
++     show author and commiter initials separated by a `/`  
++     This changes the initials width default from three to two.
++
 +   * `--initials=committer,author`  
 +     show commiter and author initials separated by a `/`  
 +     This changes the initials width default from three to two.
@@ -332,10 +338,10 @@ index 00000000..e7827206
 +(e.g. `git config log-times.defaults "--abbrev=8 --seconds"`).
 diff --git a/contrib/git-log-times/git-log-times b/contrib/git-log-times/git-log-times
 new file mode 100755
-index 00000000..0543cc02
+index 00000000..d54340f3
 --- /dev/null
 +++ b/contrib/git-log-times/git-log-times
-@@ -0,0 +1,429 @@
+@@ -0,0 +1,431 @@
 +#!/usr/bin/env perl
 +
 +# git-log-times.pl -- git log --oneline variation with dates, times and initials
@@ -367,6 +373,8 @@ index 00000000..0543cc02
 +    --committer-date      Use committer dates and times (default)
 +    --initials=author     Use author initials (default)
 +    --initials=committer  Use committer initials
++    --intiials=author,committer
++                          Use author/committer initials and --two-initials
 +    --intiials=committer,author
 +                          Use committer/author initials and --two-initials
 +    --time-zone=<zone>    Set TZ environment variable to <zone>

@@ -338,7 +338,7 @@ index 00000000..3dccdc79
 +(e.g. `git config log-times.defaults "--abbrev=8 --seconds"`).
 diff --git a/contrib/git-log-times/git-log-times b/contrib/git-log-times/git-log-times
 new file mode 100755
-index 00000000..d54340f3
+index 00000000..5e0f8733
 --- /dev/null
 +++ b/contrib/git-log-times/git-log-times
 @@ -0,0 +1,431 @@
@@ -589,7 +589,7 @@ index 00000000..d54340f3
 +	} elsif ($arg eq "--decorate=auto") {
 +		$setusedecorate = 1;
 +		$usedecorate = -t STDOUT ? 1 : undef;
-+	} elsif ($arg =~ /^--decorate=/) {
++	} elsif ($arg eq "--decorate" || $arg =~ /^--decorate=/) {
 +		$setusedecorate = 1;
 +		$usedecorate = 1;
 +	} elsif ($arg eq "--color" || $arg eq "--color=always") {

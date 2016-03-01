@@ -1,7 +1,7 @@
 /*
 
 gettext.c - gettext equivalents for Mac OS X
-Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
+Copyright (C) 2014,2015,2016 Kyle J. McKay.  All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -144,6 +144,7 @@ void git_setup_gettext(void)
 {
 	const char *codeset;
 	const char *localedir;
+	char *dotch;
 	char bundlepath[PATH_MAX];
 	CFURLRef burl;
 	CFArrayRef bl;
@@ -193,6 +194,8 @@ void git_setup_gettext(void)
 	strlcpyuc(charset, codeset, sizeof(charset));
 	is_utf8_codeset = !charset[0] || !strcmp(charset, "UTF-8");
 	strlcpy(localename, querylocale(LC_MESSAGES_MASK, NULL), sizeof(localename));
+	if ((dotch = strchr(localename, '.')) != NULL)
+		*dotch = '\0';
 	if (!is_utf8_codeset) {
 		char transcharset[64];
 		strlcpy(transcharset, charset, sizeof(transcharset));

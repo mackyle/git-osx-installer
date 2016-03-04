@@ -40,6 +40,14 @@ Git Patches
   My own patches to make `git-send-email.perl` use libcurl instead of
   OpenSSL.  Has not been posted elsewhere.
 
+* Use fgetln when getdelim is not available
+
+  - `patches/km/strbuf_getwholeline-fgetln.txt`
+
+  My own patches to make `strbuf_getwholeline` use fgetln when called with
+  a delimiter of `\n` if fgetln is available but getdelim is not.
+  Has not been posted elsewhere.
+
 * Use a different pack.windowmemory default setting instead of 0
 
   - `patches/windowmemory/q/t_util_sys__memsize.diff`

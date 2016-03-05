@@ -38,7 +38,7 @@ executable (git-log-times) and the README.
 P.S.  Now if only there were a way to get git add/reset/checkout/stage -p
       to use contrib/diff-highlight.  :)
 
-P.P.S. git am complains about 23 lines with whitespace errors.  They are
+P.P.S. git am complains about 26 lines with whitespace errors.  They are
        not whitespace errors.  The README is in markdown format and they
        are explicit line break instructions to markdown (2 trailing blanks).
        Removing them would corrupt the markdown output.
@@ -75,18 +75,18 @@ options each including its leading '-' or '--'.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- contrib/git-log-times/README        | 249 +++++++++++++++++++++
- contrib/git-log-times/git-log-times | 431 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 680 insertions(+)
+ contrib/git-log-times/README        | 256 +++++++++++++++++++++
+ contrib/git-log-times/git-log-times | 443 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 699 insertions(+)
  create mode 100644 contrib/git-log-times/README
  create mode 100755 contrib/git-log-times/git-log-times
 
 diff --git a/contrib/git-log-times/README b/contrib/git-log-times/README
 new file mode 100644
-index 00000000..3dccdc79
+index 00000000..434dda22
 --- /dev/null
 +++ b/contrib/git-log-times/README
-@@ -0,0 +1,249 @@
+@@ -0,0 +1,256 @@
 +git-log-times
 +=============
 +
@@ -327,6 +327,13 @@ index 00000000..3dccdc79
 +     This is an alterative to setting TZ before running `git log-times`
 +     and will affect the time zone dates and times are displayed in.
 +
++   * `--weekday`  
++     show the weekday with the date
++
++   * `--no-weekday`  
++     do not show the weekday with the date  
++     This is the default behavior
++
 +In addition to the above options, color output is controlled as normal
 +for `git log` with the addition of `color.diff.date`, `color.diff.time`
 +and `color.diff.initials` config options to alter the default colors
@@ -338,10 +345,10 @@ index 00000000..3dccdc79
 +(e.g. `git config log-times.defaults "--abbrev=8 --seconds"`).
 diff --git a/contrib/git-log-times/git-log-times b/contrib/git-log-times/git-log-times
 new file mode 100755
-index 00000000..5e0f8733
+index 00000000..0c068c87
 --- /dev/null
 +++ b/contrib/git-log-times/git-log-times
-@@ -0,0 +1,431 @@
+@@ -0,0 +1,443 @@
 +#!/usr/bin/env perl
 +
 +# git-log-times.pl -- git log --oneline variation with dates, times and initials
@@ -378,6 +385,8 @@ index 00000000..5e0f8733
 +    --intiials=committer,author
 +                          Use committer/author initials and --two-initials
 +    --time-zone=<zone>    Set TZ environment variable to <zone>
++    --weekday             Show the weekday with the date
++    --no-weekday          Do not show the weekday with the date (default)
 +
 +    other log options     See `git help log` for more information
 +
@@ -488,6 +497,7 @@ index 00000000..5e0f8733
 +my @args = ();
 +my $lastwasgrep;
 +my $dateopt = "%ct";
++my $usewkday;
 +my $reflogsubj = "%gs";
 +my $sawdashdash;
 +$iw = undef;
@@ -552,6 +562,14 @@ index 00000000..5e0f8733
 +		# extra option
 +		$dateopt = "%ct";
 +		$usecad = 1;
++		next;
++	} elsif ($arg eq "--weekday") {
++		# extra option
++		$usewkday = 1;
++		next;
++	} elsif ($arg eq "--no-weekday") {
++		# extra option
++		$usewkday = undef;
 +		next;
 +	} elsif ($arg =~ /^--initials=/) {
 +		# extra option
@@ -686,7 +704,8 @@ index 00000000..5e0f8733
 +	my @parents = split(' ', $parentlist) if $usegraph;
 +	my $initials = $iw ? get_initials($$ivar) : "";
 +	my $initials2 = $iw2 ? get_initials($$ivar2) : "";
-+	my ($newdate, $newtime) = split(" ", strftime("%Y-%m-%d $timeformat", localtime($timestamp)));
++	my ($newdate, $newday, $newtime) = split(" ", strftime("%Y-%m-%d %a $timeformat", localtime($timestamp)));
++	$newdate .= " " . $newday if $usewkday;
 +	my $mightneedbreak = $lastwascommit && !$lastwasroot && $usegraph && !grep($_ eq $fullhash, @lastparents);
 +	if ($lastdate ne $newdate || $mightneedbreak) {
 +		my $indent = "";

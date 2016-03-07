@@ -41,7 +41,7 @@ index a65cdd43..774db151 100644
  pack.compression::
  	An integer -1..9, indicating the compression level for objects
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index 80fe8c7d..4f0e8de4 100644
+index 53307d53..a1e04ae5 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
 @@ -19,11 +19,18 @@
@@ -72,7 +72,7 @@ index 80fe8c7d..4f0e8de4 100644
  
  /*
   * stats
-@@ -2558,6 +2565,24 @@ static void get_object_list(int ac, const char **av)
+@@ -2547,6 +2554,24 @@ static void get_object_list(int ac, const char **av)
  	sha1_array_clear(&recent_objects);
  }
  
@@ -97,7 +97,7 @@ index 80fe8c7d..4f0e8de4 100644
  static int option_parse_index_version(const struct option *opt,
  				      const char *arg, int unset)
  {
-@@ -2744,9 +2769,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+@@ -2733,9 +2758,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
  		delta_search_threads = online_cpus();
  
  #ifdef NO_PTHREADS

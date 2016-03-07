@@ -15,7 +15,7 @@ Although the implementation shares many commonalities with the
 online_cpus function provided in thread-utils, thread-utils will
 only be included when NO_PTHREADS is NOT defined.
 
-However, the sys_memsize function may still be needed to set
+However, the sys_memsize function will still be needed to set
 reasonable default memory limits even when only running with a
 single thread so it must be located elsewhere.
 
@@ -25,10 +25,11 @@ and sys-utils.c files instead.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- Makefile    |  1 +
- sys-utils.c | 63 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- sys-utils.h |  7 +++++++
- 3 files changed, 71 insertions(+)
+ Makefile         |  1 +
+ config.mak.uname |  1 +
+ sys-utils.c      | 69 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ sys-utils.h      | 10 ++++++++
+ 4 files changed, 81 insertions(+)
  create mode 100644 sys-utils.c
  create mode 100644 sys-utils.h
 
@@ -44,12 +45,24 @@ index fd19b544..dbb32adf 100644
  LIB_OBJS += tag.o
  LIB_OBJS += tempfile.o
  LIB_OBJS += trace.o
+diff --git a/config.mak.uname b/config.mak.uname
+index f34dcaad..9cfe40f4 100644
+--- a/config.mak.uname
++++ b/config.mak.uname
+@@ -520,6 +520,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))
+ 	DEFAULT_HELP_FORMAT = html
+ 	COMPAT_CFLAGS += -D__USE_MINGW_ACCESS -D_USE_32BIT_TIME_T -DNOGDI -Icompat -Icompat/win32
+ 	COMPAT_CFLAGS += -DSTRIP_EXTENSION=\".exe\"
++	COMPAT_CFLAGS += -DNO_GLOBALMEMORYSTATUSEX
+ 	COMPAT_OBJS += compat/mingw.o compat/winansi.o \
+ 		compat/win32/pthread.o compat/win32/syslog.o \
+ 		compat/win32/dirent.o
 diff --git a/sys-utils.c b/sys-utils.c
 new file mode 100644
-index 00000000..c08bbb1b
+index 00000000..21337d0b
 --- /dev/null
 +++ b/sys-utils.c
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,69 @@
 +#include "cache.h"
 +#include "sys-utils.h"
 +
@@ -65,11 +78,17 @@ index 00000000..c08bbb1b
 +#endif
 +
 +#ifdef GIT_WINDOWS_NATIVE
++#  ifdef NO_GLOBALMEMORYSTATUSEX
++	MEMORYSTATUS state;
++	GlobalMemoryStatus(&state);
++	return (uint64_t)state.dwTotalPhys;
++#  else
 +	MEMORYSTATUSEX statex;
 +	statex.dwLength = sizeof(statex);
 +
 +	if (GlobalMemoryStatusEx(&statex))
 +		return (uint64_t)statex.ullTotalPhys;
++#  endif
 +#elif defined(HAVE_BSD_SYSCTL)
 +#  if defined(HW_MEMSIZE) || defined(HW_PHYSMEM64) || defined(HW_PHYSMEM)
 +	int mib[2];
@@ -115,14 +134,17 @@ index 00000000..c08bbb1b
 +}
 diff --git a/sys-utils.h b/sys-utils.h
 new file mode 100644
-index 00000000..89a95186
+index 00000000..fd44ef67
 --- /dev/null
 +++ b/sys-utils.h
-@@ -0,0 +1,7 @@
+@@ -0,0 +1,10 @@
 +#ifndef SYS_UTILS_H
 +#define SYS_UTILS_H
 +
-+/* returns 0 if system memory size cannot be determined */
++/*
++ * return system memory size in bytes
++ * returns 0 if system memory size cannot be determined
++ */
 +uint64_t sys_memsize(void);
 +
 +#endif /* SYS_UTILS_H */

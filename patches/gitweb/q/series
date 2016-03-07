@@ -38,3 +38,4 @@ gitweb-handle-local-DST-properly.diff -p1
 gitweb-support-automatic-readme-generation.diff -p1
 gitweb-avoid-adding-js-0-unless-necessary.diff -p1
 gitweb-find-project-dirs-with-.git-gitdir-links.diff -p1
+gitweb-support-projects_list_restrict.diff -p1

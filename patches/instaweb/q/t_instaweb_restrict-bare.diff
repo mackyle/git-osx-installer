@@ -1,0 +1,36 @@
+Subject: [PATCH] git-instaweb: set $projects_list_restrict in bare repos
+
+When configuring git-instaweb to run in a bare repository, set the
+new gitweb $projects_list_restrict option to prevent excessive delay
+and unexpected projects from showing up in the project list.
+
+Since this is an extra variable, setting it and running an old version
+of gitweb that does not support it is harmless as the old version of
+gitweb will simply ignore it and produce the previous, less desirable
+behavior.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ git-instaweb.sh | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/git-instaweb.sh b/git-instaweb.sh
+index 087a258d..7442e1e5 100755
+--- a/git-instaweb.sh
++++ b/git-instaweb.sh
+@@ -718,6 +718,13 @@ our \$auto_fcgi = 1;
+ our \$projectroot = "$(dirname "$fqgitdir")";
+ our \$git_temp = "$fqgitdir/gitweb/tmp";
+ our \$projects_list = \$projectroot;
++EOF
++	if [ "$(git rev-parse --is-bare-repository)" = "true" ]; then
++		cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
++our \$projects_list_restrict = "$(basename "$fqgitdir")";
++EOF
++	fi
++	cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
+ our \$default_text_plain_charset = 'utf-8';
+ our \$my_uri = "/gitweb.cgi";
+ our \$home_link = "/gitweb.cgi";
+---

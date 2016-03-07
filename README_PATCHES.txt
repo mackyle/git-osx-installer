@@ -113,6 +113,7 @@ Git Patches
   - `patches/instaweb/q/t_instaweb_default-to-local.diff`
   - `patches/instaweb/q/t_instaweb_no-kill-nothing.diff`
   - `patches/instaweb/q/t_instaweb_auto-port.diff`
+  - `patches/instaweb/q/t_instaweb_restrict-bare.diff`
 
   My own patches to improve the usability of git instaweb by enabling source
   highlighting if highlight is available, using the installed copy of
@@ -122,12 +123,13 @@ Git Patches
   binding to both IPv4 and IPv6 addresses and browsing to localhost instead of
   127.0.0.1, enabling readme blob display, defaulting to binding only to the
   localhost address if `instaweb.local` has not been set at all, avoiding
-  attempting to kill using a process id of "" and finally attempting to
-  automatically select an available port to listen on if one was not specified
-  and the first chosen port is not available.  The ipv6 patch is only effective
-  when using lighttpd as the web server (which is the default).  The fcgi patch
-  enables FCGI mode when the needed FCGI perl module is present.  Have not been
-  posted elsewhere.
+  attempting to kill using a process id of "", attempting to automatically
+  select an available port to listen on if one was not specified and the first
+  chosen port is not available and finally set the gitweb configuration item
+  $projects_list_restrict when running in a bare repository.  The ipv6 patch is
+  only effective when using lighttpd as the web server (which is the default).
+  The fcgi patch enables FCGI mode when the needed FCGI perl module is present.
+  Have not been posted elsewhere.
 
 * Add submodule support to gitweb:
 
@@ -138,6 +140,15 @@ Git Patches
   submodules makes it very easy to browse the submodules -- without the patch
   they are not listed in the gitweb projects list.  Has not been posted
   elsewhere.
+
+* Add $projects_list_restrict support to gitweb:
+
+  - `patches/gitweb/q/gitweb-support-projects_list_restrict.diff`
+
+  My own patch to allow gitweb to restrict the projects found when
+  $projects_list is set to a directory to only those in a single subdirectory
+  or those with a full path that matches a specified regular expression.
+  Has not been posted elsewhere.
 
 * Various gitweb bug fixes / enhancements:
 

@@ -51,6 +51,7 @@
     ul.ulnone { list-style-type: none; }
     li { margin-top: 0; margin-bottom: 0; }
     .indent { display: block; margin-left: 5ex; margin-right: 5ex; text-align: left; }
+    .indent125 { display: block; margin-left: 1.25ex; margin-right: 1.25ex; text-align: left; }
     .spacer05 { display: inline-block; height: 1em; width: 0.5ex; }
     .spacer25 { display: inline-block; height: 1em; width: 2.5ex; }
 
@@ -133,7 +134,7 @@
 
 <ul>
 <li>FAT universal binary includes ppc, ppc64, x86 and x86-64</li>
-<li>OS X 10.4.8 and later compatible (including 10.5.x, 10.6.x, 10.7.x, 10.8.x, 10.9.x, 10.10.x etc.)</li>
+<li>OS X 10.4.8 and later compatible (including 10.5.x, 10.6.x, 10.7.x, 10.8.x, 10.9.x, 10.10.x, 10.11.x  etc.)</li>
 <li>Git <a href="#translations">translations</a> included!</li>
 <li><tt>git send-email</tt> and <tt>git imap-send</tt> work out-of-the-box, nothing more to install!</li>
 <li><tt>git instaweb</tt> works out-of-the-box and includes several enhancements</li>
@@ -155,26 +156,31 @@
 </thead>
 <tbody>
 
-<tr><td><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.5.4-osx-installer.dmg"><span class="down"></span>git-2.5.4-osx-installer.dmg</a></td>
+<tr><td><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.5.5-osx-installer.dmg"><span class="down"></span>git-2.5.5-osx-installer.dmg</a></td>
 <td>12 MiB</td>
-<td>v2.5.4</td>
-<td>2016-02-05</td>
-<td>Mac OS X 10.4+ universal installer for Git version 2.5.4 [<a href="#gitosx-v2.5.4_in">hashes</a>]</td></tr>
+<td>v2.5.5</td>
+<td>2016-03-27</td>
+<td>Mac OS X 10.4+ universal installer for Git version 2.5.5 [<a href="#gitosx-v2.5.5_in">hashes</a>]</td></tr>
 
-<tr><td><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.4.10-osx-installer.dmg"><span class="down"></span>git-2.4.10-osx-installer.dmg</a></td>
+<tr><td><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.4.11-osx-installer.dmg"><span class="down"></span>git-2.4.11-osx-installer.dmg</a></td>
 <td>12 MiB</td>
-<td>v2.4.10</td>
-<td>2015-10-27</td>
-<td>Mac OS X 10.4+ universal installer for Git version 2.4.10 [<a href="#gitosx-v2.4.10_in">hashes</a>]</td></tr>
-
-<tr><td><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.3.10-osx-installer.dmg"><span class="down"></span>git-2.3.10-osx-installer.dmg</a></td>
-<td>12 MiB</td>
-<td>v2.3.10</td>
-<td>2015-10-16</td>
-<td>Mac OS X 10.4+ universal installer for Git version 2.3.10 [<a href="#gitosx-v2.3.10_in">hashes</a>]</td></tr>
+<td>v2.4.11</td>
+<td>2016-03-26</td>
+<td>Mac OS X 10.4+ universal installer for Git version 2.4.11 [<a href="#gitosx-v2.4.11_in">hashes</a>]</td></tr>
 
 </tbody>
 </table>
+
+<form class="indent125"
+  action="https://feedburner.google.com/fb/a/mailverify"
+  method="get"
+  target="popupwindow"
+  onsubmit="window.open('https://feedburner.google.com/fb/a/mailverify?uri=GitOSXInstaller&amp;loc=en_US', 'popupwindow', 'scrollbars=yes,width=550,height=520');return true"
+><p>Receive Git OS X Installer updates notifications by email
+<span style="font-size:80%">(powered by <a href="https://feedburner.google.com" target="_blank">FeedBurner</a>)</span>:
+<input type="hidden" value="GitOSXInstaller" name="uri"/><input type="hidden" name="loc" value="en_US"/>
+<input type="submit" value="Subscribe" />
+</p></form>
 
 <h2 id="notes">Important Notes</h2>
 
@@ -236,27 +242,21 @@ details them all.</p>
 runnable on Mac OS X 10.4 or later are available from the following convenient download links:</p>
 <dl>
 
-<dt id="gitosx-v2.5.4_in"><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.5.4-osx-installer.dmg"><span class="down"></span><tt>git-2.5.4-osx-installer.dmg</tt></a> Mac OS X 10.4+ universal installer package (tag: <tt>v2.5.4</tt>)</dt>
+<dt id="gitosx-v2.5.5_in"><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.5.5-osx-installer.dmg"><span class="down"></span><tt>git-2.5.5-osx-installer.dmg</tt></a> Mac OS X 10.4+ universal installer package (tag: <tt>v2.5.5</tt>)</dt>
 <dd><table class='hash'><tr><td>SIZE</td><td>12 MiB</td></tr>
-<tr><td>MD5</td><td>da0810616bcf363d6042c04cf7935ff5</td></tr>
-<tr><td>SHA1</td><td>d6538a55e51f2f85bd1605d7824d4a3056716bdc</td></tr>
-<tr><td>SHA256</td><td>4f258fa73937c2a220c6b996831ecbb2e4d0601ae4cf64cc5fe315c3d214713d</td></tr></table></dd>
+<tr><td>MD5</td><td>cd4ddf472b1389979a0ea85cec0b97f0</td></tr>
+<tr><td>SHA1</td><td>7f031f322cb8296fb376c83a7cc0dd196a741ccd</td></tr>
+<tr><td>SHA256</td><td>8957e634b3ca65ac1e4b53b2ea447bdccbf439c538dc23b3a04d22160352fecc</td></tr></table></dd>
 
-<dt id="gitosx-v2.4.10_in"><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.4.10-osx-installer.dmg"><span class="down"></span><tt>git-2.4.10-osx-installer.dmg</tt></a> Mac OS X 10.4+ universal installer package (tag: <tt>v2.4.10</tt>)</dt>
+<dt id="gitosx-v2.4.11_in"><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.4.11-osx-installer.dmg"><span class="down"></span><tt>git-2.4.11-osx-installer.dmg</tt></a> Mac OS X 10.4+ universal installer package (tag: <tt>v2.4.11</tt>)</dt>
 <dd><table class='hash'><tr><td>SIZE</td><td>12 MiB</td></tr>
-<tr><td>MD5</td><td>3550c8079f6923cdbac4923f45fe16ac</td></tr>
-<tr><td>SHA1</td><td>59aa26e0ba61bac0ab23b81ea1b7172bf33f704a</td></tr>
-<tr><td>SHA256</td><td>8100a9757005737427cf5977f61e090c2472662cf69f570a434093d9db1714b2</td></tr></table></dd>
-
-<dt id="gitosx-v2.3.10_in"><a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.3.10-osx-installer.dmg"><span class="down"></span><tt>git-2.3.10-osx-installer.dmg</tt></a> Mac OS X 10.4+ universal installer package (tag: <tt>v2.3.10</tt>)</dt>
-<dd><table class='hash'><tr><td>SIZE</td><td>12 MiB</td></tr>
-<tr><td>MD5</td><td>c5de880533715eeab4f1f598e46d0bba</td></tr>
-<tr><td>SHA1</td><td>19be02affaa152e9802dca908e10e72e89b976fb</td></tr>
-<tr><td>SHA256</td><td>0fbdce3c5059cc354cd3c4a0ad78ff2604b51213a861f21b9d191ddb501205e1</td></tr></table></dd>
+<tr><td>MD5</td><td>7986123c8cbb0a01dd69eb2ff912886a</td></tr>
+<tr><td>SHA1</td><td>e10ba213305a7bcb5d74f4947d418afa59aa0665</td></tr>
+<tr><td>SHA256</td><td>20d85f3d71389ca795696c98bdf5482d339c084c1f46817452a2918c14088629</td></tr></table></dd>
 
 </dl>
 
-<p>Please note that older versions which were previously listed here, while still available for
+<p>Please note that older versions which were previously listed here, while they may still be available for
 download, are no longer recommended.</p>
 
 <h2 id="license">License</h2>

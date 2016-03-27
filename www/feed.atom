@@ -1,155 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+
+    NOTE: stupid feedburner fails to insert an xml:base attribute
+    when it republishes the feed so all the links become broken
+    unless we explicitly add an xml:base attribute ourselves.
+
+    Unfortunately, even that's not good enough for feedburner as
+    when viewing the feed directly in a browser that does not
+    support feeds, the feedburner source includes a stylesheet
+    to reformat the feed.  That stylesheet, however, fails to
+    take into account the xml:base attribute and again all the
+    links become broken.  :(
+
+    That means all the links MUST be absolute URIs instead of
+    relative absolute path references making pre-deployment
+    testing a real PITA!
+
+-->
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title>Git OS X Installer Updates</title>
-  <link rel="self" type="application/atom+xml" href="/git-osx-installer/feed.atom"/>
-  <link rel="alternate" type="text/html" href="/git-osx-installer/"/>
+  <author><name>Kyle J. McKay</name></author>
+  <link rel="self" type="application/atom+xml" href="http://mackyle.github.io/git-osx-installer/feed.atom"/>
+  <link rel="alternate" type="text/html" href="http://mackyle.github.io/git-osx-installer/"/>
   <id>urn:uuid:8c3cdd92-11f4-44d4-a90b-ae20c7f2a963</id>
-  <published>2015-01-02T03:00:00-08:00</published>
-  <updated>2016-02-05T04:00:00-08:00</updated>
+  <icon>http://mackyle.github.io/git-osx-installer/gitosxinstaller-icon.png</icon>
+  <logo>http://mackyle.github.io/git-osx-installer/gitosxinstaller-logo.png</logo>
+  <updated>2016-03-27T06:00:00-07:00</updated>
 
   <entry>
-    <title>Git 2.5.4 OS X Installer</title>
-    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.5.4_in"/>
-    <id>urn:uuid:494891bb-02d0-4889-80e9-51dba79fe2bd</id>
-    <published>2016-02-05T04:00:00-08:00</published>
-    <updated>2016-02-05T04:00:00-08:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.5.4</summary>
+    <title>Git 2.5.5 OS X Installer</title>
+    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.5.5_in"/>
+    <id>urn:uuid:00926ac1-b293-486a-a88c-24191151e37f</id>
+    <published>2016-03-27T06:00:00-07:00</published>
+    <updated>2016-03-27T06:00:00-07:00</updated>
+    <summary>Mac OS X 10.4+ universal installer for Git version 2.5.5</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.5.4</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.5.4-osx-installer.dmg">git-2.5.4-osx-installer.dmg</a><br/>
+        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.5.5</p>
+        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.5.5-osx-installer.dmg">git-2.5.5-osx-installer.dmg</a><br/>
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
-        <span>MD5: </span><tt>da0810616bcf363d6042c04cf7935ff5</tt><br/>
-        <span>SHA1: </span><tt>d6538a55e51f2f85bd1605d7824d4a3056716bdc</tt><br/>
-        <span>SHA256: </span><tt>4f258fa73937c2a220c6b996831ecbb2e4d0601ae4cf64cc5fe315c3d214713d</tt><br/>
+        <span>MD5: </span><tt>cd4ddf472b1389979a0ea85cec0b97f0</tt><br/>
+        <span>SHA1: </span><tt>7f031f322cb8296fb376c83a7cc0dd196a741ccd</tt><br/>
+        <span>SHA256: </span><tt>8957e634b3ca65ac1e4b53b2ea447bdccbf439c538dc23b3a04d22160352fecc</tt><br/>
       </div>
     </content>
   </entry>
 
   <entry>
-    <title>Git 2.4.10 OS X Installer</title>
-    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.4.10_in"/>
-    <id>urn:uuid:2219b95d-c84a-4185-bb6c-23fd4f3e451a</id>
-    <published>2015-10-27T16:00:00-07:00</published>
-    <updated>2015-10-27T16:00:00-07:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.4.10</summary>
+    <title>Git 2.4.11 OS X Installer</title>
+    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.4.11_in"/>
+    <id>urn:uuid:297a492a-d269-466a-96b0-02d93d787a84</id>
+    <published>2016-03-26T22:00:00-07:00</published>
+    <updated>2016-03-26T22:00:00-07:00</updated>
+    <summary>Mac OS X 10.4+ universal installer for Git version 2.4.11</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.4.10</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.4.10-osx-installer.dmg">git-2.4.10-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>3550c8079f6923cdbac4923f45fe16ac</tt><br/>
-        <span>SHA1: </span><tt>59aa26e0ba61bac0ab23b81ea1b7172bf33f704a</tt><br/>
-        <span>SHA256: </span><tt>8100a9757005737427cf5977f61e090c2472662cf69f570a434093d9db1714b2</tt><br/>
-      </div>
-    </content>
-  </entry>
-
-  <entry>
-    <title>Git 2.3.10 OS X Installer</title>
-    <link rel="alternate" type="text/html" href="/git-osx-installer/#gitosx-v2.3.10_in"/>
-    <id>urn:uuid:6cfd30ff-6806-4689-ae9d-8646330a18d2</id>
-    <published>2015-10-06T06:00:00-07:00</published>
-    <updated>2015-10-16T14:00:00-07:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.3.10</summary>
-    <content type="xhtml">
-      <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.3.10</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.3.10-osx-installer.dmg">git-2.3.10-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>c5de880533715eeab4f1f598e46d0bba</tt><br/>
-        <span>SHA1: </span><tt>19be02affaa152e9802dca908e10e72e89b976fb</tt><br/>
-        <span>SHA256: </span><tt>0fbdce3c5059cc354cd3c4a0ad78ff2604b51213a861f21b9d191ddb501205e1</tt><br/>
-        <p>Note: This installer has been reissued with minor corrections.  See <a href="https://github.com/mackyle/git-osx-installer/blob/v2.3.10/ChangeLog.txt">here</a> for details.</p>
-      </div>
-    </content>
-  </entry>
-
-  <entry>
-    <title>Git 2.3.9 OS X Installer</title>
-    <id>urn:uuid:f4e9b41d-bb33-4ae9-aecd-6bcdc200f08f</id>
-    <published>2015-09-13T17:00:00-07:00</published>
-    <updated>2015-10-06T06:00:00-07:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.3.9</summary>
-    <content type="xhtml">
-      <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.3.9</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.3.9-osx-installer.dmg">git-2.3.9-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>ebe202b389ffb4ec4c801c6e67092c10</tt><br/>
-        <span>SHA1: </span><tt>6590b6805efdb68d48d136b8f5286876f5319030</tt><br/>
-        <span>SHA256: </span><tt>931e4da909adb77190733b113445bbf46a400125be9a5dfa6d3674bcab042613</tt><br/>
-        <p>Note: This version is no longer recommended.</p>
-      </div>
-    </content>
-  </entry>
-
-  <entry>
-    <title>Git 2.3.3 OS X Installer</title>
-    <id>urn:uuid:91900342-7f38-41b4-90ee-c58b32817e46</id>
-    <published>2015-03-19T20:00:00-07:00</published>
-    <updated>2015-09-13T01:00:00-07:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.3.3</summary>
-    <content type="xhtml">
-      <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.3.3</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.3.3-osx-installer.dmg">git-2.3.3-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>c0c83704785fc25f249051b5421e6bfe</tt><br/>
-        <span>SHA1: </span><tt>a937a247ec164357914ba04ba9e4d8c71fb0fd9a</tt><br/>
-        <span>SHA256: </span><tt>587bbb92db27c6af27603397dae10334203c0e8693d7fa289b41ca704584a50a</tt><br/>
-        <p>Note: This version is no longer recommended.</p>
-      </div>
-    </content>
-  </entry>
-
-  <entry>
-    <title>Git 2.3.2 OS X Installer</title>
-    <id>urn:uuid:d0d2d32f-7564-4be0-af5a-4b1b119f6c72</id>
-    <published>2015-03-07T15:00:00-08:00</published>
-    <updated>2015-09-13T01:00:00-07:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.3.2</summary>
-    <content type="xhtml">
-      <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.3.2</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.3.2-osx-installer.dmg">git-2.3.2-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>2abaf1c17ba4911a3cc4f553d0bb5880</tt><br/>
-        <span>SHA1: </span><tt>2fa4e53fdcee29ca6414b9b906cbb013e9afbaf7</tt><br/>
-        <span>SHA256: </span><tt>49ee8daa770f9a1ea37fc297f2cddee00c5672fd8cb2c20c3a3afbe8ede81ec7</tt><br/>
-        <p>Note: This version is no longer recommended.</p>
-      </div>
-    </content>
-  </entry>
-
-  <entry>
-    <title>Git 2.2.2 OS X Installer</title>
-    <id>urn:uuid:ddd21a38-a066-46d5-bfab-b8b45124e413</id>
-    <published>2015-01-20T00:00:00-08:00</published>
-    <updated>2015-09-13T01:00:00-07:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.2.2</summary>
-    <content type="xhtml">
-      <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.2.2</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.2.2-osx-installer.dmg">git-2.2.2-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>4d818156d6f67b0189f56c453e7deec3</tt><br/>
-        <span>SHA1: </span><tt>67ea4e2fda289e5cbcb293d2879f7aeefb76cf97</tt><br/>
-        <span>SHA256: </span><tt>713ca9cad446c4cb93465fd7eaaa382b6ffcd9502ea358563e6b8cc83daa22aa</tt><br/>
-        <p>Note: This version is no longer recommended.</p>
-      </div>
-    </content>
-  </entry>
-
-  <entry>
-    <title>Git 2.1.4 OS X Installer</title>
-    <id>urn:uuid:59064c03-3fde-41f2-9fb1-eeaf5bad4dd9</id>
-    <published>2015-01-02T02:48:59-08:00</published>
-    <updated>2015-09-13T01:00:00-07:00</updated>
-    <summary>Mac OS X 10.4+ universal installer for Git version 2.1.4</summary>
-    <content type="xhtml">
-      <div xmlns="http://www.w3.org/1999/xhtml">
-        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.1.4</p>
-        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.1.4-osx-installer.dmg">git-2.1.4-osx-installer.dmg</a><br/>
-        <span>MD5: </span><tt>3608f85b7b2c6a855d4f7906db0e7f3f</tt><br/>
-        <span>SHA1: </span><tt>152447ea9b2086275a0d4e56a7d97455a8cbae56</tt><br/>
-        <span>SHA256: </span><tt>dacf300a3d4e7821ae0db947c8498b6ce14f96d91ffc1a7c4107a61a95294836</tt><br/>
-        <p>Note: This version is no longer recommended.</p>
+        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.4.11</p>
+        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.4.11-osx-installer.dmg">git-2.4.11-osx-installer.dmg</a><br/>
+        <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
+        <span>MD5: </span><tt>7986123c8cbb0a01dd69eb2ff912886a</tt><br/>
+        <span>SHA1: </span><tt>e10ba213305a7bcb5d74f4947d418afa59aa0665</tt><br/>
+        <span>SHA256: </span><tt>20d85f3d71389ca795696c98bdf5482d339c084c1f46817452a2918c14088629</tt><br/>
       </div>
     </content>
   </entry>

@@ -10,7 +10,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 36 insertions(+), 8 deletions(-)
 
 diff --git a/src/server.c b/src/server.c
-index 409742e5..1bced192 100644
+index bd65413a..e7b6074f 100644
 --- a/src/server.c
 +++ b/src/server.c
 @@ -559,6 +559,7 @@ static void show_help (void) {
@@ -80,9 +80,9 @@ index 409742e5..1bced192 100644
  		for (ndx = 0; ndx < srv->joblist->used; ndx++) {
  			connection *con = srv->joblist->ptr[ndx];
  			handler_t r;
-@@ -1583,16 +1606,21 @@ int main (int argc, char **argv) {
- 	if (0 == graceful_shutdown)
+@@ -1584,16 +1607,21 @@ int main (int argc, char **argv) {
  		remove_pid_file(srv, &pid_fd);
+ 	}
  
 +	if (timed_out) {
 +		log_error_write(srv, __FILE__, __LINE__, "s",

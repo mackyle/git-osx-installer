@@ -46,11 +46,11 @@ index 37e2d9e1..3a9da17d 100644
  LIB_OBJS += tempfile.o
  LIB_OBJS += trace.o
 diff --git a/config.mak.uname b/config.mak.uname
-index f34dcaad..9cfe40f4 100644
+index 943c4396..8eb09a1f 100644
 --- a/config.mak.uname
 +++ b/config.mak.uname
-@@ -520,6 +520,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))
- 	DEFAULT_HELP_FORMAT = html
+@@ -523,6 +523,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))
+ 	NO_D_INO_IN_DIRENT = YesPlease
  	COMPAT_CFLAGS += -D__USE_MINGW_ACCESS -D_USE_32BIT_TIME_T -DNOGDI -Icompat -Icompat/win32
  	COMPAT_CFLAGS += -DSTRIP_EXTENSION=\".exe\"
 +	COMPAT_CFLAGS += -DNO_GLOBALMEMORYSTATUSEX

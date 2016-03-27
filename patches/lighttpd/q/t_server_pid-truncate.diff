@@ -17,11 +17,11 @@ pid of a process that is no longer running.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- src/server.c | 70 ++++++++++++++++++++++++++++++++++++------------------------
- 1 file changed, 42 insertions(+), 28 deletions(-)
+ src/server.c | 69 ++++++++++++++++++++++++++++++++++++------------------------
+ 1 file changed, 42 insertions(+), 27 deletions(-)
 
 diff --git a/src/server.c b/src/server.c
-index c5845e2c..409742e5 100644
+index c5845e2c..bd65413a 100644
 --- a/src/server.c
 +++ b/src/server.c
 @@ -356,6 +356,34 @@ static void server_free(server *srv) {
@@ -125,7 +125,7 @@ index c5845e2c..409742e5 100644
  					log_error_write(srv, __FILE__, __LINE__, "s", "[note] graceful shutdown started");
  				} else if (srv->conns->used >= srv->max_conns) {
  					log_error_write(srv, __FILE__, __LINE__, "s", "[note] sockets disabled, connection limit reached");
-@@ -1555,19 +1580,8 @@ int main (int argc, char **argv) {
+@@ -1555,18 +1580,8 @@ int main (int argc, char **argv) {
  		srv->joblist->used = 0;
  	}
  
@@ -141,10 +141,9 @@ index c5845e2c..409742e5 100644
 -						strerror(errno));
 -			}
 -		}
--	}
-+	if (0 == graceful_shutdown)
++	if (0 == graceful_shutdown) {
 +		remove_pid_file(srv, &pid_fd);
+ 	}
  
  #ifdef HAVE_SIGACTION
- 	log_error_write(srv, __FILE__, __LINE__, "sdsd", 
 ---

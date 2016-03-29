@@ -51,7 +51,7 @@
     <title>Git 2.7.2 OS X Installer</title>
     <id>urn:uuid:159734aa-27e3-431e-b25a-87ad952e026a</id>
     <published>2016-02-29T23:00:00-08:00</published>
-    <updated>2016-03-28T19:58:09-07:00</updated>
+    <updated>2016-03-26T21:58:00-07:00</updated>
     <summary>Mac OS X 10.4+ universal installer for Git version 2.7.2</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
@@ -89,7 +89,7 @@
     <title>Git 2.6.5 OS X Installer</title>
     <id>urn:uuid:b1925420-857e-4084-8882-af1e9fb7b6d9</id>
     <published>2016-02-24T06:00:00-08:00</published>
-    <updated>2016-03-28T19:57:22-07:00</updated>
+    <updated>2016-03-26T21:56:00-07:00</updated>
     <summary>Mac OS X 10.4+ universal installer for Git version 2.6.5</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
@@ -127,7 +127,7 @@
     <title>Git 2.5.4 OS X Installer</title>
     <id>urn:uuid:494891bb-02d0-4889-80e9-51dba79fe2bd</id>
     <published>2016-02-05T04:00:00-08:00</published>
-    <updated>2016-03-28T19:53:33-07:00</updated>
+    <updated>2016-03-26T21:54:00-07:00</updated>
     <summary>Mac OS X 10.4+ universal installer for Git version 2.5.4</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
@@ -165,7 +165,7 @@
     <title>Git 2.4.10 OS X Installer</title>
     <id>urn:uuid:2219b95d-c84a-4185-bb6c-23fd4f3e451a</id>
     <published>2015-10-27T16:00:00-07:00</published>
-    <updated>2016-03-28T19:52:00-07:00</updated>
+    <updated>2016-03-26T21:52:00-07:00</updated>
     <summary>Mac OS X 10.4+ universal installer for Git version 2.4.10</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
@@ -184,7 +184,7 @@
     <title>Git 2.3.10 OS X Installer</title>
     <id>urn:uuid:6cfd30ff-6806-4689-ae9d-8646330a18d2</id>
     <published>2015-10-06T06:00:00-07:00</published>
-    <updated>2016-03-28T19:50:44-07:00</updated>
+    <updated>2016-03-26T21:50:00-07:00</updated>
     <summary>Mac OS X 10.4+ universal installer for Git version 2.3.10</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">

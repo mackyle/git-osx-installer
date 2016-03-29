@@ -11,7 +11,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 20 insertions(+), 10 deletions(-)
 
 diff --git a/imap-send.c b/imap-send.c
-index 4d3b7737..6197a7a2 100644
+index 2c52027c..b9a0adf2 100644
 --- a/imap-send.c
 +++ b/imap-send.c
 @@ -34,7 +34,7 @@ typedef void *SSL;
@@ -91,7 +91,7 @@ index 4d3b7737..6197a7a2 100644
  
  /*
   * hexchar() and cram() functions are based on the code from the isync
-@@ -1066,7 +1071,7 @@ static struct imap_store *imap_open_store(struct imap_server_conf *srvc, char *f
+@@ -1065,7 +1070,7 @@ static struct imap_store *imap_open_store(struct imap_server_conf *srvc, char *f
  		goto bail;
  
  	if (!preauth) {
@@ -100,7 +100,7 @@ index 4d3b7737..6197a7a2 100644
  		if (!srvc->use_ssl && CAP(STARTTLS)) {
  			if (imap_exec(ctx, NULL, "STARTTLS") != RESP_OK)
  				goto bail;
-@@ -1518,13 +1523,18 @@ int main(int argc, char **argv)
+@@ -1517,13 +1522,18 @@ int main(int argc, char **argv)
  		warning("--curl not supported in this build");
  		use_curl = 0;
  	}

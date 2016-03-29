@@ -148,7 +148,7 @@ index f34dcaad..015ac2fb 100644
  ifeq ($(uname_S),AIX)
  	DEFAULT_PAGER = more
 diff --git a/strbuf.c b/strbuf.c
-index d76f0aed..146125d3 100644
+index de7a7c27..3b2f9230 100644
 --- a/strbuf.c
 +++ b/strbuf.c
 @@ -484,15 +484,31 @@ int strbuf_getwholeline(struct strbuf *sb, FILE *fp, int term)

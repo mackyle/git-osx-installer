@@ -24,12 +24,12 @@ wrap in a sane fashion when there are many refs to show for a commit.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- gitweb/gitweb.perl       |  2 +-
- gitweb/static/gitweb.css | 40 ++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 41 insertions(+), 1 deletion(-)
+ gitweb/gitweb.perl       |  8 ++++----
+ gitweb/static/gitweb.css | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 48 insertions(+), 4 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 1e391b44..8a785bd6 100755
+index 1e391b44..7a479a7a 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -2842,7 +2842,7 @@ sub format_diff_line {
@@ -41,8 +41,28 @@ index 1e391b44..8a785bd6 100755
  	$diff_classes .= " $diff_class" if ($diff_class);
  	$line = "<div class=\"$diff_classes\">$line</div>\n";
  
+@@ -7105,8 +7105,8 @@ sub git_search_files {
+ 			}
+ 			print "<div class=\"pre\">" .
+ 				$cgi->a({-href => $file_href.'#l'.$lno,
+-				        -class => "linenr"}, sprintf('%4i', $lno)) .
+-				' ' .  $ltext . "</div>\n";
++				        -class => "linenr"}, sprintf('%4i ', $lno)) .
++				$ltext . "</div>\n";
+ 		}
+ 	}
+ 	if ($lastfile) {
+@@ -7940,7 +7940,7 @@ sub git_blob {
+ 			chomp $line;
+ 			$nr++;
+ 			$line = untabify($line);
+-			printf qq!<div class="pre"><a id="l%i" href="%s#l%i" class="linenr">%4i</a> %s</div>\n!,
++			printf qq!<div class="pre"><a id="l%i" href="%s#l%i" class="linenr">%4i </a>%s</div>\n!,
+ 			       $nr, esc_attr(href(-replay => 1)), $nr, $nr,
+ 			       $highlight_mode_active ? sanitize($line) : esc_html($line, -nbsp=>1);
+ 		}
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 670cb209..3e4c4a93 100644
+index 670cb209..652127e7 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
 @@ -146,6 +146,10 @@ div.title_text {
@@ -92,7 +112,16 @@ index 670cb209..3e4c4a93 100644
  }
  
  td.mode {
-@@ -588,6 +620,14 @@ a.linenr {
+@@ -583,11 +615,23 @@ td.linenr {
+ 	text-align: right;
+ }
+ 
++div.pre a.linenr {
++	white-space: pre;
++}
++
+ a.linenr {
+ 	color: #999999;
  	text-decoration: none
  }
  

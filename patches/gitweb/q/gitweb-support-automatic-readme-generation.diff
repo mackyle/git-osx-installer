@@ -16,7 +16,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 89 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 3f98332c..ae99094f 100755
+index a490cc25..7c47475a 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -200,6 +200,13 @@ our $fallback_encoding = 'latin1';
@@ -93,7 +93,7 @@ index 3f98332c..ae99094f 100755
  
  	# we need to request one more than 16 (0..15) to check if
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 3e4c4a93..d4567df7 100644
+index 652127e7..4e0841f0 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
 @@ -8,11 +8,15 @@ body {

@@ -1,0 +1,45 @@
+Subject: [PATCH] gitweb: suppress bogus 'Reading blob failed' message
+
+When showing a blob that is an image, after discovering that the blob
+is an image, gitweb closes the `cat-file blob` pipe and inserts an
+img tag instead (that uses blob_plain to retrieve the image data).
+
+In most cases (unless the image data is very small) this will cause
+the `cat-file blob` pipe file handle close to fail with an EPIPE
+error from the child and a resulting 'Reading blob failed' message
+to be displayed right below the actual image.
+
+Fix this by ignoring any close error when the image is being
+displayed inline with an img tag while retaining the error display
+for non-image data.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ gitweb/gitweb.perl | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
+index 7c47475a..ea583f2e 100755
+--- a/gitweb/gitweb.perl
++++ b/gitweb/gitweb.perl
+@@ -8006,6 +8006,7 @@ sub git_blob {
+ 		      href(action=>"blob_plain", hash=>$hash,
+ 		           hash_base=>$hash_base, file_name=>$file_name) .
+ 		      qq!" />\n!;
++		close $fd; # ignore likely EPIPE error from child
+ 	} else {
+ 		my $nr;
+ 		while (my $line = to_utf8(scalar <$fd>)) {
+@@ -8016,9 +8017,9 @@ sub git_blob {
+ 			       $nr, esc_attr(href(-replay => 1)), $nr, $nr,
+ 			       $highlight_mode_active ? sanitize($line) : esc_html($line, -nbsp=>1);
+ 		}
++		close $fd
++			or print "Reading blob failed.\n";
+ 	}
+-	close $fd
+-		or print "Reading blob failed.\n";
+ 	print "</div>";
+ 	git_footer_html();
+ }
+---

@@ -4,6 +4,17 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
+Git 2.8.2 Installer - released 2016-05-??
+-----------------------------------------
+
+* Git v2.8.2
+  - update from version 2.7.4
+
+* cURL/libcURL 7.48.0
+  - update from version 7.47.1
+
+
+-----------------------------------------
 Git 2.7.4 Installer - released 2016-03-28
 -----------------------------------------
 

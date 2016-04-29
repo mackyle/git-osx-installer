@@ -142,6 +142,7 @@
 <li><tt>--perl-regexp</tt> is fully supported</li>
 <li><tt>git subtree</tt> included</li>
 <li><tt>git-credential-osx-keychain</tt> included</li>
+<li>Git 2.8.0 and later&#x2019;s <a href="#pinnedpubkey"><tt>http.[&lt;url&gt;.]pinnedpubkey</tt> option</a> is fully supported</li>
 <li>Full documentation included (man pages, html pages, release notes, howtos, tech docs etc.)</li>
 <li>GnuPG <tt>gpg</tt> signing utility with smart card support included!</li>
 </ul>
@@ -214,6 +215,15 @@ behavioral difference to be aware of.  When <tt>git imap-send</tt> is set to use
 an OpenSSL-using version of <tt>git imap-send</tt> will attempt to use the <tt>STARTTLS</tt> command if the other end of
 the tunnel supports it.  A libcurl-using version of <tt>git imap-send</tt> will never do this.  This only affects tunnels.  All
 direct connections using <tt>imaps</tt> will always be encrypted.</p>
+
+<p id="pinnedpubkey">Starting with Git version 2.8.0, an <tt>http.[&lt;url&gt;.]pinnedpubkey</tt> option is available.
+It may be set to any value supported by <a href="https://curl.haxx.se/libcurl/c/CURLOPT_PINNEDPUBLICKEY.html">cURL&#x2019;s
+<tt>CURLOPT_PINNEDPUBLICKEY</tt> option</a> and, in addition, this version also allows it to be set to a filename of
+a PEM or DER format certificate (in which case the public key is automatically extracted from the certificate) and,
+in the case of a PEM format file, one or more PEM format public keys and/or certificates may be combined (by simply
+concatenating them together) to form a public key pinning set similarly to the way multiple &#x201c;<tt>sha256//</tt>&#x2026;&#x201d;
+values can be combined to form a public key pinning set (by concatenating them with a &#x201c;<tt>;</tt>&#x201d;
+separator).</p>
 
 <p>A change log showing the various software versions and patches included in the different releases is available
 <a href="https://github.com/mackyle/git-osx-installer/blob/master/ChangeLog.txt">here</a>.</p>

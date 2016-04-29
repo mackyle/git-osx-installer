@@ -76,8 +76,8 @@ options each including its leading '-' or '--'.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  contrib/git-log-times/README        | 256 +++++++++++++++++++++
- contrib/git-log-times/git-log-times | 445 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 701 insertions(+)
+ contrib/git-log-times/git-log-times | 446 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 702 insertions(+)
  create mode 100644 contrib/git-log-times/README
  create mode 100755 contrib/git-log-times/git-log-times
 
@@ -345,10 +345,10 @@ index 00000000..434dda22
 +(e.g. `git config log-times.defaults "--abbrev=8 --seconds"`).
 diff --git a/contrib/git-log-times/git-log-times b/contrib/git-log-times/git-log-times
 new file mode 100755
-index 00000000..fedfe6e5
+index 00000000..e838f0fa
 --- /dev/null
 +++ b/contrib/git-log-times/git-log-times
-@@ -0,0 +1,445 @@
+@@ -0,0 +1,446 @@
 +#!/usr/bin/env perl
 +
 +# git-log-times.pl -- git log --oneline variation with dates, times and initials
@@ -688,7 +688,8 @@ index 00000000..fedfe6e5
 +my @lastparents = ();
 +my $lastwascommit;
 +my ($prefix, $data, $parentlist, $subject);
-+while (($prefix, $data, $committer, $author, $parentlist, $subject) = split(/\x1f/, <LOG>, -1)) {
++while (my $logline = <LOG>) {
++	($prefix, $data, $committer, $author, $parentlist, $subject) = split(/\x1f/, $logline, -1);
 +	$subject =~ s/ // if $subject;
 +	my ($flag, $fullhash, $hash, $timestamp) = split(" ", $data, 4) if defined($data);
 +	if (!defined($flag) || $flag ne "COMMIT") {

@@ -4,7 +4,7 @@ Git OS X Installer Change Log
 
 
 -----------------------------------------
-Git 2.8.2 Installer - released 2016-05-??
+Git 2.8.2 Installer - released 2016-04-30
 -----------------------------------------
 
 * Git v2.8.2

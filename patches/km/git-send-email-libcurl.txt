@@ -461,7 +461,7 @@ index 00000000..aa48792f
 +
 +1;
 diff --git a/git-send-email.perl b/git-send-email.perl
-index d3569013..443af9dc 100755
+index c45b22a1..781692ee 100755
 --- a/git-send-email.perl
 +++ b/git-send-email.perl
 @@ -26,8 +26,15 @@ use Data::Dumper;
@@ -1397,7 +1397,7 @@ index 00000000..dd8ebbb7
 +	return 0;
 +}
 diff --git a/t/t9001-send-email.sh b/t/t9001-send-email.sh
-index 834d91a6..8ab8a802 100755
+index b3355d2c..03c9ac03 100755
 --- a/t/t9001-send-email.sh
 +++ b/t/t9001-send-email.sh
 @@ -146,6 +146,7 @@ cat >expected-show-all-headers <<\EOF

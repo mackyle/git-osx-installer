@@ -18,10 +18,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 7 insertions(+)
 
 diff --git a/run-command.c b/run-command.c
-index 2392b1ef..3ecc585a 100644
+index c7260105..b65df195 100644
 --- a/run-command.c
 +++ b/run-command.c
-@@ -402,6 +402,13 @@ fail_pipe:
+@@ -404,6 +404,13 @@ fail_pipe:
  					unsetenv(*cmd->env);
  			}
  		}

@@ -9,6 +9,7 @@ Git 2.8.2 Installer - released 2016-05-??
 
 * Git v2.8.2
   - update from version 2.7.4
+  - drop notes anywhere patch (replacement in 2.8.0)
 
 * cURL/libcURL 7.48.0
   - update from version 7.47.1

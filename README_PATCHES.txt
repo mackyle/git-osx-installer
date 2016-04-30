@@ -66,14 +66,6 @@ Git Patches
   subcommands.  This prevents incompatible PERL5LIB libraries from being picked
   up by Git's perl-based utilities.  Has not been posted elsewhere.
 
-* Allow notes refs to be anywhere if given in full
-
-  - `patches/sc/any-notes-ref.txt`
-  - `patches/km/any-notes-ref-tests.txt`
-
-  Both patches included in the thread and discussion at:
-  <http://thread.gmane.org/gmane.comp.version-control.git/257281>.
-
 * Make git-remote-mediawiki work properly:
 
   - `patches/mediawiki/q/t_mediawiki_no-dupes.diff`

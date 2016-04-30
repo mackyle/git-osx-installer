@@ -34,10 +34,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  create mode 100644 sys-utils.h
 
 diff --git a/Makefile b/Makefile
-index fd19b544..dbb32adf 100644
+index c7354bf2..c270fa3f 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -798,6 +798,7 @@ LIB_OBJS += string-list.o
+@@ -814,6 +814,7 @@ LIB_OBJS += string-list.o
  LIB_OBJS += submodule.o
  LIB_OBJS += submodule-config.o
  LIB_OBJS += symlinks.o
@@ -46,12 +46,12 @@ index fd19b544..dbb32adf 100644
  LIB_OBJS += tempfile.o
  LIB_OBJS += trace.o
 diff --git a/config.mak.uname b/config.mak.uname
-index f34dcaad..9cfe40f4 100644
+index fe8096f8..921f659f 100644
 --- a/config.mak.uname
 +++ b/config.mak.uname
-@@ -520,6 +520,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))
+@@ -521,6 +521,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))
  	DEFAULT_HELP_FORMAT = html
- 	COMPAT_CFLAGS += -D__USE_MINGW_ACCESS -D_USE_32BIT_TIME_T -DNOGDI -Icompat -Icompat/win32
+ 	COMPAT_CFLAGS += -DNOGDI -Icompat -Icompat/win32
  	COMPAT_CFLAGS += -DSTRIP_EXTENSION=\".exe\"
 +	COMPAT_CFLAGS += -DNO_GLOBALMEMORYSTATUSEX
  	COMPAT_OBJS += compat/mingw.o compat/winansi.o \

@@ -7,7 +7,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 19 insertions(+), 2 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 75c2450e..d8178c31 100755
+index b0c6b168..93374224 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -106,6 +106,7 @@ start_httpd () {
@@ -51,7 +51,7 @@ index 75c2450e..d8178c31 100755
  gitweb_conf() {
  	cat > "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
  #!@@PERL@@
-@@ -613,6 +622,13 @@ our @diff_opts = ('-B', '-C');
+@@ -614,6 +623,13 @@ our @diff_opts = ('-B', '-C');
  \$feature{'blame_incremental'}{'default'} = [1];
  \$feature{'timed'}{'default'} = [1];
  EOF
@@ -65,7 +65,7 @@ index 75c2450e..d8178c31 100755
  	hlbin="$(command -v highlight 2>/dev/null)"
  	if [ -x "$hlbin" ] && "$hlbin" --version | grep -q 'Andre Simon'; then
  		cat >> "$fqgitdir/gitweb/gitweb_config.perl" <<EOF
-@@ -668,6 +684,7 @@ restart)
+@@ -669,6 +685,7 @@ restart)
  	;;
  esac
  

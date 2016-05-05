@@ -16,7 +16,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 7 insertions(+)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index 087a258d..7442e1e5 100755
+index f84dc1c7..88067731 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -718,6 +718,13 @@ our \$auto_fcgi = 1;

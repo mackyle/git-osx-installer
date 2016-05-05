@@ -15,7 +15,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 19 insertions(+), 4 deletions(-)
 
 diff --git a/git-instaweb.sh b/git-instaweb.sh
-index d8178c31..36005a34 100755
+index 93374224..47dbbaf2 100755
 --- a/git-instaweb.sh
 +++ b/git-instaweb.sh
 @@ -30,6 +30,7 @@ root="$(git config --get instaweb.gitwebdir)"
@@ -65,7 +65,7 @@ index d8178c31..36005a34 100755
  }
  
  apache2_conf () {
-@@ -694,10 +708,11 @@ conf="$fqgitdir/gitweb/$httpd_only.conf"
+@@ -695,10 +709,11 @@ conf="$fqgitdir/gitweb/$httpd_only.conf"
  configure_httpd
  
  start_httpd

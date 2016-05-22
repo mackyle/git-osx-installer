@@ -7,10 +7,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/lib/urldata.h b/lib/urldata.h
-index f832ea88..d499774a 100644
+index 25594d3b..b0268607 100644
 --- a/lib/urldata.h
 +++ b/lib/urldata.h
-@@ -339,6 +339,11 @@ struct ssl_connect_data {
+@@ -337,6 +337,11 @@ struct ssl_connect_data {
    curl_socket_t ssl_sockfd;
    bool ssl_direction; /* true if writing, false if reading */
    size_t ssl_write_buffered_length;

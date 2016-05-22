@@ -310,6 +310,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #define TLS_RSA_PSK_WITH_NULL_SHA384                    0x00B9
 #undef TLS_EMPTY_RENEGOTIATION_INFO_SCSV
 #define TLS_EMPTY_RENEGOTIATION_INFO_SCSV               0x00FF
+#undef TLS_FALLBACK_SCSV
+#define TLS_FALLBACK_SCSV                               0x5600
 #undef TLS_ECDH_ECDSA_WITH_NULL_SHA
 #define TLS_ECDH_ECDSA_WITH_NULL_SHA                    0xC001
 #undef TLS_ECDH_ECDSA_WITH_RC4_128_SHA
@@ -515,6 +517,9 @@ OSStatus cSecItemImport(
   SecKeychainRef importKeychain, CFArrayRef *outItems);
 SSLContextRef cSSLCreateContext(CFAllocatorRef a, int ps, int ct);
 void cSSLDisposeContext(SSLContextRef);
+/* Sorts list of ciphers into most secure to least secure order and returns count
+ * of how many at the front of the list are not completely weak and worthless */
+size_t cSSLSortCiphers(SSLCipherSuite *array, size_t entries);
 OSStatus cSSLSetTrustedRoots(SSLContextRef cxt, CFArrayRef rts, Boolean replace);
 OSStatus cSSLCopyPeerTrust(SSLContextRef cxt, SecTrustRef *trust);
 OSStatus cSecTrustSetAnchorCertificatesOnly(SecTrustRef cxt, Boolean anchorsOnly);

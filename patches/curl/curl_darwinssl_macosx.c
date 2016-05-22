@@ -65,6 +65,12 @@
  * one certificate.
  */
 
+#include <stdlib.h>
+static __inline void realfree(void *p) /* stupid curl */
+{
+  free(p);
+}
+
 #include "curl_setup.h"
 
 #include "urldata.h" /* for the SessionHandle definition */
@@ -966,6 +972,8 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
           break;
       }
     }
+    allowed_ciphers_count = cSSLSortCiphers(allowed_ciphers,
+                                            allowed_ciphers_count);
     err = SSLSetEnabledCiphers(connssl->ssl_ctx, allowed_ciphers,
                                allowed_ciphers_count);
     if(err != noErr) {
@@ -1015,11 +1023,16 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 #define PKSTR NULL
 #endif
 #define NSTR(s) ((s)?(s):"")
-    ssl_sessionid =
-      aprintf("%s:%s:%s:%d:%d:%s:%hu", NSTR(data->set.str[STRING_SSL_CAFILE]),
-              NSTR(PKSTR), NSTR(data->set.str[STRING_CERT]),
-              data->set.ssl.verifypeer, data->set.ssl.verifyhost,
-              NSTR(conn->host.name), (unsigned short)conn->remote_port);
+    ssl_sessionid = NULL;
+    asprintf(&ssl_sessionid, "%s:%s:%s:%d:%d:%s:%hu",
+             NSTR(data->set.str[STRING_SSL_CAFILE]),
+             NSTR(PKSTR), NSTR(data->set.str[STRING_CERT]),
+             data->set.ssl.verifypeer, data->set.ssl.verifyhost,
+             NSTR(conn->host.name), (unsigned short)conn->remote_port);
+    if(ssl_sessionid == NULL) {
+      failf(data, "SSL: asprintf failed: out of memory");
+      return CURLE_SSL_CONNECT_ERROR;
+    }
     ssl_sessionid_len = strlen(ssl_sessionid);
 #undef NSTR
 #undef PKSTR
@@ -1545,7 +1558,7 @@ void Curl_darwinssl_session_free(void *ptr)
      got your application rejected from the App Store due to the use of a
      private API, so the best we can do is free up our own char array that we
      created way back in darwinssl_connect_step1... */
-  Curl_safefree(ptr);
+  realfree(ptr);
 }
 
 size_t Curl_darwinssl_version(char *buffer, size_t size)

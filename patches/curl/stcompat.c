@@ -40,6 +40,12 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 __attribute__((constructor,used)) static void stcompat_initialize(void);
 #endif /* (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE)) */
 
+struct cipher_order {
+    int tier;
+    int order;
+    unsigned cipher;
+};
+
 typedef struct data_s {
   const uint8_t *d;
   size_t l;
@@ -59,6 +65,106 @@ static pthread_mutex_t keych_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* Macro result is true on success */
 #define MUTEX_LOCK() (!pthread_mutex_lock(&keych_mutex))
 #define MUTEX_UNLOCK() (!pthread_mutex_unlock(&keych_mutex))
+
+static const struct cipher_order order_table[] = {
+  { 2, -1, TLS_RSA_WITH_RC4_128_MD5 },
+  { 2, -1, TLS_RSA_WITH_RC4_128_SHA },
+  { 2, -1, TLS_RSA_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA },
+  { 1, 26, TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA },
+  { 1,  7, TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA },
+  { 1, 32, TLS_RSA_WITH_AES_128_CBC_SHA },
+  { 2, -1, TLS_DH_DSS_WITH_AES_128_CBC_SHA },
+  { 2, -1, TLS_DH_RSA_WITH_AES_128_CBC_SHA },
+  { 1, 25, TLS_DHE_DSS_WITH_AES_128_CBC_SHA },
+  { 1,  6, TLS_DHE_RSA_WITH_AES_128_CBC_SHA },
+  { 1, 31, TLS_RSA_WITH_AES_256_CBC_SHA },
+  { 2, -1, TLS_DH_DSS_WITH_AES_256_CBC_SHA },
+  { 2, -1, TLS_DH_RSA_WITH_AES_256_CBC_SHA },
+  { 1, 24, TLS_DHE_DSS_WITH_AES_256_CBC_SHA },
+  { 1,  5, TLS_DHE_RSA_WITH_AES_256_CBC_SHA },
+  { 1, 30, TLS_RSA_WITH_AES_128_CBC_SHA256 },
+  { 1, 28, TLS_RSA_WITH_AES_256_CBC_SHA256 },
+  { 2, -1, TLS_DH_DSS_WITH_AES_128_CBC_SHA256 },
+  { 2, -1, TLS_DH_RSA_WITH_AES_128_CBC_SHA256 },
+  { 1, 23, TLS_DHE_DSS_WITH_AES_128_CBC_SHA256 },
+  { 1,  4, TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 },
+  { 2, -1, TLS_DH_DSS_WITH_AES_256_CBC_SHA256 },
+  { 2, -1, TLS_DH_RSA_WITH_AES_256_CBC_SHA256 },
+  { 1, 21, TLS_DHE_DSS_WITH_AES_256_CBC_SHA256 },
+  { 1,  2, TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 },
+  { 2, -1, TLS_PSK_WITH_RC4_128_SHA },
+  { 2, -1, TLS_PSK_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, TLS_PSK_WITH_AES_128_CBC_SHA },
+  { 2, -1, TLS_PSK_WITH_AES_256_CBC_SHA },
+  { 2, -1, TLS_DHE_PSK_WITH_RC4_128_SHA },
+  { 2, -1, TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, TLS_DHE_PSK_WITH_AES_128_CBC_SHA },
+  { 2, -1, TLS_DHE_PSK_WITH_AES_256_CBC_SHA },
+  { 2, -1, TLS_RSA_PSK_WITH_RC4_128_SHA },
+  { 2, -1, TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, TLS_RSA_PSK_WITH_AES_128_CBC_SHA },
+  { 2, -1, TLS_RSA_PSK_WITH_AES_256_CBC_SHA },
+  { 1, 29, TLS_RSA_WITH_AES_128_GCM_SHA256 },
+  { 1, 27, TLS_RSA_WITH_AES_256_GCM_SHA384 },
+  { 1,  3, TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 },
+  { 1,  1, TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_DH_RSA_WITH_AES_128_GCM_SHA256 },
+  { 2, -1, TLS_DH_RSA_WITH_AES_256_GCM_SHA384 },
+  { 1, 22, TLS_DHE_DSS_WITH_AES_128_GCM_SHA256 },
+  { 1, 20, TLS_DHE_DSS_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_DH_DSS_WITH_AES_128_GCM_SHA256 },
+  { 2, -1, TLS_DH_DSS_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_PSK_WITH_AES_128_GCM_SHA256 },
+  { 2, -1, TLS_PSK_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_DHE_PSK_WITH_AES_128_GCM_SHA256 },
+  { 2, -1, TLS_DHE_PSK_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_RSA_PSK_WITH_AES_128_GCM_SHA256 },
+  { 2, -1, TLS_RSA_PSK_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_PSK_WITH_AES_128_CBC_SHA256 },
+  { 2, -1, TLS_PSK_WITH_AES_256_CBC_SHA384 },
+  { 2, -1, TLS_DHE_PSK_WITH_AES_128_CBC_SHA256 },
+  { 2, -1, TLS_DHE_PSK_WITH_AES_256_CBC_SHA384 },
+  { 2, -1, TLS_RSA_PSK_WITH_AES_128_CBC_SHA256 },
+  { 2, -1, TLS_RSA_PSK_WITH_AES_256_CBC_SHA384 },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_RC4_128_SHA },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA },
+  { 2, -1, TLS_ECDHE_ECDSA_WITH_RC4_128_SHA },
+  { 2, -1, TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA },
+  { 1, 19, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA },
+  { 1, 18, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA },
+  { 2, -1, TLS_ECDH_RSA_WITH_RC4_128_SHA },
+  { 2, -1, TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA },
+  { 2, -1, TLS_ECDH_RSA_WITH_AES_128_CBC_SHA },
+  { 2, -1, TLS_ECDH_RSA_WITH_AES_256_CBC_SHA },
+  { 2, -1, TLS_ECDHE_RSA_WITH_RC4_128_SHA },
+  { 2, -1, TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA },
+  { 1, 13, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA },
+  { 1, 12, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA },
+  { 1, 17, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 },
+  { 1, 15, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384 },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256 },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384 },
+  { 1, 11, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256 },
+  { 1,  9, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384 },
+  { 2, -1, TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256 },
+  { 2, -1, TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384 },
+  { 1, 16, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 },
+  { 1, 14, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256 },
+  { 2, -1, TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384 },
+  { 1, 10, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 },
+  { 1,  8, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256 },
+  { 2, -1, TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384 },
+  { 2, -1, SSL_RSA_WITH_RC2_CBC_MD5 },
+  { 2, -1, SSL_RSA_WITH_DES_CBC_MD5 },
+  { 2, -1, SSL_RSA_WITH_3DES_EDE_CBC_MD5 }
+};
 
 static CFStringRef CFCopyTemporaryDirectory(void)
 {
@@ -976,6 +1082,9 @@ CFArrayRef CreateClientAuthWithCertificatesAndKeyData(CFArrayRef certs,
 #ifndef kCFCoreFoundationVersionNumber10_8
 #define kCFCoreFoundationVersionNumber10_8 744.00
 #endif
+#ifndef kCFCoreFoundationVersionNumber10_8_3
+#define kCFCoreFoundationVersionNumber10_8_3 744.18
+#endif
 
 typedef enum {
   small_0,
@@ -1053,6 +1162,72 @@ static void stcompat_initialize(void)
   LOOKUP(SecKeychainSearchCreateFromAttributes);
   LOOKUP(SecKeychainSearchCopyNext);
 #undef LOOKUP
+}
+
+static int search1(const void *p1, const void *p2)
+{
+    const struct cipher_order *a = (struct cipher_order *)p1;
+    const struct cipher_order *b = (struct cipher_order *)p2;
+    return (int)a->cipher - (int)b->cipher;
+}
+
+static const struct cipher_order *find_entry(SSLCipherSuite c)
+{
+    struct cipher_order s;
+    s.cipher = c;
+    return (const struct cipher_order *)
+      bsearch(&s, order_table, sizeof(order_table)/sizeof(order_table[0]),
+        sizeof(struct cipher_order), search1);
+}
+
+static int sort1(const void *p1, const void *p2)
+{
+    const struct cipher_order *a = (struct cipher_order *)p1;
+    const struct cipher_order *b = (struct cipher_order *)p2;
+    int ordering = a->tier - b->tier;
+    if (!ordering)
+      ordering = a->order - b->order;
+    return ordering;
+}
+
+size_t cSSLSortCiphers(SSLCipherSuite *a, size_t n)
+{
+  struct cipher_order *sortmem;
+  size_t i;
+  int notbad;
+
+  if (!a || !n)
+    return 0;
+  sortmem = (struct cipher_order *)malloc(n * sizeof(struct cipher_order));
+  if (!sortmem)
+    return n;
+  for (i=0; i<n; ++i) {
+    const struct cipher_order *entry = find_entry(a[i]);
+    sortmem[i].cipher = a[i];
+    if (a[i] >= TLS_ECDH_ECDSA_WITH_NULL_SHA &&
+        a[i] <= TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384 &&
+        kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber10_8 &&
+        kCFCoreFoundationVersionNumber <= kCFCoreFoundationVersionNumber10_8_3)
+      entry = NULL;
+    if (entry) {
+      sortmem[i].tier = entry->tier;
+      sortmem[i].order = entry->order;
+      if (sortmem[i].order < 0)
+        sortmem[i].order = (int)i;
+    } else {
+      sortmem[i].tier=9999;
+      sortmem[i].order = (int)i;
+    }
+  }
+  qsort(sortmem, n, sizeof(struct cipher_order), sort1);
+  notbad = -1;
+  for (i=0; i<n; ++i) {
+    if (notbad < 0 && sortmem[i].tier == 9999)
+      notbad = (int)i;
+    a[i] = sortmem[i].cipher;
+  }
+  free(sortmem);
+  return notbad >= 0 ? (size_t)notbad : n;
 }
 
 OSStatus cSSLSetTrustedRoots(SSLContextRef cxt, CFArrayRef rts, Boolean replace)

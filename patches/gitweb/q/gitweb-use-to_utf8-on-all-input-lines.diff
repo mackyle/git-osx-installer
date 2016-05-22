@@ -17,10 +17,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 93 insertions(+), 46 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f17dbf5d..af360453 100755
+index f3d3a864..bae8e35b 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -1483,6 +1483,7 @@ our $CGI = 'CGI';
+@@ -1492,6 +1492,7 @@ our $CGI = 'CGI';
  our $cgi;
  our $fcgi_mode = 0;
  our $fcgi_nproc_active = 0;
@@ -28,7 +28,7 @@ index f17dbf5d..af360453 100755
  sub is_fcgi {
  	use Errno;
  	my $stdinfno = fileno STDIN;
-@@ -1494,7 +1495,33 @@ sub is_fcgi {
+@@ -1503,7 +1504,33 @@ sub is_fcgi {
  sub configure_as_fcgi {
  	return if $fcgi_mode;
  
@@ -62,7 +62,7 @@ index f17dbf5d..af360453 100755
  	our $CGI = 'CGI::Fast';
  
  	$fcgi_mode = 1;
-@@ -1546,6 +1573,7 @@ sub _reset_globals {
+@@ -1555,6 +1582,7 @@ sub _reset_globals {
  	our %config = ();
  	our $gitweb_project_owner = undef;
  	our $shown_stale_message = 0;
@@ -70,7 +70,7 @@ index f17dbf5d..af360453 100755
  	keys %known_snapshot_formats; # reset 'each' iterator
  }
  
-@@ -3009,7 +3037,7 @@ sub git_parse_project_config {
+@@ -3018,7 +3046,7 @@ sub git_parse_project_config {
  	defined(my $fh = git_cmd_pipe "config", '-z', '-l')
  		or return;
  
@@ -79,7 +79,7 @@ index f17dbf5d..af360453 100755
  		chomp $keyval;
  		my ($key, $value) = split(/\n/, $keyval, 2);
  
-@@ -3123,7 +3151,7 @@ sub git_get_hash_by_path {
+@@ -3132,7 +3160,7 @@ sub git_get_hash_by_path {
  
  	defined(my $fd = git_cmd_pipe "ls-tree", $base, "--", $path)
  		or die_error(500, "Open git-ls-tree failed");
@@ -88,7 +88,7 @@ index f17dbf5d..af360453 100755
  	close $fd or return undef;
  
  	if (!defined $line) {
-@@ -3150,7 +3178,7 @@ sub git_get_path_by_hash {
+@@ -3159,7 +3187,7 @@ sub git_get_path_by_hash {
  
  	defined(my $fd = git_cmd_pipe "ls-tree", '-r', '-t', '-z', $base)
  		or return undef;
@@ -97,7 +97,7 @@ index f17dbf5d..af360453 100755
  		chomp $line;
  
  		#'040000 tree 595596a6a9117ddba9fe379b6b012b558bac8423	gitweb'
-@@ -3176,7 +3204,7 @@ sub git_get_file_or_project_config {
+@@ -3185,7 +3213,7 @@ sub git_get_file_or_project_config {
  	$git_dir = "$projectroot/$path";
  	open my $fd, '<', "$git_dir/$name"
  		or return git_get_project_config($name);
@@ -106,7 +106,7 @@ index f17dbf5d..af360453 100755
  	close $fd;
  	if (defined $conf) {
  		chomp $conf;
-@@ -3217,6 +3245,7 @@ sub git_get_project_ctags {
+@@ -3226,6 +3254,7 @@ sub git_get_project_ctags {
  			close $ct;
  
  			(my $ctag = $tagfile) =~ s#.*/##;
@@ -114,7 +114,7 @@ index f17dbf5d..af360453 100755
  			if ($val =~ /^\d+$/) {
  				$ctags->{$ctag} = $val;
  			} else {
-@@ -3226,7 +3255,7 @@ sub git_get_project_ctags {
+@@ -3235,7 +3264,7 @@ sub git_get_project_ctags {
  		closedir $dh;
  
  	} elsif (open my $fh, '<', "$git_dir/ctags") {
@@ -123,7 +123,7 @@ index f17dbf5d..af360453 100755
  			chomp $line;
  			$ctags->{$line}++ if $line;
  		}
-@@ -3326,7 +3355,7 @@ sub git_get_project_url_list {
+@@ -3335,7 +3364,7 @@ sub git_get_project_url_list {
  		or return wantarray ?
  		@{ config_to_multi(git_get_project_config('url')) } :
  		   config_to_multi(git_get_project_config('url'));
@@ -132,7 +132,7 @@ index f17dbf5d..af360453 100755
  	close $fd;
  
  	return wantarray ? @git_project_url_list : \@git_project_url_list;
-@@ -3626,7 +3655,7 @@ sub git_get_remotes_list {
+@@ -3635,7 +3664,7 @@ sub git_get_remotes_list {
  
  	my $fd = git_cmd_pipe 'remote', '-v';
  	return unless $fd;
@@ -141,7 +141,7 @@ index f17dbf5d..af360453 100755
  		chomp $remote;
  		$remote =~ s!\t(.*?)\s+\((\w+)\)$!!;
  		next if $wanted and not $remote eq $wanted;
-@@ -3661,7 +3690,7 @@ sub git_get_references {
+@@ -3670,7 +3699,7 @@ sub git_get_references {
  		($type ? ("--", "refs/$type") : ())) # use -- <pattern> if $type
  		or return;
  
@@ -150,7 +150,7 @@ index f17dbf5d..af360453 100755
  		chomp $line;
  		if ($line =~ m!^([0-9a-fA-F]{40})\srefs/($type.*)$!) {
  			if (defined $refs{$1}) {
-@@ -3680,7 +3709,7 @@ sub git_get_rev_name_tags {
+@@ -3689,7 +3718,7 @@ sub git_get_rev_name_tags {
  
  	defined(my $fd = git_cmd_pipe "name-rev", "--tags", $hash)
  		or return;
@@ -159,7 +159,7 @@ index f17dbf5d..af360453 100755
  	close $fd;
  
  	if ($name_rev =~ m|^$hash tags/(.*)$|) {
-@@ -3735,7 +3764,7 @@ sub parse_tag {
+@@ -3744,7 +3773,7 @@ sub parse_tag {
  
  	defined(my $fd = git_cmd_pipe "cat-file", "tag", $tag_id) or return;
  	$tag{'id'} = $tag_id;
@@ -168,7 +168,7 @@ index f17dbf5d..af360453 100755
  		chomp $line;
  		if ($line =~ m/^object ([0-9a-fA-F]{40})$/) {
  			$tag{'object'} = $1;
-@@ -3760,7 +3789,7 @@ sub parse_tag {
+@@ -3769,7 +3798,7 @@ sub parse_tag {
  			last;
  		}
  	}
@@ -177,7 +177,7 @@ index f17dbf5d..af360453 100755
  	$tag{'comment'} = \@comment;
  	close $fd or return;
  	if (!defined $tag{'name'}) {
-@@ -3819,6 +3848,7 @@ sub parse_commit_text {
+@@ -3828,6 +3857,7 @@ sub parse_commit_text {
  	$co{'parents'} = \@parents;
  	$co{'parent'} = $parents[0];
  
@@ -185,7 +185,7 @@ index f17dbf5d..af360453 100755
  	foreach my $title (@commit_lines) {
  		$title =~ s/^    //;
  		if ($title ne "") {
-@@ -4062,7 +4092,7 @@ sub git_get_heads_list {
+@@ -4071,7 +4101,7 @@ sub git_get_heads_list {
  		'--format=%(objectname) %(refname) %(subject)%00%(committer)',
  		@patterns)
  		or return;
@@ -194,7 +194,7 @@ index f17dbf5d..af360453 100755
  		my %ref_item;
  
  		chomp $line;
-@@ -4110,7 +4140,7 @@ sub git_get_tags_list {
+@@ -4119,7 +4149,7 @@ sub git_get_tags_list {
  		'%(*objectname) %(*objecttype) %(subject)%00%(creator)',
  		($all ? 'refs' : 'refs/tags'))
  		or return;
@@ -203,7 +203,7 @@ index f17dbf5d..af360453 100755
  		my %ref_item;
  
  		chomp $line;
-@@ -4171,7 +4201,9 @@ sub insert_file {
+@@ -4180,7 +4210,9 @@ sub insert_file {
  	my $filename = shift;
  
  	open my $fd, '<', $filename;
@@ -214,7 +214,7 @@ index f17dbf5d..af360453 100755
  	close $fd;
  }
  
-@@ -4902,7 +4934,9 @@ sub git_print_section {
+@@ -4912,7 +4944,9 @@ sub git_print_section {
  	} elsif (ref($content) eq 'SCALAR') {
  		print esc_html($$content);
  	} elsif (ref($content) eq 'GLOB' or ref($content) eq 'IO::Handle') {
@@ -225,7 +225,7 @@ index f17dbf5d..af360453 100755
  	} elsif (!ref($content) && defined($content)) {
  		print $content;
  	}
-@@ -5074,7 +5108,7 @@ sub git_get_link_target {
+@@ -5084,7 +5118,7 @@ sub git_get_link_target {
  		or return;
  	{
  		local $/ = undef;
@@ -234,7 +234,7 @@ index f17dbf5d..af360453 100755
  	}
  	close $fd
  		or return;
-@@ -5813,7 +5847,7 @@ sub git_patchset_body {
+@@ -5823,7 +5857,7 @@ sub git_patchset_body {
  	print "<div class=\"patchset\">\n";
  
  	# skip to first patch
@@ -243,7 +243,7 @@ index f17dbf5d..af360453 100755
  		chomp $patch_line;
  
  		last if ($patch_line =~ m/^diff /);
-@@ -5881,7 +5915,7 @@ sub git_patchset_body {
+@@ -5891,7 +5925,7 @@ sub git_patchset_body {
  		# print extended diff header
  		print "<div class=\"diff extended_header\">\n";
  	EXTENDED_HEADER:
@@ -252,7 +252,7 @@ index f17dbf5d..af360453 100755
  			chomp $patch_line;
  
  			last EXTENDED_HEADER if ($patch_line =~ m/^--- |^diff /);
-@@ -5900,7 +5934,7 @@ sub git_patchset_body {
+@@ -5910,7 +5944,7 @@ sub git_patchset_body {
  		#assert($patch_line =~ m/^---/) if DEBUG;
  
  		my $last_patch_line = $patch_line;
@@ -261,7 +261,7 @@ index f17dbf5d..af360453 100755
  		chomp $patch_line;
  		#assert($patch_line =~ m/^\+\+\+/) if DEBUG;
  
-@@ -5910,7 +5944,7 @@ sub git_patchset_body {
+@@ -5920,7 +5954,7 @@ sub git_patchset_body {
  
  		# the patch itself
  	LINE:
@@ -270,7 +270,7 @@ index f17dbf5d..af360453 100755
  			chomp $patch_line;
  
  			next PATCH if ($patch_line =~ m/^diff /);
-@@ -6865,7 +6899,7 @@ sub git_search_changes {
+@@ -6875,7 +6909,7 @@ sub git_search_changes {
  	my $alternate = 1;
  	undef %co;
  	my @files;
@@ -279,7 +279,7 @@ index f17dbf5d..af360453 100755
  		chomp $line;
  		next unless $line;
  
-@@ -6949,7 +6983,7 @@ sub git_search_files {
+@@ -6959,7 +6993,7 @@ sub git_search_files {
  	my $matches = 0;
  	my $lastfile = '';
  	my $file_href;
@@ -288,7 +288,7 @@ index f17dbf5d..af360453 100755
  		chomp $line;
  		my ($file, $lno, $ltext, $binary);
  		last if ($matches++ > 1000);
-@@ -7386,7 +7420,6 @@ sub git_blame_common {
+@@ -7396,7 +7430,6 @@ sub git_blame_common {
  			$hash_base, '--', $file_name)
  			or die_error(500, "Open git-blame --porcelain failed");
  	}
@@ -296,7 +296,7 @@ index f17dbf5d..af360453 100755
  
  	# incremental blame data returns early
  	if ($format eq 'data') {
-@@ -7394,8 +7427,8 @@ sub git_blame_common {
+@@ -7404,8 +7437,8 @@ sub git_blame_common {
  			-type=>"text/plain", -charset => "utf-8",
  			-status=> "200 OK");
  		local $| = 1; # output autoflush
@@ -307,7 +307,7 @@ index f17dbf5d..af360453 100755
  		}
  		close $fd
  			or print "ERROR $!\n";
-@@ -7473,7 +7506,7 @@ sub git_blame_common {
+@@ -7483,7 +7516,7 @@ sub git_blame_common {
  		#contents of a file
  		my $linenr = 0;
  	LINE:
@@ -316,7 +316,7 @@ index f17dbf5d..af360453 100755
  			chomp $line;
  			$linenr++;
  
-@@ -7492,7 +7525,7 @@ sub git_blame_common {
+@@ -7502,7 +7535,7 @@ sub git_blame_common {
  
  		# blame data
  	LINE:
@@ -325,7 +325,7 @@ index f17dbf5d..af360453 100755
  			chomp $line;
  			# the header: <SHA-1> <src lineno> <dst lineno> [<lines in group>]
  			# no <lines in group> for subsequent lines in group of lines
-@@ -7503,7 +7536,7 @@ sub git_blame_common {
+@@ -7513,7 +7546,7 @@ sub git_blame_common {
  			}
  			my $meta = $metainfo{$full_rev};
  			my $data;
@@ -334,7 +334,7 @@ index f17dbf5d..af360453 100755
  				chomp $data;
  				last if ($data =~ s/^\t//); # contents of line
  				if ($data =~ /^(\S+)(?: (.*))?$/) {
-@@ -7691,6 +7724,7 @@ sub git_blob_plain {
+@@ -7701,6 +7734,7 @@ sub git_blob_plain {
  
  	defined(my $fd = git_cmd_pipe "cat-file", "blob", $hash)
  		or die_error(500, "Open git-cat-file blob '$hash' failed");
@@ -342,7 +342,7 @@ index f17dbf5d..af360453 100755
  
  	# content-type (can include charset)
  	$type = blob_contenttype($fd, $file_name, $type);
-@@ -7727,10 +7761,14 @@ sub git_blob_plain {
+@@ -7737,10 +7771,14 @@ sub git_blob_plain {
  		-content_disposition =>
  			($sandbox ? 'attachment' : 'inline')
  			. '; filename="' . $save_as . '"');
@@ -359,7 +359,7 @@ index f17dbf5d..af360453 100755
  	close $fd;
  }
  
-@@ -7813,7 +7851,7 @@ sub git_blob {
+@@ -7823,7 +7861,7 @@ sub git_blob {
  		      qq!" />\n!;
  	} else {
  		my $nr;
@@ -368,7 +368,7 @@ index f17dbf5d..af360453 100755
  			chomp $line;
  			$nr++;
  			$line = untabify($line);
-@@ -7850,7 +7888,7 @@ sub git_tree {
+@@ -7860,7 +7898,7 @@ sub git_tree {
  		defined(my $fd = git_cmd_pipe "ls-tree", '-z',
  			($show_sizes ? '-l' : ()), @extra_options, $hash)
  			or die_error(500, "Open git-ls-tree failed");
@@ -377,7 +377,7 @@ index f17dbf5d..af360453 100755
  		close $fd
  			or die_error(404, "Reading tree failed");
  	}
-@@ -8069,9 +8107,15 @@ sub git_snapshot {
+@@ -8079,9 +8117,15 @@ sub git_snapshot {
  
  	defined(my $fd = cmd_pipe @cmd)
  		or die_error(500, "Execute git-archive failed");
@@ -394,7 +394,7 @@ index f17dbf5d..af360453 100755
  	close $fd;
  }
  
-@@ -8204,7 +8248,7 @@ sub git_commit {
+@@ -8214,7 +8258,7 @@ sub git_commit {
  		(@$parents <= 1 ? $parent : '-c'),
  		$hash, "--")
  		or die_error(500, "Open git-diff-tree failed");
@@ -403,7 +403,7 @@ index f17dbf5d..af360453 100755
  	close $fd or die_error(404, "Reading git-diff-tree failed");
  
  	# non-textual hash id's can be cached
-@@ -8298,7 +8342,7 @@ sub git_object {
+@@ -8308,7 +8352,7 @@ sub git_object {
  		# here errors should not happen
  		defined(my $fd = git_cmd_pipe "ls-tree", $hash_base, "--", $file_name)
  			or die_error(500, "Open git-ls-tree failed");
@@ -412,7 +412,7 @@ index f17dbf5d..af360453 100755
  		close $fd;
  
  		#'100644 blob 0fa3f3a66fb6a137f6ec2c19351ed4d807070ffa	panic.c'
-@@ -8335,7 +8379,7 @@ sub git_blobdiff {
+@@ -8345,7 +8389,7 @@ sub git_blobdiff {
  				$hash_parent_base, $hash_base,
  				"--", (defined $file_parent ? $file_parent : ()), $file_name)
  				or die_error(500, "Open git-diff-tree failed");
@@ -421,7 +421,7 @@ index f17dbf5d..af360453 100755
  			close $fd
  				or die_error(404, "Reading git-diff-tree failed");
  			@difftree
-@@ -8353,7 +8397,7 @@ sub git_blobdiff {
+@@ -8363,7 +8407,7 @@ sub git_blobdiff {
  				# ':100644 100644 03b21826... 3b93d5e7... M	ls-files.c'
  				# $hash == to_id
  				grep { /^:[0-7]{6} [0-7]{6} [0-9a-fA-F]{40} $hash/ }
@@ -430,7 +430,7 @@ index f17dbf5d..af360453 100755
  			close $fd
  				or die_error(404, "Reading git-diff-tree failed");
  			@difftree
-@@ -8438,7 +8482,7 @@ sub git_blobdiff {
+@@ -8448,7 +8492,7 @@ sub git_blobdiff {
  		git_footer_html();
  
  	} else {
@@ -439,7 +439,7 @@ index f17dbf5d..af360453 100755
  			$line =~ s!a/($hash|$hash_parent)!'a/'.esc_path($diffinfo{'from_file'})!eg;
  			$line =~ s!b/($hash|$hash_parent)!'b/'.esc_path($diffinfo{'to_file'})!eg;
  
-@@ -8446,8 +8490,9 @@ sub git_blobdiff {
+@@ -8456,8 +8500,9 @@ sub git_blobdiff {
  
  			last if $line =~ m!^\+\+\+!;
  		}
@@ -451,7 +451,7 @@ index f17dbf5d..af360453 100755
  		close $fd;
  	}
  }
-@@ -8579,7 +8624,7 @@ sub git_commitdiff {
+@@ -8589,7 +8634,7 @@ sub git_commitdiff {
  			$hash_parent_param, $hash, "--")
  			or die_error(500, "Open git-diff-tree failed");
  
@@ -460,7 +460,7 @@ index f17dbf5d..af360453 100755
  			chomp $line;
  			# empty line ends raw part of diff-tree output
  			last unless $line;
-@@ -8693,13 +8738,15 @@ sub git_commitdiff {
+@@ -8703,13 +8748,15 @@ sub git_commitdiff {
  		git_footer_html();
  
  	} elsif ($format eq 'plain') {
@@ -480,7 +480,7 @@ index f17dbf5d..af360453 100755
  		close $fd
  			or print "Reading git-format-patch failed\n";
  	}
-@@ -8966,7 +9013,7 @@ XML
+@@ -8976,7 +9023,7 @@ XML
  			$co{'parent'} || "--root",
  			$co{'id'}, "--", (defined $file_name ? $file_name : ()))
  			or next;

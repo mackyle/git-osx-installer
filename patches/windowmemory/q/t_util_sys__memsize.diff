@@ -34,10 +34,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  create mode 100644 sys-utils.h
 
 diff --git a/Makefile b/Makefile
-index c7354bf2..c270fa3f 100644
+index a83e322f..e0872474 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -814,6 +814,7 @@ LIB_OBJS += string-list.o
+@@ -811,6 +811,7 @@ LIB_OBJS += string-list.o
  LIB_OBJS += submodule.o
  LIB_OBJS += submodule-config.o
  LIB_OBJS += symlinks.o
@@ -46,10 +46,10 @@ index c7354bf2..c270fa3f 100644
  LIB_OBJS += tempfile.o
  LIB_OBJS += trace.o
 diff --git a/config.mak.uname b/config.mak.uname
-index fe8096f8..921f659f 100644
+index 40d6b29e..94b428a3 100644
 --- a/config.mak.uname
 +++ b/config.mak.uname
-@@ -521,6 +521,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))
+@@ -522,6 +522,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))
  	DEFAULT_HELP_FORMAT = html
  	COMPAT_CFLAGS += -DNOGDI -Icompat -Icompat/win32
  	COMPAT_CFLAGS += -DSTRIP_EXTENSION=\".exe\"
@@ -59,7 +59,7 @@ index fe8096f8..921f659f 100644
  		compat/win32/dirent.o
 diff --git a/sys-utils.c b/sys-utils.c
 new file mode 100644
-index 00000000..21337d0b
+index 00000000..ffc467f8
 --- /dev/null
 +++ b/sys-utils.c
 @@ -0,0 +1,69 @@
@@ -128,7 +128,7 @@ index 00000000..21337d0b
 +	len = sizeof(physmem);
 +	if (!sysctl(mib, 2, &physmem, &len, NULL, 0) && physmem > 0)
 +		return physmem;
-+#endif /* defined(HAVE_BSD_SYSCTL) && defined(HW_NCPU) */
++#endif /* defined(HAVE_BSD_SYSCTL) && defined(HW_PHYSMEM) */
 +
 +	return 0;
 +}

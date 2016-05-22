@@ -16,10 +16,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 22 insertions(+), 9 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index b8ec37ad..9678ea26 100755
+index 02663e32..c67dd314 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -4853,7 +4853,13 @@ sub git_print_page_nav {
+@@ -4863,7 +4863,13 @@ sub git_print_page_nav {
  
  	my @navs = qw(summary log commit commitdiff tree refs);
  	if ($suppress) {
@@ -34,7 +34,7 @@ index b8ec37ad..9678ea26 100755
  	}
  
  	my %arg = map { $_ => {action=>$_} } @navs;
-@@ -7434,10 +7440,19 @@ sub git_tag {
+@@ -7444,10 +7450,19 @@ sub git_tag {
  	$fullhash = $hash if $hash =~ m/^[0-9a-fA-F]{40}$/;
  	$fullhash = git_get_full_hash($project, $hash) unless $fullhash;
  
@@ -57,7 +57,7 @@ index b8ec37ad..9678ea26 100755
  	print "<div class=\"title_text\">\n" .
  	      "<table class=\"object_header\">\n" .
  	      "<tr><td>tag</td><td class=\"sha1\">$fullhash</td></tr>\n" .
-@@ -7926,9 +7941,8 @@ sub git_blob {
+@@ -7936,9 +7951,8 @@ sub git_blob {
  		git_print_page_nav('','', $hash_base,$co{'tree'},$hash_base, $formats_nav);
  		git_print_header_div('commit', esc_html($co{'title'}), $hash_base);
  	} else {
@@ -69,7 +69,7 @@ index b8ec37ad..9678ea26 100755
  	}
  	git_print_page_path($file_name, "blob", $hash_base);
  	print "<div class=\"title_text\">\n" .
-@@ -8015,9 +8029,8 @@ sub git_tree {
+@@ -8025,9 +8039,8 @@ sub git_tree {
  		                   join(' | ', @views_nav));
  		git_print_header_div('commit', esc_html($co{'title'}), $hash_base, undef, $ref);
  	} else {

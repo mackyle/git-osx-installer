@@ -86,3 +86,12 @@ void cCCHmacFinal(CCHmacContext *ctx, void *m)
   CC_MD5_Update(&ctx->md5ctx, md5, CC_MD5_DIGEST_LENGTH);
   CC_MD5_Final(m, &ctx->md5ctx);
 }
+
+void cCCHmac(int alg, const void *k, size_t kl, const void *d, size_t dl, void *m)
+{
+  CCHmacContext ctx;
+
+  cCCHmacInit(&ctx, alg, k, kl);
+  cCCHmacUpdate(&ctx, d, dl);
+  cCCHmacFinal(&ctx, m);
+}

@@ -14,10 +14,10 @@ Signed-off-by: Petr Baudis <petr.baudis@novartis.com>
  1 file changed, 36 insertions(+), 12 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 506f67ef..c281eda5 100755
+index 1b02d72c..ec4b4482 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -4347,7 +4347,7 @@ sub git_print_page_nav {
+@@ -4350,7 +4350,7 @@ sub git_print_page_nav {
  	my ($current, $suppress, $head, $treehead, $treebase, $extra) = @_;
  	$extra = '' if !defined $extra; # pager or formats
  
@@ -26,7 +26,7 @@ index 506f67ef..c281eda5 100755
  	if ($suppress) {
  		@navs = grep { $_ ne $suppress } @navs;
  	}
-@@ -4358,12 +4358,16 @@ sub git_print_page_nav {
+@@ -4361,12 +4361,16 @@ sub git_print_page_nav {
  			$arg{$_}{'hash'} = $head;
  		}
  		if ($current =~ m/^(tree | log | shortlog | commit | commitdiff | search)$/x) {
@@ -46,7 +46,7 @@ index 506f67ef..c281eda5 100755
  	$arg{'tree'}{'hash'} = $treehead if defined $treehead;
  	$arg{'tree'}{'hash_base'} = $treebase if defined $treebase;
  
-@@ -4432,6 +4436,26 @@ sub format_paging_nav {
+@@ -4435,6 +4439,26 @@ sub format_paging_nav {
  	return $paging_nav;
  }
  
@@ -73,7 +73,7 @@ index 506f67ef..c281eda5 100755
  ## ......................................................................
  ## functions printing or outputting HTML: div
  
-@@ -5766,8 +5790,7 @@ sub git_project_list_rows {
+@@ -5769,8 +5793,7 @@ sub git_project_list_rows {
  		}
  		print"<td class=\"link\">" .
  		      $cgi->a({-href => href(project=>$pr->{'path'}, action=>"summary")}, "summary")   . " | " .
@@ -83,7 +83,7 @@ index 506f67ef..c281eda5 100755
  		      $cgi->a({-href => href(project=>$pr->{'path'}, action=>"tree")}, "tree") .
  		      ($pr->{'forks'} ? " | " . $cgi->a({-href => href(project=>$pr->{'path'}, action=>"forks")}, "forks") : '') .
  		      "</td>\n" .
-@@ -6056,8 +6079,7 @@ sub git_tags_body {
+@@ -6059,8 +6082,7 @@ sub git_tags_body {
  		      "<td class=\"link\">" . " | " .
  		      $cgi->a({-href => href(action=>$tag{'reftype'}, hash=>$tag{'refid'})}, $tag{'reftype'});
  		if ($tag{'reftype'} eq "commit") {
@@ -93,7 +93,7 @@ index 506f67ef..c281eda5 100755
  		} elsif ($tag{'reftype'} eq "blob") {
  			print " | " . $cgi->a({-href => href(action=>"blob_plain", hash=>$tag{'refid'})}, "raw");
  		}
-@@ -6096,8 +6118,7 @@ sub git_heads_body {
+@@ -6099,8 +6121,7 @@ sub git_heads_body {
  		               -class => "list name"},esc_html($ref{'name'})) .
  		      "</td>\n" .
  		      "<td class=\"link\">" .
@@ -103,7 +103,7 @@ index 506f67ef..c281eda5 100755
  		      $cgi->a({-href => href(action=>"tree", hash=>$ref{'fullname'}, hash_base=>$ref{'fullname'})}, "tree") .
  		      "</td>\n" .
  		      "</tr>";
-@@ -7459,7 +7480,7 @@ sub git_log_generic {
+@@ -7462,7 +7483,7 @@ sub git_log_generic {
  	}
  
  
@@ -112,7 +112,7 @@ index 506f67ef..c281eda5 100755
  	my $next_link = '';
  	if ($#commitlist >= 100) {
  		$next_link =
-@@ -7475,7 +7496,10 @@ sub git_log_generic {
+@@ -7478,7 +7499,10 @@ sub git_log_generic {
  		}
  	}
  

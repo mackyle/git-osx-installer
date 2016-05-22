@@ -25,10 +25,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index fe5b750b..5b600106 100755
+index acf51917..2474775f 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -1749,6 +1749,7 @@ sub esc_html {
+@@ -1758,6 +1758,7 @@ sub esc_html {
  	if ($opts{'-nbsp'}) {
  		$str =~ s/ /&#160;/g;
  	}
@@ -36,7 +36,7 @@ index fe5b750b..5b600106 100755
  	$str =~ s|([[:cntrl:]])|(($1 ne "\t") ? quot_cec($1) : $1)|eg;
  	return $str;
  }
-@@ -1765,6 +1766,7 @@ sub esc_path {
+@@ -1774,6 +1775,7 @@ sub esc_path {
  	if ($opts{'-nbsp'}) {
  		$str =~ s/ /&#160;/g;
  	}
@@ -44,7 +44,7 @@ index fe5b750b..5b600106 100755
  	$str =~ s|([[:cntrl:]])|quot_cec($1)|eg;
  	return $str;
  }
-@@ -1776,6 +1778,7 @@ sub sanitize {
+@@ -1785,6 +1787,7 @@ sub sanitize {
  	return undef unless defined $str;
  
  	$str = to_utf8($str);
@@ -52,7 +52,7 @@ index fe5b750b..5b600106 100755
  	$str =~ s|([[:cntrl:]])|(index("\t\n\r", $1) != -1 ? $1 : quot_cec($1))|eg;
  	return $str;
  }
-@@ -1949,6 +1952,7 @@ sub chop_and_escape_str {
+@@ -1958,6 +1961,7 @@ sub chop_and_escape_str {
  	if ($chopped eq $str) {
  		return esc_html($chopped);
  	} else {
@@ -60,7 +60,7 @@ index fe5b750b..5b600106 100755
  		$str =~ s/[[:cntrl:]]/?/g;
  		return $cgi->span({-title=>$str}, esc_html($chopped));
  	}
-@@ -2263,6 +2267,7 @@ sub format_subject_html {
+@@ -2272,6 +2276,7 @@ sub format_subject_html {
  	$extra = '' unless defined($extra);
  
  	if (length($short) < length($long)) {

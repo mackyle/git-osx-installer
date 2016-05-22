@@ -461,10 +461,10 @@ index 00000000..aa48792f
 +
 +1;
 diff --git a/git-send-email.perl b/git-send-email.perl
-index c45b22a1..781692ee 100755
+index 69587856..602b2c23 100755
 --- a/git-send-email.perl
 +++ b/git-send-email.perl
-@@ -26,8 +26,15 @@ use Data::Dumper;
+@@ -26,8 +26,15 @@ use Text::ParseWords;
  use Term::ANSIColor;
  use File::Temp qw/ tempdir tempfile /;
  use File::Spec::Functions qw(catfile);
@@ -506,19 +506,19 @@ index c45b22a1..781692ee 100755
  		    "smtp-pass:s" => \$smtp_authpass,
  		    "smtp-ssl" => sub { $smtp_encryption = 'ssl' },
  		    "smtp-encryption=s" => \$smtp_encryption,
-@@ -964,8 +972,10 @@ sub make_message_id {
+@@ -965,8 +973,10 @@ sub make_message_id {
  		require Sys::Hostname;
  		$du_part = 'user@' . Sys::Hostname::hostname();
  	}
--	my $message_id_template = "<%s-git-send-email-%s>";
-+	my $message_id_template = "%s-git-send-email-%s";
+-	my $message_id_template = "<%s-%s>";
++	my $message_id_template = "%s-%s";
  	$message_id = sprintf($message_id_template, $uniq, $du_part);
 +	@_ = split /@/, $message_id;
 +	$message_id = '<'.substr(md5_hex($_[0]),0,31).'@'.substr(md5_hex($_[1]),1,31).'>';
  	#print "new message id = $message_id\n"; # Was useful for debugging
  }
  
-@@ -1139,12 +1149,12 @@ sub smtp_host_string {
+@@ -1140,12 +1150,12 @@ sub smtp_host_string {
  	}
  }
  
@@ -534,7 +534,7 @@ index c45b22a1..781692ee 100755
  	}
  
  	# Workaround AUTH PLAIN/LOGIN interaction defect
-@@ -1163,58 +1173,32 @@ sub smtp_auth_maybe {
+@@ -1164,58 +1174,32 @@ sub smtp_auth_maybe {
  	# TODO: Authentication may fail not because credentials were
  	# invalid but due to other reasons, in which we should not
  	# reject credentials.
@@ -605,7 +605,7 @@ index c45b22a1..781692ee 100755
  	} else {
  		die "CA path \"$smtp_ssl_cert_path\" does not exist";
  	}
-@@ -1332,76 +1316,70 @@ Message-Id: $message_id
+@@ -1333,76 +1317,70 @@ Message-Id: $message_id
  			die "The required SMTP server is not properly defined."
  		}
  
@@ -734,7 +734,7 @@ index c45b22a1..781692ee 100755
  		print (($dry_run ? "Dry-" : "")."OK. Log says:\n");
  		if (!file_name_is_absolute($smtp_server)) {
  			print "Server: $smtp_server\n";
-@@ -1414,8 +1392,7 @@ Message-Id: $message_id
+@@ -1415,8 +1393,7 @@ Message-Id: $message_id
  		}
  		print $header, "\n";
  		if ($smtp) {
@@ -744,7 +744,7 @@ index c45b22a1..781692ee 100755
  		} else {
  			print "Result: OK\n";
  		}
-@@ -1673,7 +1650,7 @@ sub cleanup_compose_files {
+@@ -1674,7 +1651,7 @@ sub cleanup_compose_files {
  	unlink($compose_filename, $compose_filename . ".final") if $compose;
  }
  

@@ -14,10 +14,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 31c53d88..23f30f0f 100755
+index 79a91e3b..d9358809 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -965,7 +965,14 @@ sub get_loadavg {
+@@ -974,7 +974,14 @@ sub get_loadavg {
  # version of the core git binary
  our $git_version;
  sub evaluate_git_version {

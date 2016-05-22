@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <CommonCrypto/CommonDigest.h>
 
+#define CCHmacAlgorithm int
 #define kCCHmacAlgMD5 1
 
 typedef struct {
@@ -14,9 +15,11 @@ typedef struct {
 void cCCHmacInit(CCHmacContext *,int,const void *,size_t);
 void cCCHmacUpdate(CCHmacContext *,const void *,size_t);
 void cCCHmacFinal(CCHmacContext *, void *);
+void cCCHmac(int,const void *,size_t,const void *,size_t,void *);
 
 #define CCHmacInit(c,a,k,l) cCCHmacInit(c,a,k,l)
 #define CCHmacUpdate(c,d,l) cCCHmacUpdate(c,d,l)
 #define CCHmacFinal(c,m) cCCHmacFinal(c,m)
+#define CCHmac(a,k,kl,d,dl,m) cCCHmac(a,k,kl,d,dl,m)
 
 #endif /* _CC_COMMON_HMAC_H_ */

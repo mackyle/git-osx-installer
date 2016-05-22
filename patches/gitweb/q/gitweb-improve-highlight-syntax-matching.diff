@@ -15,7 +15,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 209 insertions(+), 21 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 62aace40..8feb19a9 100755
+index 12beab7d..7512e472 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -304,20 +304,136 @@ our %highlight_basename = (
@@ -163,7 +163,7 @@ index 62aace40..8feb19a9 100755
  );
  
  # You define site-wide feature defaults here; override them with
-@@ -4133,15 +4249,73 @@ sub blob_contenttype {
+@@ -4142,15 +4258,73 @@ sub blob_contenttype {
  	return $type;
  }
  
@@ -239,7 +239,7 @@ index 62aace40..8feb19a9 100755
  	$basename =~ /\.([^.]*)$/;
  	my $ext = $1 or return undef;
  	return $highlight_ext{$ext}
-@@ -4153,15 +4327,29 @@ sub guess_file_syntax {
+@@ -4162,16 +4336,30 @@ sub guess_file_syntax {
  # run highlighter and return FD of its output,
  # or return original FD if no highlighting
  sub run_highlighter {
@@ -251,6 +251,7 @@ index 62aace40..8feb19a9 100755
 -	close $fd;
 -	open $fd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
 +	defined(open my $hifd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
+ 	          $to_utf8_pipe_command.
  	          quote_command($highlight_bin).
 -	          " --replace-tabs=8 --fragment --syntax $syntax |"
 +	          " --replace-tabs=8 --fragment --syntax $syntax |")
@@ -275,7 +276,7 @@ index 62aace40..8feb19a9 100755
  }
  
  ## ======================================================================
-@@ -7569,10 +7757,10 @@ sub git_blob {
+@@ -7579,10 +7767,10 @@ sub git_blob {
  	# we can have blame only for text/* mimetype
  	$have_blame &&= ($mimetype =~ m!^text/!);
  
@@ -290,7 +291,7 @@ index 62aace40..8feb19a9 100755
  
  	git_header_html(undef, $expires);
  	my $formats_nav = '';
-@@ -7626,7 +7814,7 @@ sub git_blob {
+@@ -7636,7 +7824,7 @@ sub git_blob {
  			$line = untabify($line);
  			printf qq!<div class="pre"><a id="l%i" href="%s#l%i" class="linenr">%4i</a> %s</div>\n!,
  			       $nr, esc_attr(href(-replay => 1)), $nr, $nr,

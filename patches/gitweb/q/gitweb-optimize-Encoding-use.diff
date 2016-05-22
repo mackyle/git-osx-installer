@@ -4,20 +4,25 @@ Make sure the fallback encoding is only looked up exactly once
 rather than every time we call to_utf8 and the input string is
 not UTF-8 or US-ASCII.
 
+Also avoid unnecessarily spawning another copy of perl when
+running highlight if the fallback encoding does not include any
+multibyte sequences in which not all bytes have the high bit set.
+
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- gitweb/gitweb.perl | 17 ++++++++++++++++-
- 1 file changed, 16 insertions(+), 1 deletion(-)
+ gitweb/gitweb.perl | 30 ++++++++++++++++++++++++++----
+ 1 file changed, 26 insertions(+), 4 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index ada60eb8..2e431385 100755
+index 12cd7f1f..357aa285 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -805,6 +805,20 @@ sub evaluate_gitweb_config {
+@@ -805,6 +805,29 @@ sub evaluate_gitweb_config {
  	read_config_file($GITWEB_CONFIG_SYSTEM);
  }
  
 +our $encode_object;
++our $to_utf8_pipe_command = '';
 +
 +sub evaluate_encoding {
 +	my $requested = $fallback_encoding || 'ISO-8859-1';
@@ -29,12 +34,20 @@ index ada60eb8..2e431385 100755
 +		$obj = $altobj if $altobj;
 +	}
 +	$encode_object = $obj;
++	my $nm = lc($encode_object->name);
++	unless ($nm eq 'cp1252' || $nm eq 'ascii' || $nm eq 'utf8' ||
++		$nm =~ /^utf-8/ || $nm =~ /^iso-8859-/) {
++		$to_utf8_pipe_command =
++		  quote_command($^X, '-CO', '-MEncode=decode,FB_DEFAULT', '-pse',
++		    '$_ = decode($fe, $_, FB_DEFAULT) if !utf8::decode($_);',
++		    '--', "-fe=$fallback_encoding")." | ";
++	}
 +}
 +
  # Get loadavg of system, to compare against $maxload.
  # Currently it requires '/proc/loadavg' present to get loadavg;
  # if it is not present it returns 0, which means no load checking.
-@@ -1416,6 +1430,7 @@ sub _reset_globals {
+@@ -1416,6 +1439,7 @@ sub _reset_globals {
  
  sub run {
  	evaluate_gitweb_config();
@@ -42,7 +55,7 @@ index ada60eb8..2e431385 100755
  	evaluate_git_version();
  	my ($ml, $mi, $bu, $hl, $subroutine) = ($my_url, $my_uri, $base_url, $home_link, '');
  	$subroutine .= '$my_url = $ml;' if defined $my_url && $my_url ne '';
-@@ -1681,7 +1696,7 @@ sub to_utf8 {
+@@ -1681,7 +1705,7 @@ sub to_utf8 {
  	if (utf8::is_utf8($str) || utf8::decode($str)) {
  		return $str;
  	} else {
@@ -51,4 +64,15 @@ index ada60eb8..2e431385 100755
  	}
  }
  
+@@ -4111,9 +4135,7 @@ sub run_highlighter {
+ 
+ 	close $fd;
+ 	open $fd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
+-	          quote_command($^X, '-CO', '-MEncode=decode,FB_DEFAULT', '-pse',
+-	            '$_ = decode($fe, $_, FB_DEFAULT) if !utf8::decode($_);',
+-	            '--', "-fe=$fallback_encoding")." | ".
++	          $to_utf8_pipe_command.
+ 	          quote_command($highlight_bin).
+ 	          " --replace-tabs=8 --fragment --syntax $syntax |"
+ 		or die_error(500, "Couldn't open file or run syntax highlighter");
 ---

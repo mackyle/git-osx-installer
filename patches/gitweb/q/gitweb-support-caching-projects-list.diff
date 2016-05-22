@@ -108,7 +108,7 @@ index d0fde38c..7d4c6dfb 100644
  Some optional features and policies
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 2fab5246..6275fa45 100755
+index ad3edbe1..17cc6573 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -19,6 +19,7 @@ use File::Find qw();
@@ -202,7 +202,7 @@ index 2fab5246..6275fa45 100755
  }
  
  # Implementation note: when a single remote is wanted, we cannot use 'git
-@@ -5712,12 +5732,99 @@ sub project_info_needs_filling {
+@@ -5715,12 +5735,99 @@ sub project_info_needs_filling {
  	return;
  }
  
@@ -303,7 +303,7 @@ index 2fab5246..6275fa45 100755
  # that run unconditionally git command that requires repository, and
  # therefore do always check if project repository is invalid.
  #
-@@ -5730,6 +5837,66 @@ sub project_info_needs_filling {
+@@ -5733,6 +5840,66 @@ sub project_info_needs_filling {
  # NOTE: modifies $projlist, but does not remove entries from it
  sub fill_project_list_info {
  	my ($projlist, @wanted_keys) = @_;
@@ -370,7 +370,7 @@ index 2fab5246..6275fa45 100755
  	my @projects;
  	my $filter_set = sub { return @_; };
  	if (@wanted_keys) {
-@@ -5740,12 +5907,12 @@ sub fill_project_list_info {
+@@ -5743,12 +5910,12 @@ sub fill_project_list_info {
  	my $show_ctags = gitweb_check_feature('ctags');
   PROJECT:
  	foreach my $pr (@$projlist) {
@@ -385,7 +385,7 @@ index 2fab5246..6275fa45 100755
  		}
  		if (project_info_needs_filling($pr, $filter_set->('descr', 'descr_long'))) {
  			my $descr = git_get_project_description($pr->{'path'}) || "";
-@@ -5781,11 +5948,11 @@ sub sort_projects_list {
+@@ -5784,11 +5951,11 @@ sub sort_projects_list {
  		return sub { $a->{$key} cmp $b->{$key} };
  	}
  
@@ -399,7 +399,7 @@ index 2fab5246..6275fa45 100755
  				(defined $b->{$key} ? 1 : 0)
  		};
  	}
-@@ -5794,7 +5961,7 @@ sub sort_projects_list {
+@@ -5797,7 +5964,7 @@ sub sort_projects_list {
  		project => order_str('path'),
  		descr => order_str('descr_long'),
  		owner => order_str('owner'),
@@ -408,7 +408,7 @@ index 2fab5246..6275fa45 100755
  	);
  
  	my $ordering = $orderings{$order};
-@@ -5847,6 +6014,7 @@ sub git_project_list_rows {
+@@ -5850,6 +6017,7 @@ sub git_project_list_rows {
  	$from = 0 unless defined $from;
  	$to = $#$projlist if (!defined $to || $#$projlist < $to);
  
@@ -416,7 +416,7 @@ index 2fab5246..6275fa45 100755
  	my $alternate = 1;
  	for (my $i = $from; $i <= $to; $i++) {
  		my $pr = $projlist->[$i];
-@@ -5887,8 +6055,14 @@ sub git_project_list_rows {
+@@ -5890,8 +6058,14 @@ sub git_project_list_rows {
  		        print "<td><i>" . chop_and_escape_str($pr->{'owner'}, 15) . "</i></td>\n";
  		}
  		unless ($omit_age_column) {
@@ -433,7 +433,7 @@ index 2fab5246..6275fa45 100755
  		}
  		print"<td class=\"link\">" .
  		      $cgi->a({-href => href(project=>$pr->{'path'}, action=>"summary")}, "summary")   . " | " .
-@@ -5921,7 +6095,7 @@ sub git_project_list_body {
+@@ -5924,7 +6098,7 @@ sub git_project_list_body {
  		if ($tagfilter || $search_regexp);
  	# fill the rest
  	my @all_fields = ('descr', 'descr_long', 'ctags', 'category');

@@ -16,7 +16,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 89 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index a490cc25..7c47475a 100755
+index daef7e56..bf91b84e 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -200,6 +200,13 @@ our $fallback_encoding = 'latin1';
@@ -33,7 +33,7 @@ index a490cc25..7c47475a 100755
  # Disables features that would allow repository owners to inject script into
  # the gitweb domain.
  our $prevent_xss = 0;
-@@ -4220,6 +4227,33 @@ sub insert_file {
+@@ -4229,6 +4236,33 @@ sub insert_file {
  	close $fd;
  }
  
@@ -67,7 +67,7 @@ index a490cc25..7c47475a 100755
  ## ......................................................................
  ## mimetype related functions
  
-@@ -7386,11 +7420,19 @@ sub git_summary {
+@@ -7396,11 +7430,19 @@ sub git_summary {
  
  	# If XSS prevention is on, we don't include README.html.
  	# TODO: Allow a readme in some safe format.

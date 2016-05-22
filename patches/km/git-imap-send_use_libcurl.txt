@@ -11,7 +11,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 20 insertions(+), 10 deletions(-)
 
 diff --git a/imap-send.c b/imap-send.c
-index 2c52027c..b9a0adf2 100644
+index 938c6915..5c0580fa 100644
 --- a/imap-send.c
 +++ b/imap-send.c
 @@ -34,7 +34,7 @@ typedef void *SSL;
@@ -50,7 +50,7 @@ index 2c52027c..b9a0adf2 100644
  static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int verify)
  {
  	fprintf(stderr, "SSL requested but SSL support not compiled in\n");
-@@ -353,7 +353,7 @@ static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int ve
+@@ -356,7 +356,7 @@ static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int ve
  static int socket_read(struct imap_socket *sock, char *buf, int len)
  {
  	ssize_t n;
@@ -59,7 +59,7 @@ index 2c52027c..b9a0adf2 100644
  	if (sock->ssl)
  		n = SSL_read(sock->ssl, buf, len);
  	else
-@@ -371,7 +371,7 @@ static int socket_read(struct imap_socket *sock, char *buf, int len)
+@@ -374,7 +374,7 @@ static int socket_read(struct imap_socket *sock, char *buf, int len)
  static int socket_write(struct imap_socket *sock, const char *buf, int len)
  {
  	int n;
@@ -68,7 +68,7 @@ index 2c52027c..b9a0adf2 100644
  	if (sock->ssl)
  		n = SSL_write(sock->ssl, buf, len);
  	else
-@@ -388,7 +388,7 @@ static int socket_write(struct imap_socket *sock, const char *buf, int len)
+@@ -391,7 +391,7 @@ static int socket_write(struct imap_socket *sock, const char *buf, int len)
  
  static void socket_shutdown(struct imap_socket *sock)
  {
@@ -77,7 +77,7 @@ index 2c52027c..b9a0adf2 100644
  	if (sock->ssl) {
  		SSL_shutdown(sock->ssl);
  		SSL_free(sock->ssl);
-@@ -847,7 +847,12 @@ static void imap_close_store(struct imap_store *ctx)
+@@ -850,7 +850,12 @@ static void imap_close_store(struct imap_store *ctx)
  	free(ctx);
  }
  

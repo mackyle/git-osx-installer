@@ -24,7 +24,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 35 insertions(+), 4 deletions(-)
 
 diff --git a/Documentation/config.txt b/Documentation/config.txt
-index 2cd6bdd7..c4f26852 100644
+index ef347875..5fc083c3 100644
 --- a/Documentation/config.txt
 +++ b/Documentation/config.txt
 @@ -2083,8 +2083,10 @@ pack.windowMemory::
@@ -41,7 +41,7 @@ index 2cd6bdd7..c4f26852 100644
  pack.compression::
  	An integer -1..9, indicating the compression level for objects
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index a27de5b3..e5b917c9 100644
+index b6664ce4..c02d1a01 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
 @@ -19,11 +19,18 @@
@@ -72,7 +72,7 @@ index a27de5b3..e5b917c9 100644
  
  /*
   * stats
-@@ -2548,6 +2555,24 @@ static void get_object_list(int ac, const char **av)
+@@ -2555,6 +2562,24 @@ static void get_object_list(int ac, const char **av)
  	sha1_array_clear(&recent_objects);
  }
  
@@ -97,7 +97,7 @@ index a27de5b3..e5b917c9 100644
  static int option_parse_index_version(const struct option *opt,
  				      const char *arg, int unset)
  {
-@@ -2717,9 +2742,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+@@ -2724,9 +2749,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
  		delta_search_threads = online_cpus();
  
  #ifdef NO_PTHREADS

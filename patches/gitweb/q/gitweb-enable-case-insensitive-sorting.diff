@@ -6,10 +6,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 2e431385..f61247a8 100755
+index 357aa285..aadc82f9 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -5997,7 +5997,7 @@ sub sort_projects_list {
+@@ -6007,7 +6007,7 @@ sub sort_projects_list {
  
  	sub order_str {
  		my $key = shift;

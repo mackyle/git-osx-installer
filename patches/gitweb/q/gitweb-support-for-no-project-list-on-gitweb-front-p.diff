@@ -72,7 +72,7 @@ index cd9c8951..e87a461b 100644
  summary::
  	Displays summary about given repository.  This is the default command if
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 1a48cd3a..7a964062 100755
+index 371f9199..a182f230 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -202,6 +202,11 @@ our $prevent_xss = 0;
@@ -111,7 +111,7 @@ index 1a48cd3a..7a964062 100755
  	    !$project) {
  		die_error(400, "Project needed");
  	}
-@@ -5591,7 +5597,7 @@ sub git_project_search_form {
+@@ -5594,7 +5600,7 @@ sub git_project_search_form {
  
  	my $limit = '';
  	if ($project_filter) {
@@ -120,7 +120,7 @@ index 1a48cd3a..7a964062 100755
  	}
  
  	print "<div class=\"projsearch\">\n";
-@@ -5608,9 +5614,16 @@ sub git_project_search_form {
+@@ -5611,9 +5617,16 @@ sub git_project_search_form {
  	      "</span>\n" .
  	      $cgi->submit(-name => 'btnS', -value => 'Search') .
  	      $cgi->end_form() . "\n" .
@@ -138,7 +138,7 @@ index 1a48cd3a..7a964062 100755
  	print "</div>\n";
  }
  
-@@ -5849,7 +5862,7 @@ sub git_project_list_body {
+@@ -5852,7 +5865,7 @@ sub git_project_list_body {
  	if ($from > $to) {
  		print "<center>\n".
  		      "<b>No such projects found</b><br />\n".
@@ -147,7 +147,7 @@ index 1a48cd3a..7a964062 100755
  		      "</center>\n<br />\n";
  		return;
  	}
-@@ -6531,7 +6544,8 @@ sub git_search_grep_body {
+@@ -6534,7 +6547,8 @@ sub git_search_grep_body {
  ## ======================================================================
  ## actions
  
@@ -157,7 +157,7 @@ index 1a48cd3a..7a964062 100755
  	my $order = $input_params{'order'};
  	if (defined $order && $order !~ m/none|project|descr|owner|age/) {
  		die_error(400, "Unknown order parameter");
-@@ -6539,18 +6553,54 @@ sub git_project_list {
+@@ -6542,18 +6556,54 @@ sub git_project_list {
  
  	my @list = git_get_projects_list($project_filter, $strict_export);
  	if (!@list) {

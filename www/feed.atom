@@ -26,7 +26,26 @@
   <id>urn:uuid:8c3cdd92-11f4-44d4-a90b-ae20c7f2a963</id>
   <icon>http://mackyle.github.io/git-osx-installer/gitosxinstaller-icon.png</icon>
   <logo>http://mackyle.github.io/git-osx-installer/gitosxinstaller-logo.png</logo>
-  <updated>2016-05-22T00:00:00-07:00</updated>
+  <updated>2016-06-20T00:00:00-07:00</updated>
+
+  <entry>
+    <title>Git 2.8.4 OS X Installer</title>
+    <link rel="alternate" type="text/html" href="http://mackyle.github.io/git-osx-installer/#gitosx-v2.8.4_in"/>
+    <id>urn:uuid:0429c708-bed1-4472-9354-00b43b76adfb</id>
+    <published>2016-06-20T00:00:00-07:00</published>
+    <updated>2016-06-20T00:00:00-07:00</updated>
+    <summary>Mac OS X 10.4+ universal installer for Git version 2.8.4</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.8.4</p>
+        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.8.4-osx-installer.dmg">git-2.8.4-osx-installer.dmg</a><br/>
+        <span>SIZE: </span><tt>13</tt><span> MiB</span><br/>
+        <span>MD5: </span><tt>664ef90eb20ee614723293ed58b7a025</tt><br/>
+        <span>SHA1: </span><tt>63422bcd9795892a5e2a5effdf974115ca5082fa</tt><br/>
+        <span>SHA256: </span><tt>6075bf151d04e639dd4d574f05e87ff89cc203d92e26712ea8a61f9e7d720e79</tt><br/>
+      </div>
+    </content>
+  </entry>
 
   <entry>
     <title>Git 2.8.3 OS X Installer</title>

@@ -42,6 +42,7 @@
         <span>SIZE: </span><tt>13</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>664ef90eb20ee614723293ed58b7a025</tt><br/>
         <span>SHA1: </span><tt>63422bcd9795892a5e2a5effdf974115ca5082fa</tt><br/>
+        <span>BLOB: </span><tt>deded1a6d81a7c209f6e1cc6324ba6ad8f8776af</tt><br/>
         <span>SHA256: </span><tt>6075bf151d04e639dd4d574f05e87ff89cc203d92e26712ea8a61f9e7d720e79</tt><br/>
       </div>
     </content>
@@ -61,6 +62,7 @@
         <span>SIZE: </span><tt>13</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>23e75353fc4e9011fb680986b9df05d9</tt><br/>
         <span>SHA1: </span><tt>32864aec4b043acd7fc2d0fd89c3e9ba5b00cd60</tt><br/>
+        <span>BLOB: </span><tt>6dc9c5008915991c64b25c3db1265191b53083f1</tt><br/>
         <span>SHA256: </span><tt>fa7f304c47d5695e746dcd9c8ec1f7ad781231dcb7c28cf050444fc63b4365d5</tt><br/>
       </div>
     </content>
@@ -80,6 +82,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>fc63a827021acc3983b9a8c25b8f44bb</tt><br/>
         <span>SHA1: </span><tt>0089923eb7e18efc4ecb90f7177adcd5a7f4b2d5</tt><br/>
+        <span>BLOB: </span><tt>b312d624f062f46947675b725aea195793259c93</tt><br/>
         <span>SHA256: </span><tt>78a9eab23d124bbc37e162a6976623706620bd86cb3a22233d1fb68c8a0856c2</tt><br/>
       </div>
     </content>
@@ -99,6 +102,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>d9bbd22ce3e1f1db4ec9e5ee7ea5e867</tt><br/>
         <span>SHA1: </span><tt>fdadefcb27930295ea15b8299b4e61530fedd9bd</tt><br/>
+        <span>BLOB: </span><tt>7d8f07c28e2734a85959f531d3aa4b6893aff2c0</tt><br/>
         <span>SHA256: </span><tt>ad43775d0a419695db67f74e14607743e21e6ca210bb9b12d36e2da0e0b559e0</tt><br/>
       </div>
     </content>
@@ -117,6 +121,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>8b975731ac1744460c4a8b5a3a25c9a7</tt><br/>
         <span>SHA1: </span><tt>bb149bf72bb854b2c059397774a52da57aa3b4a3</tt><br/>
+        <span>BLOB: </span><tt>ed9850a7eeee5bebd9640d3c81af3d72d1187aee</tt><br/>
         <span>SHA256: </span><tt>2fc3577a742c4773ce4ed06916bc40517833256c4765e7d4738d6adc92e98a51</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -137,6 +142,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>c9d53f8eafad3c40d0a21c31f1ef33b3</tt><br/>
         <span>SHA1: </span><tt>4907db759b6eb504c8b4c4f937bb5ddae0186073</tt><br/>
+        <span>BLOB: </span><tt>3552d31b29e8a09552913e23f71b3b51fb69ae77</tt><br/>
         <span>SHA256: </span><tt>c733dfcff8b4cbf54ea7448959ff1767284180426c82224914d4406b1575ff09</tt><br/>
       </div>
     </content>
@@ -155,6 +161,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>fafa263802b7d1d6e2790376efe06a0b</tt><br/>
         <span>SHA1: </span><tt>7d37273d9f450e22bc1d95158d91b4be82781a1c</tt><br/>
+        <span>BLOB: </span><tt>11f92468b50873b040eba8a1e5eb9c67cfdb3967</tt><br/>
         <span>SHA256: </span><tt>24960ff9d3d4be85cad1e3a9c72c2f9a176fa39382c0ac0560b4f9caf929f18a</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -175,6 +182,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>cd4ddf472b1389979a0ea85cec0b97f0</tt><br/>
         <span>SHA1: </span><tt>7f031f322cb8296fb376c83a7cc0dd196a741ccd</tt><br/>
+        <span>BLOB: </span><tt>31fc189c04f0f391d5b1f0a8f04c6d1eb6e76d7d</tt><br/>
         <span>SHA256: </span><tt>8957e634b3ca65ac1e4b53b2ea447bdccbf439c538dc23b3a04d22160352fecc</tt><br/>
       </div>
     </content>
@@ -193,6 +201,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>da0810616bcf363d6042c04cf7935ff5</tt><br/>
         <span>SHA1: </span><tt>d6538a55e51f2f85bd1605d7824d4a3056716bdc</tt><br/>
+        <span>BLOB: </span><tt>2f89c16737915c10bef82a06fdd80721bd38154e</tt><br/>
         <span>SHA256: </span><tt>4f258fa73937c2a220c6b996831ecbb2e4d0601ae4cf64cc5fe315c3d214713d</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -213,6 +222,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>7986123c8cbb0a01dd69eb2ff912886a</tt><br/>
         <span>SHA1: </span><tt>e10ba213305a7bcb5d74f4947d418afa59aa0665</tt><br/>
+        <span>BLOB: </span><tt>6ad8d8b259cde78e66856b7b35047e32517d0f22</tt><br/>
         <span>SHA256: </span><tt>20d85f3d71389ca795696c98bdf5482d339c084c1f46817452a2918c14088629</tt><br/>
       </div>
     </content>
@@ -231,6 +241,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>3550c8079f6923cdbac4923f45fe16ac</tt><br/>
         <span>SHA1: </span><tt>59aa26e0ba61bac0ab23b81ea1b7172bf33f704a</tt><br/>
+        <span>BLOB: </span><tt>3be9f172fea4fd951a15ea0dd32e26b5d4ce4e23</tt><br/>
         <span>SHA256: </span><tt>8100a9757005737427cf5977f61e090c2472662cf69f570a434093d9db1714b2</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -250,6 +261,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>c5de880533715eeab4f1f598e46d0bba</tt><br/>
         <span>SHA1: </span><tt>19be02affaa152e9802dca908e10e72e89b976fb</tt><br/>
+        <span>BLOB: </span><tt>1e502d1e57efff63080bcca95a49f8c3a30bdb04</tt><br/>
         <span>SHA256: </span><tt>0fbdce3c5059cc354cd3c4a0ad78ff2604b51213a861f21b9d191ddb501205e1</tt><br/>
         <p>Note: This installer has been reissued with minor corrections.  See <a href="https://github.com/mackyle/git-osx-installer/blob/v2.3.10/ChangeLog.txt">here</a><span> </span>for details.</p>
         <p>Note: This version is no longer recommended.</p>
@@ -270,6 +282,7 @@
         <span>SIZE: </span><tt>12</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>ebe202b389ffb4ec4c801c6e67092c10</tt><br/>
         <span>SHA1: </span><tt>6590b6805efdb68d48d136b8f5286876f5319030</tt><br/>
+        <span>BLOB: </span><tt>9818ef806a3f11316970a6a8ccb1c69dff6da41c</tt><br/>
         <span>SHA256: </span><tt>931e4da909adb77190733b113445bbf46a400125be9a5dfa6d3674bcab042613</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -289,6 +302,7 @@
         <span>SIZE: </span><tt>11</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>c0c83704785fc25f249051b5421e6bfe</tt><br/>
         <span>SHA1: </span><tt>a937a247ec164357914ba04ba9e4d8c71fb0fd9a</tt><br/>
+        <span>BLOB: </span><tt>e0c8ef4720a90546e8ea3b12a7e38223f1bad83f</tt><br/>
         <span>SHA256: </span><tt>587bbb92db27c6af27603397dae10334203c0e8693d7fa289b41ca704584a50a</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -308,6 +322,7 @@
         <span>SIZE: </span><tt>11</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>2abaf1c17ba4911a3cc4f553d0bb5880</tt><br/>
         <span>SHA1: </span><tt>2fa4e53fdcee29ca6414b9b906cbb013e9afbaf7</tt><br/>
+        <span>BLOB: </span><tt>d4d5114cb4755578403f1536d41824c872be9433</tt><br/>
         <span>SHA256: </span><tt>49ee8daa770f9a1ea37fc297f2cddee00c5672fd8cb2c20c3a3afbe8ede81ec7</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -327,6 +342,7 @@
         <span>SIZE: </span><tt>11</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>4d818156d6f67b0189f56c453e7deec3</tt><br/>
         <span>SHA1: </span><tt>67ea4e2fda289e5cbcb293d2879f7aeefb76cf97</tt><br/>
+        <span>BLOB: </span><tt>80fc86e2dc53049bf7c3e7515aaa685ba154e8cb</tt><br/>
         <span>SHA256: </span><tt>713ca9cad446c4cb93465fd7eaaa382b6ffcd9502ea358563e6b8cc83daa22aa</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>
@@ -346,6 +362,7 @@
         <span>SIZE: </span><tt>11</tt><span> MiB</span><br/>
         <span>MD5: </span><tt>3608f85b7b2c6a855d4f7906db0e7f3f</tt><br/>
         <span>SHA1: </span><tt>152447ea9b2086275a0d4e56a7d97455a8cbae56</tt><br/>
+        <span>BLOB: </span><tt>131f919be411bdd817fb5c5bd005feacb0a0d536</tt><br/>
         <span>SHA256: </span><tt>dacf300a3d4e7821ae0db947c8498b6ce14f96d91ffc1a7c4107a61a95294836</tt><br/>
         <p>Note: This version is no longer recommended.</p>
       </div>

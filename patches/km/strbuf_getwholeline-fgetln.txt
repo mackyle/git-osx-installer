@@ -80,7 +80,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  3 files changed, 35 insertions(+), 8 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index a83e322f..cb08616f 100644
+index e11e626d..c07f12ab 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -367,6 +367,8 @@ all::
@@ -104,7 +104,7 @@ index a83e322f..cb08616f 100644
  NO_TCLTK = NoThanks
  endif
 diff --git a/config.mak.uname b/config.mak.uname
-index 40d6b29e..51bc7e04 100644
+index a88f1398..e2d68a2b 100644
 --- a/config.mak.uname
 +++ b/config.mak.uname
 @@ -113,6 +113,7 @@ ifeq ($(uname_S),Darwin)

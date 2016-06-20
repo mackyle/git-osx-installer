@@ -24,10 +24,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 35 insertions(+), 4 deletions(-)
 
 diff --git a/Documentation/config.txt b/Documentation/config.txt
-index ef347875..5fc083c3 100644
+index 02696208..a4ca30b3 100644
 --- a/Documentation/config.txt
 +++ b/Documentation/config.txt
-@@ -2083,8 +2083,10 @@ pack.windowMemory::
+@@ -2098,8 +2098,10 @@ pack.windowMemory::
  	The maximum size of memory that is consumed by each thread
  	in linkgit:git-pack-objects[1] for pack window memory when
  	no limit is given on the command line.  The value can be

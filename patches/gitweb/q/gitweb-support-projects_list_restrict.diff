@@ -30,7 +30,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 22 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f5cf2501..8e56ae11 100755
+index 07c32e65..1a53cabc 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -130,6 +130,14 @@ our $logo_label = "git homepage";
@@ -48,7 +48,7 @@ index f5cf2501..8e56ae11 100755
  # the width (in characters) of the projects list "Description" column
  our $projects_list_description_width = 25;
  
-@@ -3397,12 +3405,21 @@ sub git_get_projects_list {
+@@ -3399,12 +3407,21 @@ sub git_get_projects_list {
  		$dir =~ s!/+$!!;
  		my $pfxlen = length("$dir");
  		my $pfxdepth = ($dir =~ tr!/!!);
@@ -71,7 +71,7 @@ index f5cf2501..8e56ae11 100755
  		File::Find::find({
  			follow_fast => 1, # follow symbolic links
  			follow_skip => 2, # ignore duplicates
-@@ -3452,6 +3469,10 @@ sub git_get_projects_list {
+@@ -3454,6 +3471,10 @@ sub git_get_projects_list {
  				}
  				# only directories can be git repositories
  				return unless (-d $_);

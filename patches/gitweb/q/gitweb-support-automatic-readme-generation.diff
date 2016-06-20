@@ -11,12 +11,12 @@ a README.html file that consists of only XML <!-- comments -->.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- gitweb/gitweb.perl       | 52 +++++++++++++++++++++++++++++++++++++++++++-----
- gitweb/static/gitweb.css | 48 ++++++++++++++++++++++++++++++++++++++------
- 2 files changed, 89 insertions(+), 11 deletions(-)
+ gitweb/gitweb.perl       | 60 ++++++++++++++++++++++++++++++++++++++++++++----
+ gitweb/static/gitweb.css | 48 +++++++++++++++++++++++++++++++++-----
+ 2 files changed, 97 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index daef7e56..bf91b84e 100755
+index daef7e56..6c378cf0 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -200,6 +200,13 @@ our $fallback_encoding = 'latin1';
@@ -67,7 +67,7 @@ index daef7e56..bf91b84e 100755
  ## ......................................................................
  ## mimetype related functions
  
-@@ -7396,11 +7430,19 @@ sub git_summary {
+@@ -7396,11 +7430,27 @@ sub git_summary {
  
  	# If XSS prevention is on, we don't include README.html.
  	# TODO: Allow a readme in some safe format.
@@ -77,13 +77,21 @@ index daef7e56..bf91b84e 100755
 -		insert_file("$projectroot/$project/README.html");
 -		print "\n</div>\n"; # class="readme"
 +	if (!$prevent_xss) {
-+		my $readme = -s "$projectroot/$project/README.html"
-+			? collect_html_file("$projectroot/$project/README.html")
-+			: collect_output($git_automatic_readme_html, "$projectroot/$project");
++		my $readme_name = "readme";
++		my $readme;
++		if (-s "$projectroot/$project/README.html") {
++			$readme = collect_html_file("$projectroot/$project/README.html");
++		} else {
++			$readme = collect_output($git_automatic_readme_html, "$projectroot/$project");
++			if ($readme && $readme =~ /^<!-- README NAME: ((?:[^-]|(?:-(?!-)))+) -->/) {
++				$readme_name = $1;
++				$readme =~ s/^<!--(?:[^-]|(?:-(?!-)))*-->\n?//;
++			}
++		}
 +		if (defined($readme)) {
 +			$readme =~ s/^\s+//s;
 +			$readme =~ s/\s+$//s;
-+			print "<div class=\"title\">readme</div>\n",
++			print "<div class=\"title\">$readme_name</div>\n",
 +			      "<div class=\"readme\">\n",
 +			      $readme,
 +			      "\n</div>\n"

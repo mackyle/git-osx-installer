@@ -5,9 +5,10 @@ not in the "release" branch yet end up in here.
 
 Hopefully this will be empty most of the time.
 ---
- gitweb/gitweb.perl       | 18 ++++++++++++------
- gitweb/static/gitweb.css |  1 +
- 2 files changed, 13 insertions(+), 6 deletions(-)
+ gitweb/gitweb.perl                    | 18 ++++++++++++------
+ gitweb/static/gitweb.css              |  1 +
+ gitweb/static/js/blame_incremental.js |  2 +-
+ 3 files changed, 14 insertions(+), 7 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
 index 2fddf750..a6ef6fba 100755
@@ -82,4 +83,17 @@ index 32126010..02cced9a 100644
  	/* "top: 0; right: 0;" would be better, if not for bugs in browsers */
  	top: 0; left: 0;
  	border: 1px solid;
+diff --git a/gitweb/static/js/blame_incremental.js b/gitweb/static/js/blame_incremental.js
+index db6eb505..e100d820 100644
+--- a/gitweb/static/js/blame_incremental.js
++++ b/gitweb/static/js/blame_incremental.js
+@@ -484,7 +484,7 @@ function processBlameLines(lines) {
+ 			case 'previous':
+ 				curCommit.nprevious++;
+ 				// store only first 'previous' header
+-				if (!'previous' in curCommit) {
++				if (!('previous' in curCommit)) {
+ 					var parts = data.split(' ', 2);
+ 					curCommit.previous    = parts[0];
+ 					curCommit.file_parent = unquote(parts[1]);
 ---

@@ -34,7 +34,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  create mode 100644 sys-utils.h
 
 diff --git a/Makefile b/Makefile
-index a83e322f..e0872474 100644
+index e11e626d..a8ab610c 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -811,6 +811,7 @@ LIB_OBJS += string-list.o
@@ -46,7 +46,7 @@ index a83e322f..e0872474 100644
  LIB_OBJS += tempfile.o
  LIB_OBJS += trace.o
 diff --git a/config.mak.uname b/config.mak.uname
-index 40d6b29e..94b428a3 100644
+index a88f1398..d9294a8c 100644
 --- a/config.mak.uname
 +++ b/config.mak.uname
 @@ -522,6 +522,7 @@ ifneq (,$(findstring MINGW,$(uname_S)))

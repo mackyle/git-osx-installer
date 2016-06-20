@@ -80,7 +80,7 @@ index 02cced9a..77e272e3 100644
  	margin: .5em;
  	border: 1px solid #d9d8d1;
 diff --git a/gitweb/static/js/blame_incremental.js b/gitweb/static/js/blame_incremental.js
-index db6eb505..d3144e46 100644
+index e100d820..b34364fb 100644
 --- a/gitweb/static/js/blame_incremental.js
 +++ b/gitweb/static/js/blame_incremental.js
 @@ -298,6 +298,63 @@ function fixColorsAndGroups() {

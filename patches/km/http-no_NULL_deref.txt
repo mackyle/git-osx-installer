@@ -1,0 +1,28 @@
+From 48670f5531116334aad296bddbd0fe53278b9aa0 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Sun, 19 Jun 2016 19:29:12 -0700
+Subject: [PATCH] http.c: avoid NULL pointer dereference
+
+Since credential_fill is not guaranteed to provide non-NULL
+fields, test the protocol field before passing it to strcmp to
+avoid a NULL pointer dereference.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ http.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/http.c b/http.c
+index 1d5e3bbd..30403539 100644
+--- a/http.c
++++ b/http.c
+@@ -589,7 +589,7 @@ static CURL *get_curl_handle(void)
+ 	 * precedence here, as in CURL.
+ 	 */
+ 	if (!curl_http_proxy) {
+-		if (!strcmp(http_auth.protocol, "https")) {
++		if (http_auth.protocol && !strcmp(http_auth.protocol, "https")) {
+ 			var_override(&curl_http_proxy, getenv("HTTPS_PROXY"));
+ 			var_override(&curl_http_proxy, getenv("https_proxy"));
+ 		} else {
+---

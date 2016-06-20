@@ -35,13 +35,10 @@ executable (git-log-times) and the README.
 
 --Kyle
 
-P.S.  Now if only there were a way to get git add/reset/checkout/stage -p
-      to use contrib/diff-highlight.  :)
-
-P.P.S. git am complains about 26 lines with whitespace errors.  They are
-       not whitespace errors.  The README is in markdown format and they
-       are explicit line break instructions to markdown (2 trailing blanks).
-       Removing them would corrupt the markdown output.
+P.S. git am complains about 26 lines with whitespace errors.  They are
+     not whitespace errors.  The README is in markdown format and they
+     are explicit line break instructions to markdown (2 trailing blanks).
+     Removing them would corrupt the markdown output.
 
 -- 8< --
 Subject: [PATCH] contrib/git-log-times: alternative git log --oneline utility
@@ -76,14 +73,14 @@ options each including its leading '-' or '--'.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  contrib/git-log-times/README        | 256 +++++++++++++++++++++
- contrib/git-log-times/git-log-times | 446 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 702 insertions(+)
+ contrib/git-log-times/git-log-times | 448 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 704 insertions(+)
  create mode 100644 contrib/git-log-times/README
  create mode 100755 contrib/git-log-times/git-log-times
 
 diff --git a/contrib/git-log-times/README b/contrib/git-log-times/README
 new file mode 100644
-index 00000000..434dda22
+index 00000000..65f1d2c5
 --- /dev/null
 +++ b/contrib/git-log-times/README
 @@ -0,0 +1,256 @@
@@ -202,8 +199,8 @@ index 00000000..434dda22
 +disable color for git log output.
 +
 +Additionally, the color of the three new items (dates, times and
-+initials) can, unsurprisingly, be controlled with the `color.diff.date`,
-+`color.diff.time` and `color.diff.initials` config options.
++initials) can be controlled with the `color.log-times.date`,
++`color.log-times.time` and `color.log-times.initials` config options.
 +
 +Running `git log-times --graph --max-parents=0` on the Git repository gives:
 +
@@ -335,9 +332,9 @@ index 00000000..434dda22
 +     This is the default behavior
 +
 +In addition to the above options, color output is controlled as normal
-+for `git log` with the addition of `color.diff.date`, `color.diff.time`
-+and `color.diff.initials` config options to alter the default colors
-+for dates, times and initials respectively.
++for `git log` with the addition of `color.log-times.date`,
++`color.log-times.time` and `color.log-times.initials` config options to alter
++the default colors for dates, times and initials respectively.
 +
 +Furthermore, default options may be set in the `log-times.defaults`
 +config value and they will be treated as though they appeared at
@@ -345,10 +342,10 @@ index 00000000..434dda22
 +(e.g. `git config log-times.defaults "--abbrev=8 --seconds"`).
 diff --git a/contrib/git-log-times/git-log-times b/contrib/git-log-times/git-log-times
 new file mode 100755
-index 00000000..e838f0fa
+index 00000000..4bc2012a
 --- /dev/null
 +++ b/contrib/git-log-times/git-log-times
-@@ -0,0 +1,446 @@
+@@ -0,0 +1,448 @@
 +#!/usr/bin/env perl
 +
 +# git-log-times.pl -- git log --oneline variation with dates, times and initials
@@ -391,11 +388,13 @@ index 00000000..e838f0fa
 +    other log options     See `git help log` for more information
 +
 +Default colors for dates, times and initials may be changed by setting
-+`color.diff.date`, `color.diff.time` and/or `color.diff.initials` config
-+values.  Dates and times are shown in the local time zone if TZ is not set
-+in the environment and the `--time-zone` option has not been used.  Default
-+options may be set in the `log-times.defaults` config value and they will be
-+treated as though they were listed first in the command line options list.
++`color.log-times.date`, `color.log-times.time` and/or
++`color.log-times.initials` config values.  Dates and times are shown in the
++local time zone if TZ is not set in the environment and the `--time-zone`
++option has not been used.  Default options may be set in the
++`log-times.defaults` config value and they will be treated as though they were
++listed first in the command line options list (e.g.
++`git config log-times.defaults "--abbrev=8 --seconds"`)
 +USAGE
 +
 +my $timeformat = "%H:%M";
@@ -659,9 +658,9 @@ index 00000000..e838f0fa
 +	$color = "always";
 +	$autocolor = "%C(auto)";
 +	$hashcolor= qx(git config --get-color color.diff.commit "yellow");
-+	$datecolor= qx(git config --get-color color.diff.date "bold blue");
-+	$timecolor= qx(git config --get-color color.diff.time "green") if $timeformat;
-+	$initialscolor = qx(git config --get-color color.diff.initials "red") if $iw;
++	$datecolor= qx(git config --get-color color.log-times.date "bold blue");
++	$timecolor= qx(git config --get-color color.log-times.time "green") if $timeformat;
++	$initialscolor = qx(git config --get-color color.log-times.initials "red") if $iw;
 +	$resetcolor = qx(git config --get-color "" "reset");
 +}
 +my $decopt = "";

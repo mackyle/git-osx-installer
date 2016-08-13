@@ -187,6 +187,7 @@ support Mac OS X 10.4 at all as released.
   - `patches/curl/stcompat.h`
   - `patches/curl/q/t_ntlm_no-one-shot.diff`
   - `patches/curl/q/t_securetransport_extra-data.diff`
+  - `patches/curl/q/t_vtls_reuse-client-session.diff`
   - `patches/curl/q/t_pinning_darwin.diff`
   - `patches/curl/q/t_pinning_dummy-key.diff`
 

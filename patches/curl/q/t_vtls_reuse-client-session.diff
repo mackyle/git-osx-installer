@@ -1,0 +1,33 @@
+Subject: [PATCH] allow session resume with same client certificate
+
+cURL 7.50.1 introduced a fix for CVE-2016-5419 that prevents resuming a TLS session
+whenever a client certificate is in use.  Stock cURL could have resumed a TLS session
+that was actually authenticated using a different client certificate without this fix.
+
+However, the darwin vtls used by the Git OS X Installer always includes the client
+certificate file name in the computed session id so it is incapable of resuming a TLS
+session with a mismatched client certificate.
+
+Re-enable the ability to resume TLS sessions that use client certificates to avoid the
+unnecessary performance penalty since the Git OS X Installer darwin vtls is not in any
+way vulnerable to the CVE-2016-5419 problem.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ lib/vtls/vtls.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/lib/vtls/vtls.c b/lib/vtls/vtls.c
+index 38637771..ed982d00 100644
+--- a/lib/vtls/vtls.c
++++ b/lib/vtls/vtls.c
+@@ -161,7 +161,6 @@ Curl_clone_ssl_config(struct ssl_config_data *source,
+     dest->clientcert = strdup(source->clientcert);
+     if(!dest->clientcert)
+       return FALSE;
+-    dest->sessionid = FALSE;
+   }
+   else
+     dest->clientcert = NULL;
+---

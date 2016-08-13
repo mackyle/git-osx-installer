@@ -24,10 +24,10 @@ index 8b185b67..6cafab7d 100644
  #define curlssl_init() (1)
  #define curlssl_cleanup() Curl_nop_stmt
 diff --git a/tests/runtests.pl b/tests/runtests.pl
-index 5d13fc83..467aa1a3 100755
+index b8497f9c..f0dbc1b2 100755
 --- a/tests/runtests.pl
 +++ b/tests/runtests.pl
-@@ -2353,6 +2353,7 @@ sub checksystem {
+@@ -2411,6 +2411,7 @@ sub checksystem {
             }
             elsif ($libcurl =~ /securetransport/i) {
                 $has_darwinssl=1;

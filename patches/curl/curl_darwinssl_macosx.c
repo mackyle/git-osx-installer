@@ -8,7 +8,7 @@
  * Copyright (C) 2012 - 2014, Nick Zitzmann, <nickzman@gmail.com>.
  * Copyright (C) 2012 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
- * MacOSX modifications copyright (C) 2014, 2015 Kyle J. McKay.
+ * MacOSX modifications copyright (C) 2014, 2015, 2016 Kyle J. McKay.
  * All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -73,7 +73,7 @@ static __inline void realfree(void *p) /* stupid curl */
 
 #include "curl_setup.h"
 
-#include "urldata.h" /* for the SessionHandle definition */
+#include "urldata.h" /* for the Curl_easy definition */
 
 #ifdef USE_DARWINSSL
 
@@ -139,6 +139,17 @@ static __inline void realfree(void *p) /* stupid curl */
 #include "curl_memory.h"
 /* The last #include file should be: */
 #include "memdebug.h"
+
+/* With cURL version 7.50.0 struct SessionHandle was renamed to struct Curl_easy
+ * so we use the new name (Curl_easy) but #define it to the old one for older
+ * versions of cURL.  In addition, two new functions Curl_ssl_sessionid_lock and
+ * Curl_ssl_sessionid_unlock must be used so those are defined away to nothing
+ * for older cURL versions as well. */
+#if LIBCURL_VERSION_NUM < 0x073200
+#define Curl_easy SessionHandle
+#define Curl_ssl_sessionid_lock(c) (void)0
+#define Curl_ssl_sessionid_unlock(c) (void)0
+#endif
 
 /* The following two functions were ripped from Apple sample code,
  * with some modifications: */
@@ -481,7 +492,7 @@ CF_INLINE bool is_file(const char *filename)
  *   0x20 => show even if empty (certs has 0 elements)
  *   0x80 => suppress dates display
  */
-static void show_certs_array(struct SessionHandle *data, const char *hdr,
+static void show_certs_array(struct Curl_easy *data, const char *hdr,
                              CFArrayRef certs, unsigned flags,
                              CSSM_TP_APPLE_EVIDENCE_INFO *evdnc)
 {
@@ -561,13 +572,11 @@ static void cleanup_mem(struct ssl_connect_data *connssl)
 static CURLcode darwinssl_connect_step1(struct connectdata *conn,
                                         int sockindex)
 {
-  struct SessionHandle *data = conn->data;
+  struct Curl_easy *data = conn->data;
   curl_socket_t sockfd = conn->sock[sockindex];
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
   size_t all_ciphers_count = 0UL, allowed_ciphers_count = 0UL, i;
   SSLCipherSuite *all_ciphers = NULL, *allowed_ciphers = NULL;
-  char *ssl_sessionid;
-  size_t ssl_sessionid_len;
   OSStatus err = noErr;
 
   cleanup_mem(connssl);
@@ -1002,51 +1011,60 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   }
 
   /* Check if there's a cached ID we can/should use here! */
-  if(!Curl_ssl_getsessionid(conn, (void **)&ssl_sessionid,
-                            &ssl_sessionid_len)) {
-    /* we got a session id, use it! */
-    err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
-    if(err != noErr) {
-      failf(data, "SSL: SSLSetPeerID() failed: OSStatus %d", err);
-      return CURLE_SSL_CONNECT_ERROR;
+  if(conn->ssl_config.sessionid) {
+    char *ssl_sessionid;
+    size_t ssl_sessionid_len;
+
+    Curl_ssl_sessionid_lock(conn);
+    if(!Curl_ssl_getsessionid(conn, (void **)&ssl_sessionid,
+                              &ssl_sessionid_len)) {
+      /* we got a session id, use it! */
+      err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
+      Curl_ssl_sessionid_unlock(conn);
+      if(err != noErr) {
+        failf(data, "SSL: SSLSetPeerID() failed: OSStatus %d", err);
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+      /* Informational message */
+      infof(data, "SSL re-using session ID\n");
     }
-    /* Informational message */
-    infof(data, "SSL re-using session ID\n");
-  }
-  /* If there isn't one, then let's make one up! This has to be done prior
-     to starting the handshake. */
-  else {
-    CURLcode result;
+    /* If there isn't one, then let's make one up! This has to be done prior
+       to starting the handshake. */
+    else {
+      CURLcode result;
 #if LIBCURL_VERSION_NUM >= 0x072700
 #define PKSTR data->set.str[STRING_SSL_PINNEDPUBLICKEY]
 #else
 #define PKSTR NULL
 #endif
 #define NSTR(s) ((s)?(s):"")
-    ssl_sessionid = NULL;
-    asprintf(&ssl_sessionid, "%s:%s:%s:%d:%d:%s:%hu",
-             NSTR(data->set.str[STRING_SSL_CAFILE]),
-             NSTR(PKSTR), NSTR(data->set.str[STRING_CERT]),
-             data->set.ssl.verifypeer, data->set.ssl.verifyhost,
-             NSTR(conn->host.name), (unsigned short)conn->remote_port);
-    if(ssl_sessionid == NULL) {
-      failf(data, "SSL: asprintf failed: out of memory");
-      return CURLE_SSL_CONNECT_ERROR;
-    }
-    ssl_sessionid_len = strlen(ssl_sessionid);
+      ssl_sessionid = NULL;
+      asprintf(&ssl_sessionid, "%s:%s:%s:%d:%d:%s:%hu",
+               NSTR(data->set.str[STRING_SSL_CAFILE]),
+               NSTR(PKSTR), NSTR(data->set.str[STRING_CERT]),
+               data->set.ssl.verifypeer, data->set.ssl.verifyhost,
+               NSTR(conn->host.name), (unsigned short)conn->remote_port);
+      if(ssl_sessionid == NULL) {
+        failf(data, "SSL: asprintf failed: out of memory");
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+      ssl_sessionid_len = strlen(ssl_sessionid);
 #undef NSTR
 #undef PKSTR
 
-    err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
-    if(err != noErr) {
-      failf(data, "SSL: SSLSetPeerID() failed: OSStatus %d", err);
-      return CURLE_SSL_CONNECT_ERROR;
-    }
+      err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
+      if(err != noErr) {
+        Curl_ssl_sessionid_unlock(conn);
+        failf(data, "SSL: SSLSetPeerID() failed: OSStatus %d", err);
+        return CURLE_SSL_CONNECT_ERROR;
+      }
 
-    result = Curl_ssl_addsessionid(conn, ssl_sessionid, ssl_sessionid_len);
-    if(result) {
-      failf(data, "failed to store ssl session");
-      return result;
+      result = Curl_ssl_addsessionid(conn, ssl_sessionid, ssl_sessionid_len);
+      Curl_ssl_sessionid_unlock(conn);
+      if(result) {
+        failf(data, "failed to store ssl session");
+        return result;
+      }
     }
   }
 
@@ -1082,7 +1100,7 @@ is_ssl_ctx_connected(SSLContextRef ssl_ctx)
 static CURLcode
 darwinssl_connect_step2(struct connectdata *conn, int sockindex)
 {
-  struct SessionHandle *data = conn->data;
+  struct Curl_easy *data = conn->data;
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
   OSStatus err;
   SSLCipherSuite cipher;
@@ -1321,7 +1339,7 @@ static CURLcode
 darwinssl_connect_step3(struct connectdata *conn,
                         int sockindex)
 {
-  /*struct SessionHandle *data = conn->data;*/
+  /*struct Curl_easy *data = conn->data;*/
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
 
   /* There is no step 3! */
@@ -1339,7 +1357,7 @@ darwinssl_connect_common(struct connectdata *conn,
                          bool *done)
 {
   CURLcode result;
-  struct SessionHandle *data = conn->data;
+  struct Curl_easy *data = conn->data;
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
   curl_socket_t sockfd = conn->sock[sockindex];
   long timeout_ms;
@@ -1489,8 +1507,8 @@ void Curl_darwinssl_close(struct connectdata *conn, int sockindex)
   cleanup_mem(connssl);
 }
 
-void Curl_darwinssl_close_all(struct SessionHandle *data);
-void Curl_darwinssl_close_all(struct SessionHandle *data)
+void Curl_darwinssl_close_all(struct Curl_easy *data);
+void Curl_darwinssl_close_all(struct Curl_easy *data)
 {
   /* SecureTransport doesn't separate sessions from contexts, so... */
   (void)data;
@@ -1499,7 +1517,7 @@ void Curl_darwinssl_close_all(struct SessionHandle *data)
 int Curl_darwinssl_shutdown(struct connectdata *conn, int sockindex)
 {
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
-  struct SessionHandle *data = conn->data;
+  struct Curl_easy *data = conn->data;
   ssize_t nread;
   int what;
   int rc;
@@ -1651,7 +1669,7 @@ static ssize_t darwinssl_send(struct connectdata *conn,
                               size_t len,
                               CURLcode *curlcode)
 {
-  /*struct SessionHandle *data = conn->data;*/
+  /*struct Curl_easy *data = conn->data;*/
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
   size_t processed = 0UL;
   OSStatus err;
@@ -1717,7 +1735,7 @@ static ssize_t darwinssl_recv(struct connectdata *conn,
                               size_t buffersize,
                               CURLcode *curlcode)
 {
-  /*struct SessionHandle *data = conn->data;*/
+  /*struct Curl_easy *data = conn->data;*/
   struct ssl_connect_data *connssl = &conn->ssl[num];
   size_t processed = 0UL;
   OSStatus err = SSLRead(connssl->ssl_ctx, buf, buffersize, &processed);

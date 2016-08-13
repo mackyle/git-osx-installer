@@ -27,9 +27,9 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  Makefile         |  1 +
  config.mak.uname |  1 +
- sys-utils.c      | 69 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ sys-utils.c      | 76 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  sys-utils.h      | 10 ++++++++
- 4 files changed, 81 insertions(+)
+ 4 files changed, 88 insertions(+)
  create mode 100644 sys-utils.c
  create mode 100644 sys-utils.h
 
@@ -59,10 +59,10 @@ index a88f1398..d9294a8c 100644
  		compat/win32/dirent.o
 diff --git a/sys-utils.c b/sys-utils.c
 new file mode 100644
-index 00000000..ffc467f8
+index 00000000..e37148fa
 --- /dev/null
 +++ b/sys-utils.c
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,76 @@
 +#include "cache.h"
 +#include "sys-utils.h"
 +
@@ -73,7 +73,7 @@ index 00000000..ffc467f8
 + * resolution (64 bits) to lowest resolution (32 bits or less).
 + */
 +
-+#if defined(_SC_PHYS_PAGES) || defined(_SC_AIX_REALMEM)
++#if defined(_SC_PHYS_PAGES) || defined(_SC_AIX_REALMEM) || defined(HAVE_BSD_SYSCTL)
 +	long phys_pages;
 +#endif
 +
@@ -90,9 +90,9 @@ index 00000000..ffc467f8
 +		return (uint64_t)statex.ullTotalPhys;
 +#  endif
 +#elif defined(HAVE_BSD_SYSCTL)
++	size_t len;
 +#  if defined(HW_MEMSIZE) || defined(HW_PHYSMEM64) || defined(HW_PHYSMEM)
 +	int mib[2];
-+	size_t len;
 +#    if defined(HW_MEMSIZE) || defined(HW_PHYSMEM64)
 +	uint64_t memsize;
 +#    endif
@@ -104,16 +104,22 @@ index 00000000..ffc467f8
 +#    ifdef HW_MEMSIZE
 +	mib[1] = HW_MEMSIZE;
 +	len = sizeof(memsize);
++	memsize = 0;
 +	if (!sysctl(mib, 2, &memsize, &len, NULL, 0))
 +		return memsize;
 +#    endif
 +#    ifdef HW_PHYSMEM64
 +	mib[1] = HW_PHYSMEM64;
 +	len = sizeof(memsize);
++	memsize = 0;
 +	if (!sysctl(mib, 2, &memsize, &len, NULL, 0))
 +		return memsize;
 +#    endif
 +#  endif /* HW_MEMSIZE || HW_PHYSMEM64 || HW_PHYSMEM */
++	len = sizeof(phys_pages);
++	phys_pages = 0;
++	if (!sysctlbyname("hw.availpages", &phys_pages, &len, NULL, 0) && phys_pages > 0)
++		return (uint64_t)phys_pages * (uint64_t)getpagesize();
 +#endif /* HAVE_BSD_SYSCTL */
 +#ifdef _SC_PHYS_PAGES
 +	if ((phys_pages = (long)sysconf(_SC_PHYS_PAGES)) > 0)
@@ -126,6 +132,7 @@ index 00000000..ffc467f8
 +#if defined(HAVE_BSD_SYSCTL) && defined(HW_PHYSMEM)
 +	mib[1] = HW_PHYSMEM;
 +	len = sizeof(physmem);
++	physmem = 0;
 +	if (!sysctl(mib, 2, &physmem, &len, NULL, 0) && physmem > 0)
 +		return physmem;
 +#endif /* defined(HAVE_BSD_SYSCTL) && defined(HW_PHYSMEM) */

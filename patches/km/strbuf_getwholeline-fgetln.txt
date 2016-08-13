@@ -80,7 +80,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  3 files changed, 35 insertions(+), 8 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index e11e626d..c07f12ab 100644
+index 4579eab4..a0a87a48 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -367,6 +367,8 @@ all::
@@ -104,7 +104,7 @@ index e11e626d..c07f12ab 100644
  NO_TCLTK = NoThanks
  endif
 diff --git a/config.mak.uname b/config.mak.uname
-index a88f1398..e2d68a2b 100644
+index 4cd62bda..ae2dfa03 100644
 --- a/config.mak.uname
 +++ b/config.mak.uname
 @@ -113,6 +113,7 @@ ifeq ($(uname_S),Darwin)
@@ -115,7 +115,7 @@ index a88f1398..e2d68a2b 100644
  endif
  ifeq ($(uname_S),SunOS)
  	NEEDS_SOCKET = YesPlease
-@@ -206,6 +207,7 @@ ifeq ($(uname_S),FreeBSD)
+@@ -207,6 +208,7 @@ ifeq ($(uname_S),FreeBSD)
  	HAVE_PATHS_H = YesPlease
  	GMTIME_UNRELIABLE_ERRORS = UnfortunatelyYes
  	HAVE_BSD_SYSCTL = YesPlease
@@ -123,7 +123,7 @@ index a88f1398..e2d68a2b 100644
  endif
  ifeq ($(uname_S),OpenBSD)
  	NO_STRCASESTR = YesPlease
-@@ -216,6 +218,7 @@ ifeq ($(uname_S),OpenBSD)
+@@ -217,6 +219,7 @@ ifeq ($(uname_S),OpenBSD)
  	BASIC_LDFLAGS += -L/usr/local/lib
  	HAVE_PATHS_H = YesPlease
  	HAVE_BSD_SYSCTL = YesPlease
@@ -131,7 +131,7 @@ index a88f1398..e2d68a2b 100644
  endif
  ifeq ($(uname_S),MirBSD)
  	NO_STRCASESTR = YesPlease
-@@ -224,6 +227,7 @@ ifeq ($(uname_S),MirBSD)
+@@ -225,6 +228,7 @@ ifeq ($(uname_S),MirBSD)
  	NEEDS_LIBICONV = YesPlease
  	HAVE_PATHS_H = YesPlease
  	HAVE_BSD_SYSCTL = YesPlease
@@ -139,7 +139,7 @@ index a88f1398..e2d68a2b 100644
  endif
  ifeq ($(uname_S),NetBSD)
  	ifeq ($(shell expr "$(uname_R)" : '[01]\.'),2)
-@@ -235,6 +239,7 @@ ifeq ($(uname_S),NetBSD)
+@@ -236,6 +240,7 @@ ifeq ($(uname_S),NetBSD)
  	NO_MKSTEMPS = YesPlease
  	HAVE_PATHS_H = YesPlease
  	HAVE_BSD_SYSCTL = YesPlease
@@ -148,10 +148,10 @@ index a88f1398..e2d68a2b 100644
  ifeq ($(uname_S),AIX)
  	DEFAULT_PAGER = more
 diff --git a/strbuf.c b/strbuf.c
-index 2c08dbb1..a5200962 100644
+index f3bd5719..e469210d 100644
 --- a/strbuf.c
 +++ b/strbuf.c
-@@ -501,15 +501,31 @@ int strbuf_getwholeline(struct strbuf *sb, FILE *fp, int term)
+@@ -514,15 +514,31 @@ int strbuf_getwholeline(struct strbuf *sb, FILE *fp, int term)
  		return EOF;
  
  	strbuf_reset(sb);

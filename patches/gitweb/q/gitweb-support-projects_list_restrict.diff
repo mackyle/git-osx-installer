@@ -30,7 +30,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 22 insertions(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 07c32e65..1a53cabc 100755
+index 7a38e475..25207f5d 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -130,6 +130,14 @@ our $logo_label = "git homepage";

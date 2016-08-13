@@ -1,7 +1,7 @@
 /*
 
 build-prefix.h - build prefix header for building git
-Copyright (C) 2014,2015 Kyle J. McKay.  All rights reserved.
+Copyright (C) 2014,2015,2016 Kyle J. McKay.  All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -51,3 +51,4 @@ extern const char *gettext(const char *msgid);
 extern const char *ngettext(const char *msgid, const char *plu, unsigned long n);
 extern int gettext_width(const char *s);
 const char *get_preferred_languages(void);
+extern int is_utf8_locale(void);

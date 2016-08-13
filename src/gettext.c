@@ -356,6 +356,11 @@ int gettext_width(const char *s)
 	return is_utf8_codeset ? utf8_strwidth(s) : strlen(s);
 }
 
+int is_utf8_locale(void)
+{
+	return is_utf8_codeset;
+}
+
 static CFStringRef get_dict_str(CFDictionaryRef d, CFStringRef k)
 {
 	CFStringRef v;

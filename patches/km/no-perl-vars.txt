@@ -18,10 +18,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 7 insertions(+)
 
 diff --git a/run-command.c b/run-command.c
-index 2d662801..79420e46 100644
+index af0c8a10..51f33588 100644
 --- a/run-command.c
 +++ b/run-command.c
-@@ -404,6 +404,13 @@ fail_pipe:
+@@ -404,6 +404,13 @@ int start_command(struct child_process *cmd)
  					unsetenv(*cmd->env);
  			}
  		}

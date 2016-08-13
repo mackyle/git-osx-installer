@@ -11,7 +11,7 @@ Hopefully this will be empty most of the time.
  3 files changed, 14 insertions(+), 7 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 2fddf750..a6ef6fba 100755
+index 33d701d8..74d45769 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -664,9 +664,11 @@ sub feature_extra_branch_refs {

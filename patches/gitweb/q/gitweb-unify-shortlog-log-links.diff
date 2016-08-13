@@ -14,7 +14,7 @@ Signed-off-by: Petr Baudis <petr.baudis@novartis.com>
  1 file changed, 36 insertions(+), 12 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 1b02d72c..ec4b4482 100755
+index 08bcef66..3f8c7318 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -4350,7 +4350,7 @@ sub git_print_page_nav {

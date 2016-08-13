@@ -14,12 +14,12 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 50 insertions(+), 19 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index d3ac2e8e..2a8e1425 100755
+index 38e6c3ff..d92d992e 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -2254,13 +2254,13 @@ sub format_ref_marker {
  					hash=>$dest
- 				)}, $name);
+ 				)}, esc_html($name));
  
 -			$markers .= " <span class=\"".esc_attr($class)."\" title=\"".esc_attr($ref)."\">" .
 +			$markers .= "<span class=\"".esc_attr($class)."\" title=\"".esc_attr($ref)."\">" .

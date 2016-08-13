@@ -19,7 +19,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 60 insertions(+), 24 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index 7d4c6dfb..4673e93c 100644
+index 450ab97a..1b628533 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
 @@ -629,6 +629,11 @@ This variable matters only when using persistent web environments that
@@ -35,7 +35,7 @@ index 7d4c6dfb..4673e93c 100644
  Other variables
  ~~~~~~~~~~~~~~~
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 1ddda28e..12cd7f1f 100755
+index 46dfb04e..c4df54c7 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -452,7 +452,8 @@ our %feature = (

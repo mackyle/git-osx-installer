@@ -15,7 +15,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 209 insertions(+), 21 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 12beab7d..7512e472 100755
+index 86ad7c20..f8458ac2 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -304,20 +304,136 @@ our %highlight_basename = (

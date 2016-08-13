@@ -15,7 +15,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 29795b2e..0e24b601 100755
+index ac46d3d4..cd95cba1 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -1852,6 +1852,8 @@ sub is_valid_refname {

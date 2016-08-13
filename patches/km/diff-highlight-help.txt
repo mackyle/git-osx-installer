@@ -1,0 +1,28 @@
+From 1bf80a846586b4e00315fcc3d972e0a420592732 Mon Sep 17 00:00:00 2001
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Date: Fri, 12 Aug 2016 18:27:28 -0700
+Subject: [PATCH] contrib/diff-highlight: mention interactive.diffFilter in
+ README
+
+If the three pager items are being set then the diffFilter item
+is probably desired as well.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ contrib/diff-highlight/README | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/contrib/diff-highlight/README b/contrib/diff-highlight/README
+index 836b97a7..1a22417e 100644
+--- a/contrib/diff-highlight/README
++++ b/contrib/diff-highlight/README
+@@ -56,6 +56,8 @@ following in your git configuration:
+ 	log = diff-highlight | less
+ 	show = diff-highlight | less
+ 	diff = diff-highlight | less
++[interactive]
++	diffFilter = diff-highlight
+ ---------------------------------------------
+ 
+ 
+---

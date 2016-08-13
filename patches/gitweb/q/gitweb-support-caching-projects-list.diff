@@ -39,7 +39,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  3 files changed, 251 insertions(+), 20 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index d0fde38c..7d4c6dfb 100644
+index f77628cf..450ab97a 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
 @@ -428,7 +428,8 @@ $frontpage_no_project_list::
@@ -108,7 +108,7 @@ index d0fde38c..7d4c6dfb 100644
  Some optional features and policies
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index ad3edbe1..17cc6573 100755
+index 1a3ed1a3..7fce8873 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -19,6 +19,7 @@ use File::Find qw();

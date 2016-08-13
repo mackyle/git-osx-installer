@@ -52,7 +52,7 @@ index cd194d05..8aab6c99 100644
  GITWEB-BUILD-OPTIONS: FORCE
  	@rm -f $@+
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 7512e472..f3d3a864 100755
+index f8458ac2..61f23e33 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -203,6 +203,10 @@ our @diff_opts = ('-M'); # taken from git_commit

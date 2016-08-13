@@ -22,7 +22,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 33 insertions(+), 15 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f7cbb143..371f9199 100755
+index f3b4ace4..64c4daa1 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -480,8 +480,11 @@ our %feature = (

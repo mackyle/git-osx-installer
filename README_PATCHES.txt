@@ -153,13 +153,15 @@ Git Patches
   [1] <http://repo.or.cz/w/girocco.git>  
   [2] <http://repo.or.cz/w/git/gitweb.git/blob/girocco:README_FIRST.txt>
 
-* contrib/git-log-times:
+* contrib/git-log-compact:
 
-  - `patches/km/contrib-git-log-times.txt`
+  - `patches/km/contrib-git-log-compact.txt`
 
-  My own patch that adds contrib/git-log-times a git log --oneline alternative
-  that includes dates, times and initials.  See the README file in the patch.
-  Has not been posted elsewhere.
+  My own patch that adds contrib/git-log-compact a git log --oneline alternative
+  that includes dates, times and initials.  See the README file in the patch or
+  visit [3] for detailed information and screen shots.
+
+  [3] <https://mackyle.github.io/git-log-compact/>
 
 
 Curl Patches

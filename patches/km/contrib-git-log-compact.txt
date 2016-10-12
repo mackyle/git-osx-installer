@@ -1,9 +1,27 @@
 From: Kyle J. McKay <mackyle@gmail.com>
-Subject: [PATCH/RFC] git log --oneline alterative with dates, times and initials
+Subject: [ANNOUNCE] git-log-compact v1.0
+
+The git-log-compact script provides a compact alternative to the
+`git log --oneline` output that includes dates, times and author
+and/or committer initials in a space efficient output format.
+
+`git-log-compact` is intended to fill the gap between the single line
+`--oneline` log output format and the multiline `--pretty=short` /
+`--pretty=medium` output formats.
+
+It is not strictly a one line per commit output format (but almost) and
+while it only shows the title of each commit (like the short format) it
+does include author and date information (similarly to the medium format)
+except that timestamps are shown very compactly and author/committer
+names are shown as initials.
+
+This allows one to get a complete view of repository activity in a very
+compact output format that can show many commits per screen full and is
+fully compatible with the `--graph` option.
 
 Simple example output from the Git repository:
 
-git log-times --graph --date-order --decorate --no-merges -n 5 v2.5.3
+git log-compact --graph --date-order --decorate --no-merges -n 5 v2.5.3
 
     === 2015-09-17 ===
   * ee6ad5f4 12:16 jch (tag: v2.5.3) Git 2.5.3
@@ -21,17 +39,17 @@ shows root commits and eliminates confusion over whether or not two adjacent
 lines in the output are related as parent/child (the --show-linear-break
 option does not work with --graph).
 
-The git-log-times utility is the result.  Except for --notes, --pretty and
+The git-log-compact utility is the result.  Except for --notes, --pretty and
 --format options (which would make the output a non-oneline format) any
 other `git log` option may be used (including things like --cherry-mark,
 --patch, --raw, --stat, --summary, --show-linear-break etc.),
 
-There are a few new options specific to git-log-times which are described
-in the README and the `git-log-times -h` output that can be used to alter
+There are a few new options specific to git-log-compact which are described
+in the README and the `git-log-compact -h` output that can be used to alter
 the dates, times and/or initials displayed.
 
-The patch below adds a contrib/git-log-times directory containing the
-executable (git-log-times) and the README.
+The patch below adds a contrib/git-log-compact directory containing the
+executable (git-log-compact) and the README.
 
 --Kyle
 
@@ -40,11 +58,15 @@ P.S. git am complains about 26 lines with whitespace errors.  They are
      are explicit line break instructions to markdown (2 trailing blanks).
      Removing them would corrupt the markdown output.
 
--- 8< --
-Subject: [PATCH] contrib/git-log-times: alternative git log --oneline utility
+P.P.S A picture is worth a thousand words, so the formatted help text,
+      and several images of actual git-log-compact output are available at:
+      https://mackyle.github.io/git-log-compact/
 
-The git-log-times utility provides an alternative interface to using
-git log --oneline that includes dates, times and author initials.
+-- 8< --
+Subject: [PATCH] contrib/git-log-compact: compact git log --oneline alternative
+
+A compact alternative to `git log --oneline` that includes dates, times
+and author and/or committer initials in a space efficient output format.
 
 Additionally root commits are marked for easy identification and
 when using --graph mode breaks are inserted when necessary to prevent
@@ -59,39 +81,51 @@ Output will be colorized using the same rules used for git log
 output.
 
 The three extra items in the output (dates, times and initials) use
-'color.diff.date', 'color.diff.time' and 'color.diff.initials' to
-change their default color.
+'color.log-compact.date', 'color.log-compact.time' and
+'color.log-compact.initials' to change their default color.
 
-Other options specific to git-log-times may be shown by using the
--h option (i.e. `git-log-times -h`).
+Other options specific to git-log-compact may be shown by using the
+-h option (i.e. `git-log-compact -h`).
 
 One or more default options which behave as though they are the
 first option argument(s) on the command line may be set by assigning
-them to the 'log-times.defaults' config value as space-separated
+them to the 'log-compact.defaults' config value as space-separated
 options each including its leading '-' or '--'.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- contrib/git-log-times/README        | 256 +++++++++++++++++++++
- contrib/git-log-times/git-log-times | 448 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 704 insertions(+)
- create mode 100644 contrib/git-log-times/README
- create mode 100755 contrib/git-log-times/git-log-times
+ contrib/git-log-compact/README          | 268 ++++++++++++++++++
+ contrib/git-log-compact/git-log-compact | 464 ++++++++++++++++++++++++++++++++
+ 2 files changed, 732 insertions(+)
+ create mode 100644 contrib/git-log-compact/README
+ create mode 100755 contrib/git-log-compact/git-log-compact
 
-diff --git a/contrib/git-log-times/README b/contrib/git-log-times/README
+diff --git a/contrib/git-log-compact/README b/contrib/git-log-compact/README
 new file mode 100644
-index 00000000..65f1d2c5
+index 00000000..0ae0ccc2
 --- /dev/null
-+++ b/contrib/git-log-times/README
-@@ -0,0 +1,256 @@
-+git-log-times
-+=============
++++ b/contrib/git-log-compact/README
+@@ -0,0 +1,268 @@
++git-log-compact
++===============
 +
-+An alterative to `git log --oneline` that includes dates, times and
-+author initials in a compact one line output format.
++A compact alternative to `git log --oneline` that includes dates, times
++and author and/or committer initials in a space efficient output format.
++
++The `git-log-compact` script is intended to fill the gap between the
++`--oneline` log output format and the `--pretty=short`/`--pretty=medium`
++output formats.  It is not strictly a one line per commit output format
++(but almost) and while it only shows the title of each commit (like the
++`--pretty=short` format) it does include author and date information
++(like the `--pretty=medium` format) except that timestamps are shown
++very compactly and author/committer names are shown as initials.
++
++This allows one to get a complete view of repository activity in a very
++compact output format that can show many commits per screen full and is
++fully compatible with the `--graph` option.
 +
 +The `--notes`, `--pretty` and `--format` options are not allowed but any
-+other `git log` options should work fine including `--graph`.
++other `git log` options should work fine (especially `--graph`).
 +
 +In both `--graph` and non `--graph` modes:
 +
@@ -105,26 +139,26 @@ index 00000000..65f1d2c5
 +Installation
 +------------
 +
-+Put the `git-log-times` executable file in one of the directories
++Put the `git-log-compact` executable file in one of the directories
 +included in the `PATH` environment variable.
 +
-+Optionally set a global alias to save typing such as `lo` like so:
++Optionally set a global alias to save typing such as `lc` like so:
 +
-+    git config --global alias.lo log-times
++    git config --global alias.lc log-compact
 +
 +Optionally set global default options such as `--two-initials` and
 +`--abbrev=8` like so:
 +
-+    git config --global log-times.defaults "--two-initials --abbrev=8"
++    git config --global log-compact.defaults "--two-initials --abbrev=8"
 +
 +
 +Dates & Times
 +-------------
 +
 +Dates and times are shown in the local timezone.  Set the TZ variable
-+before running `git log-times` (e.g. `TZ=UTC git log-times` to show
++before running `git log-compact` (e.g. `TZ=UTC git log-compact` to show
 +dates and times in UTC) or use the `--time-zone=` option (e.g.
-+`git log-times --time-zone=UTC`) to change that.
++`git log-compact --time-zone=UTC`) to change that.
 +
 +Dates are shown on a date line all by themselves like so:
 +
@@ -159,7 +193,7 @@ index 00000000..65f1d2c5
 +Examples
 +--------
 +
-+For example, running `git log-times --decorate --graph -n 17 v2.6.1`
++For example, running `git log-compact --decorate --graph -n 17 v2.6.1`
 +on the Git repository produces this output (which will be colorized
 +on the terminal if color is enabled):
 +
@@ -199,10 +233,10 @@ index 00000000..65f1d2c5
 +disable color for git log output.
 +
 +Additionally, the color of the three new items (dates, times and
-+initials) can be controlled with the `color.log-times.date`,
-+`color.log-times.time` and `color.log-times.initials` config options.
++initials) can be controlled with the `color.log-compact.date`,
++`color.log-compact.time` and `color.log-compact.initials` config options.
 +
-+Running `git log-times --graph --max-parents=0` on the Git repository gives:
++Running `git log-compact --graph --max-parents=0` on the Git repository gives:
 +
 +      === 2009-04-24 ===
 +    *_0ca71b37_11:13 ap  basic options parsing and whatnot.
@@ -225,7 +259,7 @@ index 00000000..65f1d2c5
 +space there.  In `--graph` mode, all the spaces between the commit mark
 +(e.g. `*`) and the hash are turned into `_`.
 +
-+Running `git log-times --decorate --graph --no-merges -n 13 v2.6.1`
++Running `git log-compact --decorate --graph --no-merges -n 13 v2.6.1`
 +on the Git repository results in this output:
 +
 +      === 2015-09-28 ===
@@ -321,7 +355,7 @@ index 00000000..65f1d2c5
 +
 +   * `--time-zone=zone`  
 +     set the TZ environment variable to `zone`  
-+     This is an alterative to setting TZ before running `git log-times`
++     This is an alterative to setting TZ before running `git log-compact`
 +     and will affect the time zone dates and times are displayed in.
 +
 +   * `--weekday`  
@@ -332,23 +366,23 @@ index 00000000..65f1d2c5
 +     This is the default behavior
 +
 +In addition to the above options, color output is controlled as normal
-+for `git log` with the addition of `color.log-times.date`,
-+`color.log-times.time` and `color.log-times.initials` config options to alter
-+the default colors for dates, times and initials respectively.
++for `git log` with the addition of `color.log-compact.date`,
++`color.log-compact.time` and `color.log-compact.initials` config options
++to alter the default colors for dates, times and initials respectively.
 +
-+Furthermore, default options may be set in the `log-times.defaults`
++Furthermore, default options may be set in the `log-compact.defaults`
 +config value and they will be treated as though they appeared at
-+the very beginning of the `git log-times` command line option list
-+(e.g. `git config log-times.defaults "--abbrev=8 --seconds"`).
-diff --git a/contrib/git-log-times/git-log-times b/contrib/git-log-times/git-log-times
++the very beginning of the `git log-compact` command line option list
++(e.g. `git config log-compact.defaults "--abbrev=8 --seconds"`).
+diff --git a/contrib/git-log-compact/git-log-compact b/contrib/git-log-compact/git-log-compact
 new file mode 100755
-index 00000000..4bc2012a
+index 00000000..8c8636d7
 --- /dev/null
-+++ b/contrib/git-log-times/git-log-times
-@@ -0,0 +1,448 @@
++++ b/contrib/git-log-compact/git-log-compact
+@@ -0,0 +1,464 @@
 +#!/usr/bin/env perl
 +
-+# git-log-times.pl -- git log --oneline variation with dates, times and initials
++# git-log-compact.pl -- compact git log --oneline alternative with dates, times and initials
 +# Copyright (C) 2015,2016 Kyle J. McKay <mackyle@gmail.com>.  All rights reserved.
 +
 +# License GPL v2
@@ -363,7 +397,7 @@ index 00000000..4bc2012a
 +use Encode;
 +
 +my $USAGE = <<'USAGE';
-+usage: git%slog-times [<options>] [<revision-range>] [[--] <path>...]
++usage: git%slog-compact [<options>] [<revision-range>] [[--] <path>...]
 +
 +    -h                    Show this help
 +    --seconds             Use HH:MM:SS instead of just the default HH:MM
@@ -388,13 +422,13 @@ index 00000000..4bc2012a
 +    other log options     See `git help log` for more information
 +
 +Default colors for dates, times and initials may be changed by setting
-+`color.log-times.date`, `color.log-times.time` and/or
-+`color.log-times.initials` config values.  Dates and times are shown in the
++`color.log-compact.date`, `color.log-compact.time` and/or
++`color.log-compact.initials` config values.  Dates and times are shown in the
 +local time zone if TZ is not set in the environment and the `--time-zone`
 +option has not been used.  Default options may be set in the
-+`log-times.defaults` config value and they will be treated as though they were
++`log-compact.defaults` config value and they will be treated as though they were
 +listed first in the command line options list (e.g.
-+`git config log-times.defaults "--abbrev=8 --seconds"`)
++`git config log-compact.defaults "--abbrev=8 --seconds"`)
 +USAGE
 +
 +my $timeformat = "%H:%M";
@@ -493,6 +527,22 @@ index 00000000..4bc2012a
 +	return $indent;
 +}
 +
++sub get_defaults {
++	# defaults are cumulative, but an empty setting resets
++	my @defaults = ();
++	my $opts = qx(git config --get-all log-compact.defaults 2>/dev/null);
++	chomp($opts);
++	foreach (split(/\r\n|\r|\n/, $opts, -1)) {
++		s/^\s+//; s/\s+$//;
++		if ($_ eq "") {
++			@defaults = ();
++			next;
++		}
++		push(@defaults, $_);
++	}
++	return split(" ", join(" ", @defaults));
++}
++
 +system("git rev-parse --git-dir >/dev/null") == 0 or exit(1);
 +my ($usemark, $usegraph, $usereflog, $useboundary, $useleftright, $usecherry, $setusecolor, $usecolor, $usecad);
 +my @args = ();
@@ -505,7 +555,7 @@ index 00000000..4bc2012a
 +my $iw2 = "";
 +my ($committer, $author, $ivar, $ivar2);
 +$ivar = \$author;
-+foreach my $arg (split(" ", qx(git config --get log-times.defaults 2>/dev/null)), @ARGV) {
++foreach my $arg (get_defaults(), @ARGV) {
 +	my $nextisgrep;
 +	if ($sawdashdash || $lastwasgrep) {
 +		push(@args, $arg);
@@ -658,9 +708,9 @@ index 00000000..4bc2012a
 +	$color = "always";
 +	$autocolor = "%C(auto)";
 +	$hashcolor= qx(git config --get-color color.diff.commit "yellow");
-+	$datecolor= qx(git config --get-color color.log-times.date "bold blue");
-+	$timecolor= qx(git config --get-color color.log-times.time "green") if $timeformat;
-+	$initialscolor = qx(git config --get-color color.log-times.initials "red") if $iw;
++	$datecolor= qx(git config --get-color color.log-compact.date "bold blue");
++	$timecolor= qx(git config --get-color color.log-compact.time "green") if $timeformat;
++	$initialscolor = qx(git config --get-color color.log-compact.initials "red") if $iw;
 +	$resetcolor = qx(git config --get-color "" "reset");
 +}
 +my $decopt = "";

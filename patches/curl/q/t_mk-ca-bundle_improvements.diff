@@ -3,31 +3,29 @@ Subject: [PATCH] mk-ca-bundle.pl: various improvements
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 
 ---
- lib/mk-ca-bundle.pl | 164 +++++++++++++++++++++++++++++++++-------------------
- 1 file changed, 106 insertions(+), 58 deletions(-)
+ lib/mk-ca-bundle.pl | 207 +++++++++++++++++++++++++++++++---------------------
+ 1 file changed, 122 insertions(+), 85 deletions(-)
 
 diff --git a/lib/mk-ca-bundle.pl b/lib/mk-ca-bundle.pl
-index 5a1435c5..f2bfe5d2 100755
+index 9574f1db..764f153e 100755
 --- a/lib/mk-ca-bundle.pl
 +++ b/lib/mk-ca-bundle.pl
 @@ -8,6 +8,9 @@
  # *
- # * Copyright (C) 1998 - 2014, Daniel Stenberg, <daniel@haxx.se>, et al.
+ # * Copyright (C) 1998 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
  # *
-+# * Additional modifications copyright (C) 2014,2015 Kyle J. McKay.
++# * Additional modifications copyright (C) 2014,2015,2016 Kyle J. McKay.
 +# * All rights reserved.
 +# *
  # * This software is licensed as described in the file COPYING, which
  # * you should have received as part of this distribution. The terms
  # * are also available at https://curl.haxx.se/docs/copyright.html.
-@@ -32,16 +35,33 @@
- #
+@@ -34,16 +37,33 @@ use Encode;
  use Getopt::Std;
  use MIME::Base64;
--use LWP::UserAgent;
  use strict;
--use vars qw($opt_b $opt_d $opt_f $opt_h $opt_i $opt_l $opt_n $opt_p $opt_q $opt_s $opt_t $opt_u $opt_v $opt_w);
-+use vars qw($opt_b $opt_d $opt_f $opt_h $opt_i $opt_l $opt_n $opt_p $opt_q $opt_s $opt_t $opt_u $opt_v $opt_w $have_lwp $have_sha1);
+-use vars qw($opt_b $opt_d $opt_f $opt_h $opt_i $opt_k $opt_l $opt_m $opt_n $opt_p $opt_q $opt_s $opt_t $opt_u $opt_v $opt_w);
++use vars qw($opt_b $opt_d $opt_f $opt_h $opt_i $opt_k $opt_l $opt_m $opt_n $opt_p $opt_q $opt_s $opt_t $opt_u $opt_v $opt_w $have_lwp $have_sha1);
  use List::Util;
  use Text::Wrap;
 -my $MOD_SHA = "Digest::SHA";
@@ -59,32 +57,42 @@ index 5a1435c5..f2bfe5d2 100755
 +  } ||
 +  undef($have_sha1);
  }
+-eval "require LWP::UserAgent";
  
  my %urls = (
-@@ -62,7 +82,7 @@ $opt_d = 'release';
+   'nss' =>
+@@ -63,7 +83,7 @@ $opt_d = 'release';
  # If the OpenSSL commandline is not in search path you can configure it here!
  my $openssl = 'openssl';
  
--my $version = '1.25';
-+my $version = '1.25_1';
+-my $version = '1.27';
++my $version = '1.27_1';
  
  $opt_w = 76; # default base64 encoded lines length
  
-@@ -119,7 +139,7 @@ if(!defined($opt_d)) {
- # Use predefined URL or else custom URL specified on command line.
- my $url = ( defined( $urls{$opt_d} ) ) ? $urls{$opt_d} : $opt_d;
+@@ -122,14 +142,14 @@ my $url;
+ if(defined($urls{$opt_d})) {
+   $url = $urls{$opt_d};
+   if(!$opt_k && $url !~ /^https:\/\//i) {
+-    die "The URL for '$opt_d' is not HTTPS. Use -k to override (insecure).\n";
++    die "The URL for '$opt_d' is not https:. Use -k to override (insecure).\n";
+   }
+ }
+ else {
+   $url = $opt_d;
+ }
  
 -my $curl = `curl -V`;
 +my $curl = `curl -V 2>/dev/null` || '';
  
  if ($opt_i) {
    print ("=" x 78 . "\n");
-@@ -128,10 +148,12 @@ if ($opt_i) {
+@@ -138,10 +158,12 @@ if ($opt_i) {
    print "Operating System Name            : $^O\n";
    print "Getopt::Std.pm Version           : ${Getopt::Std::VERSION}\n";
    print "MIME::Base64.pm Version          : ${MIME::Base64::VERSION}\n";
--  print "LWP::UserAgent.pm Version        : ${LWP::UserAgent::VERSION}\n";
--  print "LWP.pm Version                   : ${LWP::VERSION}\n";
+-  print "LWP::UserAgent.pm Version        : ${LWP::UserAgent::VERSION}\n" if($LWP::UserAgent::VERSION);
+-  print "LWP.pm Version                   : ${LWP::VERSION}\n" if($LWP::VERSION);
 -  print "Digest::SHA.pm Version           : ${Digest::SHA::VERSION}\n" if ($Digest::SHA::VERSION);
 -  print "Digest::SHA::PurePerl.pm Version : ${Digest::SHA::PurePerl::VERSION}\n" if ($Digest::SHA::PurePerl::VERSION);
 +  print "LWP::UserAgent.pm Version        : @{[$have_lwp ? ${LWP::UserAgent::VERSION} : 'n/a']}\n";
@@ -96,7 +104,16 @@ index 5a1435c5..f2bfe5d2 100755
    print ("=" x 78 . "\n");
  }
  
-@@ -148,7 +170,7 @@ sub warning_message() {
+@@ -149,7 +171,7 @@ sub warning_message() {
+   if ( $opt_d =~ m/^risk$/i ) { # Long Form Warning and Exit
+     print "Warning: Use of this script may pose some risk:\n";
+     print "\n";
+-    print "  1) If you use HTTP URLs they are subject to a man in the middle attack\n";
++    print "  1) If you use http: URLs they are subject to a man in the middle attack\n";
+     print "  2) Default to 'release', but more recent updates may be found in other trees\n";
+     print "  3) certdata.txt file format may change, lag time to update this script\n";
+     print "  4) Generally unwise to blindly trust CAs without manual review & verification\n";
+@@ -158,7 +180,7 @@ sub warning_message() {
      print "     swear at you.  ;)\n";
      exit;
    } else { # Short Form Warning
@@ -105,20 +122,23 @@ index 5a1435c5..f2bfe5d2 100755
    }
  }
  
-@@ -158,10 +180,11 @@ sub HELP_MESSAGE() {
+@@ -168,12 +190,13 @@ sub HELP_MESSAGE() {
    print "\t-d\tspecify Mozilla tree to pull certdata.txt or custom URL\n";
    print "\t\t  Valid names are:\n";
    print "\t\t    ", join( ", ", map { ( $_ =~ m/$opt_d/ ) ? "$_ (default)" : "$_" } sort keys %urls ), "\n";
 +  print "\t\t    ", join( "\n\t\t    ", map { sprintf "%-8s %s", "$_:", $urls{$_} } sort keys %urls ), "\n" if $opt_v;
    print "\t-f\tforce rebuild even if certdata.txt is current\n";
    print "\t-i\tprint version info about used modules\n";
+-  print "\t-k\tallow URLs other than HTTPS, enable HTTP fallback (insecure)\n";
++  print "\t-k\tallow URLs other than https:, enable http: fallback (insecure)\n";
    print "\t-l\tprint license info about certdata.txt\n";
+   print "\t-m\tinclude meta data in output\n";
 -  print "\t-n\tno download of certdata.txt (to use existing)\n";
 +  print wrap("\t","\t\t", "-n\tno download of certdata.txt (to use existing)@{[$curl||$have_lwp?'':' -- required on this OS as neither curl nor LWP::UserAgent is present']}"), "\n";
    print wrap("\t","\t\t", "-p\tlist of Mozilla trust purposes and levels for certificates to include in output. Takes the form of a comma separated list of purposes, a colon, and a comma separated list of levels. (default: $default_mozilla_trust_purposes:$default_mozilla_trust_levels)"), "\n";
    print "\t\t  Valid purposes are:\n";
    print wrap("\t\t    ","\t\t    ", join( ", ", "ALL", @valid_mozilla_trust_purposes ) ), "\n";
-@@ -173,7 +196,7 @@ sub HELP_MESSAGE() {
+@@ -185,7 +208,7 @@ sub HELP_MESSAGE() {
    print wrap("\t\t    ","\t\t    ", join( ", ", "ALL", @valid_signature_algorithms ) ), "\n";
    print "\t-t\tinclude plain text listing of certificates\n";
    print "\t-u\tunlink (remove) certdata.txt after processing\n";
@@ -127,33 +147,41 @@ index 5a1435c5..f2bfe5d2 100755
    print "\t-w <l>\twrap base64 output lines after <l> chars (default: ${opt_w})\n";
    exit;
  }
-@@ -226,10 +249,11 @@ sub parse_csv_param($$@) {
+@@ -236,34 +259,36 @@ sub parse_csv_param($$@) {
+   return @values;
+ }
  
- sub sha1 {
+-sub sha256 {
++sub sha1 {
    my $result;
 -  if ($Digest::SHA::VERSION || $Digest::SHA::PurePerl::VERSION) {
 +  if ($have_sha1) {
      open(FILE, $_[0]) or die "Can't open '$_[0]': $!";
      binmode(FILE);
--    $result = $MOD_SHA->new(1)->addfile(*FILE)->hexdigest;
+-    $result = $MOD_SHA->new(256)->addfile(*FILE)->hexdigest;
 +    local $/ = undef;
 +    $result = sha1_hex(scalar(<FILE>));
      close(FILE);
    } else {
      # Use OpenSSL command if Perl Digest::SHA modules not available
-@@ -238,19 +262,20 @@ sub sha1 {
+-    $result = `"$openssl" dgst -r -sha256 "$_[0]"`;
+-    $result =~ s/^([0-9a-f]{64}) .+/$1/is;
++    chomp($result = qx("$openssl" dgst -sha1 <"$_[0]"));
++    $result =~ s/^[^=]*= *//;
+   }
    return $result;
  }
  
 -
- sub oldsha1 {
--  my $sha1 = "";
+-sub oldhash {
+-  my $hash = "";
 -  open(C, "<$_[0]") || return 0;
 -  while(<C>) {
 -    chomp;
--    if($_ =~ /^\#\# SHA1: (.*)/) {
--      $sha1 = $1;
+-    if($_ =~ /^\#\# SHA256: (.*)/) {
+-      $hash = $1;
 -      last;
++sub oldsha1 {
 +    my ($crt)=@_;
 +    my $sha1="<no file present>";
 +    if (open(C, "<$crt")) {
@@ -168,48 +196,46 @@ index 5a1435c5..f2bfe5d2 100755
      }
 -  }
 -  close(C);
--  return $sha1;
+-  return $hash;
 +    return $sha1;
  }
  
  if ( $opt_p !~ m/:/ ) {
-@@ -282,39 +307,62 @@ my $stdout = $crt eq '-';
+@@ -295,73 +320,85 @@ my $stdout = $crt eq '-';
  my $resp;
  my $fetched;
  
--my $oldsha1 = oldsha1($crt);
--
--report "SHA1 of old file: $oldsha1";
+-my $oldhash = oldhash($crt);
 +my $oldsha1= $stdout ? '' : oldsha1($crt);
  
--report "Downloading '$txt' ...";
+-report "SHA256 of old file: $oldhash";
 +report "SHA1 of old data file: $oldsha1" unless $stdout;
  
--if($curl && !$opt_n) {
--  my $https = $url;
--  $https =~ s/^http:/https:/;
--  report "Get certdata over HTTPS with curl!";
--  my $quiet = $opt_q ? "-s" : "";
--  my @out = `curl -w %{response_code} $quiet -O $https`;
--  if(@out && $out[0] == 200) {
--    $fetched = 1;
--  } else {
--    report "Failed downloading HTTPS with curl, trying HTTP with LWP";
+-if(!$opt_n) {
+-  report "Downloading $txt ...";
+-
+-  # If we have an HTTPS URL then use curl
+-  if($url =~ /^https:\/\//i) {
+-    if($curl) {
+-      if($curl =~ /^Protocols:.* https( |$)/m) {
+-        report "Get certdata with curl!";
+-        my $proto = !$opt_k ? "--proto =https" : "";
+-        my $quiet = $opt_q ? "-s" : "";
+-        my @out = `curl -w %{response_code} $proto $quiet -o "$txt" "$url"`;
+-        if(@out && $out[0] == 200) {
+-          $fetched = 1;
+-          report "Downloaded $txt";
+-        }
+-        else {
+-          report "Failed downloading via HTTPS with curl";
+-          if(-e $txt && !unlink($txt)) {
+-            report "Failed to remove '$txt': $!";
+-          }
 +unless ($opt_n and -e $txt) {
 +  if ($opt_n) {
 +    print STDERR "No '$txt' file found to process and option -n given.\n";
 +    exit 1;
-   }
--}
--
--unless ($fetched || ($opt_n and -e $txt)) {
--  my $ua  = new LWP::UserAgent(agent => "$0/$version");
--  $ua->env_proxy();
--  $resp = $ua->mirror($url, $txt);
--  if ($resp && $resp->code eq '304') {
--    report "Not modified";
--    exit 0 if -e $crt && !$opt_f;
--  } else {
++  }
 +  if (!$curl && !$have_lwp) {
 +    print STDERR
 +      "The -n option is required on this OS as neither curl nor LWP::UserAgent\n",
@@ -220,39 +246,79 @@ index 5a1435c5..f2bfe5d2 100755
 +  }
 +  report "Downloading '$txt' ...";
 +  if ($curl) {
-+    my $https = $url;
-+    $https =~ s/^http:/https:/;
-+    report "Getting certdata over HTTPS with curl!";
-+    my $quiet = $opt_q ? "-s" : "";
-+    my @out = `curl -w %{response_code} $quiet -O $https`;
-+    if(@out && $out[0] == 200) {
-       $fetched = 1;
-+    } else {
-+      report "Failed downloading HTTPS with curl@{[$have_lwp ? ', trying HTTP with LWP' : '']}";
-+    }
++    if($curl =~ /^Protocols:.* https( |$)/m) {
++      my $https = $url;
++      $https =~ s/^http:/https:/;
++      report "Getting certdata over https: with curl!";
++      my $proto = !$opt_k ? "--proto =https" : "";
++      my $quiet = $opt_q ? "-s" : "";
++      my @out = `curl -w %{response_code} $proto $quiet -o "$txt" "$https"`;
++      if(@out && $out[0] == 200) {
++        $fetched = 1;
++        report "Downloaded $txt";
++      } else {
++        report "Failed downloading via https: with curl@{[$have_lwp ? ', trying http: with LWP' : '']}";
++        if(-e $txt && !unlink($txt)) {
++          report "Failed to remove '$txt': $!";
+         }
+       }
+-      else {
+-        report "curl lacks https support";
+-      }
+     }
+     else {
+-      report "curl not found";
++      report "curl lacks https: support";
+     }
+   }
++  else {
++    report "curl not found";
 +  }
-+
+ 
+-  # If nothing was fetched then use LWP
+-  if(!$fetched) {
 +  if (!$fetched && $have_lwp) {
-+    report "Getting certdata over HTTP with LWP::UserAgent";
-+    my $ua  = new LWP::UserAgent(agent => "$0/$version");
-+    $ua->env_proxy();
-+    $resp = $ua->mirror($url, $txt);
+     if($url =~ /^https:\/\//i) {
+-      report "Falling back to HTTP";
++      report "Falling back to http:";
+       $url =~ s/^https:\/\//http:\/\//i;
+     }
+     if(!$opt_k) {
+-      report "URLs other than HTTPS are disabled by default, to enable use -k";
+-      exit 1;
+-    }
+-    report "Get certdata with LWP!";
+-    if(!defined(${LWP::UserAgent::VERSION})) {
+-      report "LWP is not available (LWP::UserAgent not found)";
++      report "URLs other than https: are disabled by default, to enable use -k";
+       exit 1;
+     }
+-    my $ua  = new LWP::UserAgent(agent => "$0/$version");
++    report "Getting certdata over http: with LWP::UserAgent";
++    my $ua = new LWP::UserAgent(agent => "$0/$version");
+     $ua->env_proxy();
+     $resp = $ua->mirror($url, $txt);
+-    if($resp && $resp->code eq '304') {
 +    if ($resp && $resp->code eq '304') {
-+      report "Not modified";
-+      exit 0 if -e $crt && !$opt_f;
+       report "Not modified";
+       exit 0 if -e $crt && !$opt_f;
+-    }
+-    else {
+-      $fetched = 1;
+-      report "Downloaded $txt";
 +    } else {
 +	$fetched = 1;
-+    }
-+    if( !$resp || $resp->code !~ /^(?:200|304)$/ ) {
-+	report "Unable to download latest data: "
-+	  . ($resp? $resp->code . ' - ' . $resp->message : "LWP failed");
-+	exit 1 if -e $crt || ! -r $txt;
-+    }
-   }
--  if( !$resp || $resp->code !~ /^(?:200|304)$/ ) {
++        report "Downloaded $txt";
+     }
+     if(!$resp || $resp->code !~ /^(?:200|304)$/) {
 -      report "Unable to download latest data: "
 -        . ($resp? $resp->code . ' - ' . $resp->message : "LWP failed");
 -      exit 1 if -e $crt || ! -r $txt;
++	report "Unable to download latest data: "
++	  . ($resp? $resp->code . ' - ' . $resp->message : "LWP failed");
++	exit 1 if -e $crt || ! -r $txt;
+     }
+   }
 +
 +  unless ($fetched) {
 +    print STDERR
@@ -261,16 +327,44 @@ index 5a1435c5..f2bfe5d2 100755
 +      "URLs, download a suitable certdata.txt file via other means (such as wget)\n",
 +      "and run this script again using the -n option to process the certdata.txt file.\n";
 +    exit 1;
-   }
++  }
  }
  
-@@ -334,7 +382,7 @@ if(!$opt_f && $oldsha1 eq $newsha1) {
+ my $filedate = $resp ? $resp->last_modified : (stat($txt))[9];
+@@ -373,14 +410,14 @@ if(!$filedate) {
+ }
+ 
+ # get the hash from the download file
+-my $newhash= sha256($txt);
++my $newsha1= sha1($txt);
+ 
+-if(!$opt_f && $oldhash eq $newhash) {
++if(!$opt_f && $oldsha1 eq $newsha1) {
+     report "Downloaded file identical to previous run\'s source file. Exiting";
      exit;
  }
  
--report "SHA1 of new file: $newsha1";
+-report "SHA256 of new file: $newhash";
 +report "SHA1 of new data file: $newsha1";
  
  my $currentdate = scalar gmtime($filedate);
  
+@@ -407,7 +444,7 @@ print CRT <<EOT;
+ ## Just configure this file as the SSLCACertificateFile.
+ ##
+ ## Conversion done with mk-ca-bundle.pl version $version.
+-## SHA256: $newhash
++## SHA1: $newsha1
+ ##
+ 
+ EOT
+@@ -488,7 +525,7 @@ while (<TXT>) {
+               . "-----END CERTIFICATE-----\n";
+       print CRT "\n$caname\n";
+       print CRT @precert if($opt_m);
+-      my $maxStringLength = length(decode('UTF-8', $caname, Encode::FB_CROAK));
++      my $maxStringLength = length(decode('UTF-8', $caname, Encode::FB_DEFAULT));
+       if ($opt_t) {
+         foreach my $key (keys %trust_purposes_by_level) {
+            my $string = $key . ": " . join(", ", @{$trust_purposes_by_level{$key}});
 ---

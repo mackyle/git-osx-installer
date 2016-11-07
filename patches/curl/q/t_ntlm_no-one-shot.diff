@@ -11,10 +11,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/lib/curl_ntlm_core.c b/lib/curl_ntlm_core.c
-index f3fb0132..66a36751 100644
+index 812a0731..891bc11d 100644
 --- a/lib/curl_ntlm_core.c
 +++ b/lib/curl_ntlm_core.c
-@@ -546,7 +546,10 @@ CURLcode Curl_ntlm_core_mk_nt_hash(struct Curl_easy *data,
+@@ -573,7 +573,10 @@ CURLcode Curl_ntlm_core_mk_nt_hash(struct Curl_easy *data,
  #elif defined(USE_NSS) || defined(USE_OS400CRYPTO)
      Curl_md4it(ntbuffer, pw, 2 * len);
  #elif defined(USE_DARWINSSL)

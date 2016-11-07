@@ -17,6 +17,9 @@ Git 2.10.2 Installer - released 2016-11-??
     * libidn (cURL < 7.51.0) was available as GPL2
     * libidn2 is only available as GPL3 but Git is GPL2
 
+* GnuPG 1.4.21
+  - update from version 1.4.19
+
 
 -----------------------------------------
 Git 2.9.3 Installer - released 2016-08-13

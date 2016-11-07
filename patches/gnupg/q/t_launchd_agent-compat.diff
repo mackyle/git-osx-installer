@@ -19,10 +19,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 11 insertions(+)
 
 diff --git a/g10/passphrase.c b/g10/passphrase.c
-index 9003ea4d..18c29665 100644
+index 7cc9f6eb..8bb513fd 100644
 --- a/g10/passphrase.c
 +++ b/g10/passphrase.c
-@@ -317,6 +317,7 @@ agent_open (int try, const char *orig_codeset)
+@@ -326,6 +326,7 @@ agent_open (int try, const char *orig_codeset)
  
    if ( !(p = strchr (infostr, PATHSEP_C)) || p == infostr)
      {
@@ -30,7 +30,7 @@ index 9003ea4d..18c29665 100644
        if (!try)
          {
  #ifdef ENABLE_NLS
-@@ -328,12 +329,22 @@ agent_open (int try, const char *orig_codeset)
+@@ -337,12 +338,22 @@ agent_open (int try, const char *orig_codeset)
          }
        xfree (infostr);
        return NULL;

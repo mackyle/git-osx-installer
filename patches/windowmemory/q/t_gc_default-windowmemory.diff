@@ -6,7 +6,7 @@ a 64-bit memory space, this can easily lead to memory thrashing and
 bring the system to its knees.
 
 Instead of using a default pack.windowmemory = 0 value, use a default
-value of system-memory-size / 2 / number-of-packing-threads but cap
+value of system-memory-size / 3 / number-of-packing-threads but cap
 it to no more than SSIZE_MAX to avoid potential arithmetic issues.
 
 The memory thrashing behavior can still be restored by explicitly
@@ -41,7 +41,7 @@ index 6ad3eb66..9548fe89 100644
  pack.compression::
  	An integer -1..9, indicating the compression level for objects
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index f854ca42..c2c6e422 100644
+index f854ca42..5374ee32 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
 @@ -19,11 +19,18 @@
@@ -82,7 +82,7 @@ index f854ca42..c2c6e422 100644
 +
 +	window_memory_limit = 0;
 +	if (memsize > 0) {
-+		memsize /= 2U;
++		memsize /= 3U;
 +		if (!delta_search_threads)	/* --threads=0 means autodetect */
 +			delta_search_threads = online_cpus();
 +		if (delta_search_threads > 1)

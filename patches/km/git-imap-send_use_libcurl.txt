@@ -11,7 +11,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 20 insertions(+), 10 deletions(-)
 
 diff --git a/imap-send.c b/imap-send.c
-index 938c6915..5c0580fa 100644
+index 5c7e27a8..32f1e636 100644
 --- a/imap-send.c
 +++ b/imap-send.c
 @@ -34,7 +34,7 @@ typedef void *SSL;
@@ -100,7 +100,7 @@ index 938c6915..5c0580fa 100644
  		if (!srvc->use_ssl && CAP(STARTTLS)) {
  			if (imap_exec(ctx, NULL, "STARTTLS") != RESP_OK)
  				goto bail;
-@@ -1517,13 +1522,18 @@ int main(int argc, char **argv)
+@@ -1513,13 +1518,18 @@ int cmd_main(int argc, const char **argv)
  		warning("--curl not supported in this build");
  		use_curl = 0;
  	}

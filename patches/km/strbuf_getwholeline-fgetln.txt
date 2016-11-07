@@ -80,19 +80,19 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  3 files changed, 35 insertions(+), 8 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index 4579eab4..a0a87a48 100644
+index ddd1bdfc..1b60bee0 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -367,6 +367,8 @@ all::
- # Define HAVE_BSD_SYSCTL if your platform has a BSD-compatible sysctl function.
+@@ -384,6 +384,8 @@ all::
  #
- # Define HAVE_GETDELIM if your system has the getdelim() function.
+ # to say "export LESS=FRX (and LV=-c) if the environment variable
+ # LESS (and LV) is not set, respectively".
 +#
 +# Define HAVE_FGETLN if your system has the fgetln() function.
  
  GIT-VERSION-FILE: FORCE
  	@$(SHELL_PATH) ./GIT-VERSION-GEN
-@@ -1480,6 +1482,10 @@ ifdef HAVE_GETDELIM
+@@ -1510,6 +1512,10 @@ ifdef HAVE_GETDELIM
  	BASIC_CFLAGS += -DHAVE_GETDELIM
  endif
  
@@ -104,10 +104,10 @@ index 4579eab4..a0a87a48 100644
  NO_TCLTK = NoThanks
  endif
 diff --git a/config.mak.uname b/config.mak.uname
-index 4cd62bda..ae2dfa03 100644
+index b232908f..d5fd4dc8 100644
 --- a/config.mak.uname
 +++ b/config.mak.uname
-@@ -113,6 +113,7 @@ ifeq ($(uname_S),Darwin)
+@@ -115,6 +115,7 @@ ifeq ($(uname_S),Darwin)
  	BASIC_CFLAGS += -DPRECOMPOSE_UNICODE
  	BASIC_CFLAGS += -DPROTECT_HFS_DEFAULT=1
  	HAVE_BSD_SYSCTL = YesPlease
@@ -115,15 +115,15 @@ index 4cd62bda..ae2dfa03 100644
  endif
  ifeq ($(uname_S),SunOS)
  	NEEDS_SOCKET = YesPlease
-@@ -207,6 +208,7 @@ ifeq ($(uname_S),FreeBSD)
- 	HAVE_PATHS_H = YesPlease
+@@ -210,6 +211,7 @@ ifeq ($(uname_S),FreeBSD)
  	GMTIME_UNRELIABLE_ERRORS = UnfortunatelyYes
  	HAVE_BSD_SYSCTL = YesPlease
+ 	PAGER_ENV = LESS=FRX LV=-c MORE=FRX
 +	HAVE_FGETLN = YesPlease
  endif
  ifeq ($(uname_S),OpenBSD)
  	NO_STRCASESTR = YesPlease
-@@ -217,6 +219,7 @@ ifeq ($(uname_S),OpenBSD)
+@@ -220,6 +222,7 @@ ifeq ($(uname_S),OpenBSD)
  	BASIC_LDFLAGS += -L/usr/local/lib
  	HAVE_PATHS_H = YesPlease
  	HAVE_BSD_SYSCTL = YesPlease
@@ -131,7 +131,7 @@ index 4cd62bda..ae2dfa03 100644
  endif
  ifeq ($(uname_S),MirBSD)
  	NO_STRCASESTR = YesPlease
-@@ -225,6 +228,7 @@ ifeq ($(uname_S),MirBSD)
+@@ -228,6 +231,7 @@ ifeq ($(uname_S),MirBSD)
  	NEEDS_LIBICONV = YesPlease
  	HAVE_PATHS_H = YesPlease
  	HAVE_BSD_SYSCTL = YesPlease
@@ -139,7 +139,7 @@ index 4cd62bda..ae2dfa03 100644
  endif
  ifeq ($(uname_S),NetBSD)
  	ifeq ($(shell expr "$(uname_R)" : '[01]\.'),2)
-@@ -236,6 +240,7 @@ ifeq ($(uname_S),NetBSD)
+@@ -239,6 +243,7 @@ ifeq ($(uname_S),NetBSD)
  	NO_MKSTEMPS = YesPlease
  	HAVE_PATHS_H = YesPlease
  	HAVE_BSD_SYSCTL = YesPlease
@@ -148,7 +148,7 @@ index 4cd62bda..ae2dfa03 100644
  ifeq ($(uname_S),AIX)
  	DEFAULT_PAGER = more
 diff --git a/strbuf.c b/strbuf.c
-index f3bd5719..e469210d 100644
+index b839be49..d47f351f 100644
 --- a/strbuf.c
 +++ b/strbuf.c
 @@ -514,15 +514,31 @@ int strbuf_getwholeline(struct strbuf *sb, FILE *fp, int term)

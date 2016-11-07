@@ -24,10 +24,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 35 insertions(+), 4 deletions(-)
 
 diff --git a/Documentation/config.txt b/Documentation/config.txt
-index 6ad3eb66..9548fe89 100644
+index 21fdddf2..91b8d307 100644
 --- a/Documentation/config.txt
 +++ b/Documentation/config.txt
-@@ -2141,8 +2141,10 @@ pack.windowMemory::
+@@ -2183,8 +2183,10 @@ pack.windowMemory::
  	The maximum size of memory that is consumed by each thread
  	in linkgit:git-pack-objects[1] for pack window memory when
  	no limit is given on the command line.  The value can be
@@ -41,7 +41,7 @@ index 6ad3eb66..9548fe89 100644
  pack.compression::
  	An integer -1..9, indicating the compression level for objects
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index f854ca42..5374ee32 100644
+index 0954375b..29c952b9 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
 @@ -19,11 +19,18 @@
@@ -63,7 +63,7 @@ index f854ca42..5374ee32 100644
  static const char *pack_usage[] = {
  	N_("git pack-objects --stdout [<options>...] [< <ref-list> | < <object-list>]"),
  	N_("git pack-objects [<options>...] <base-name> [< <ref-list> | < <object-list>]"),
-@@ -73,7 +80,7 @@ static unsigned long delta_cache_size = 0;
+@@ -75,7 +82,7 @@ static unsigned long delta_cache_size = 0;
  static unsigned long max_delta_cache_size = 256 * 1024 * 1024;
  static unsigned long cache_max_small_delta_size = 1000;
  
@@ -72,7 +72,7 @@ index f854ca42..5374ee32 100644
  
  /*
   * stats
-@@ -2554,6 +2561,24 @@ static void get_object_list(int ac, const char **av)
+@@ -2630,6 +2637,24 @@ static void get_object_list(int ac, const char **av)
  	sha1_array_clear(&recent_objects);
  }
  
@@ -97,7 +97,7 @@ index f854ca42..5374ee32 100644
  static int option_parse_index_version(const struct option *opt,
  				      const char *arg, int unset)
  {
-@@ -2723,9 +2748,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+@@ -2801,9 +2826,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
  		delta_search_threads = online_cpus();
  
  #ifdef NO_PTHREADS

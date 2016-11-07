@@ -192,6 +192,7 @@ support Mac OS X 10.4 at all as released.
   - `patches/curl/q/t_vtls_reuse-client-session.diff`
   - `patches/curl/q/t_pinning_darwin.diff`
   - `patches/curl/q/t_pinning_dummy-key.diff`
+  - `patches/curl/q/t_docs_manpage.diff`
 
 * Curl mk-ca-bundle script improvements
 

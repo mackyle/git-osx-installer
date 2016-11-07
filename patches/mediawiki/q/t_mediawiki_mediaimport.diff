@@ -32,7 +32,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 deletion(-)
 
 diff --git a/contrib/mw-to-git/git-remote-mediawiki.perl b/contrib/mw-to-git/git-remote-mediawiki.perl
-index 771c5995..0e865220 100755
+index cbba8f39..caa9abcd 100755
 --- a/contrib/mw-to-git/git-remote-mediawiki.perl
 +++ b/contrib/mw-to-git/git-remote-mediawiki.perl
 @@ -434,7 +434,6 @@ sub get_mw_mediafile_for_page_revision {

@@ -4,7 +4,7 @@ Git OS X Installer Change Log
 
 
 ------------------------------------------
-Git 2.10.2 Installer - released 2016-11-??
+Git 2.10.2 Installer - released 2016-11-08
 ------------------------------------------
 
 * Git v2.10.2

@@ -22,7 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "git-compat-util.h"
 #include "gettext.h"
 
-int main(int argc, char **argv)
+int cmd_main(int, const char **);
+int cmd_main(int argc, const char **argv)
 {
 	const char usage[] = "Usage: git gettext MSGID [MSGID_PLURAL N]";
 	long n = 0;
@@ -34,7 +35,7 @@ int main(int argc, char **argv)
 		if (!argv[3][0] || *end || n < 0)
 			die("%s", usage);
 	}
-	git_setup_gettext();
+	/* git_setup_gettext(); // called by main from common-main.c */
 	if (argc == 4) {
 		printf("%s", ngettext(argv[1], argv[2], (unsigned long)n));
 	} else {

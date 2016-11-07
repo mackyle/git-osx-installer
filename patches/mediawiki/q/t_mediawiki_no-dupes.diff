@@ -22,7 +22,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 3 insertions(+)
 
 diff --git a/contrib/mw-to-git/git-remote-mediawiki.perl b/contrib/mw-to-git/git-remote-mediawiki.perl
-index 8dd74a9a..f54eefa8 100755
+index 41e74fba..e4603da7 100755
 --- a/contrib/mw-to-git/git-remote-mediawiki.perl
 +++ b/contrib/mw-to-git/git-remote-mediawiki.perl
 @@ -772,7 +772,10 @@ sub get_more_refs {

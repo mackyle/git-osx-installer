@@ -21,7 +21,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 59 insertions(+), 8 deletions(-)
 
 diff --git a/contrib/mw-to-git/git-remote-mediawiki.perl b/contrib/mw-to-git/git-remote-mediawiki.perl
-index 0e865220..ffe2f465 100755
+index caa9abcd..75db85b6 100755
 --- a/contrib/mw-to-git/git-remote-mediawiki.perl
 +++ b/contrib/mw-to-git/git-remote-mediawiki.perl
 @@ -1,16 +1,67 @@

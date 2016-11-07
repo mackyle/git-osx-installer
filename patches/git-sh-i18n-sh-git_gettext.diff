@@ -1,6 +1,6 @@
 --- a/git-sh-i18n.sh
 +++ b/git-sh-i18n.sh
-@@ -45,6 +45,19 @@ gnu)
+@@ -45,6 +45,30 @@ gnu)
  	# Use libintl's gettext.sh, or fall back to English if we can't.
  	. gettext.sh
  	;;
@@ -10,10 +10,21 @@
 +		git gettext "$1"
 +	}
 +
++	ngettext () {
++		git gettext "$1" "$2" "$3"
++	}
++
 +	eval_gettext () {
 +		git gettext "$1" | (
 +			export PATH $(git sh-i18n--envsubst --variables "$1");
 +			git sh-i18n--envsubst "$1"
++		)
++	}
++
++	eval_ngettext () {
++		git gettext "$1" "$2" "$3" | (
++			export PATH $(git sh-i18n--envsubst --variables "$2");
++			git sh-i18n--envsubst "$2"
 +		)
 +	}
 +	;;

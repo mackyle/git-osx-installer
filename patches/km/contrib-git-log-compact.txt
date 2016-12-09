@@ -376,7 +376,7 @@ index 00000000..0ae0ccc2
 +(e.g. `git config log-compact.defaults "--abbrev=8 --seconds"`).
 diff --git a/contrib/git-log-compact/git-log-compact b/contrib/git-log-compact/git-log-compact
 new file mode 100755
-index 00000000..8c8636d7
+index 00000000..870e76c9
 --- /dev/null
 +++ b/contrib/git-log-compact/git-log-compact
 @@ -0,0 +1,464 @@
@@ -411,9 +411,9 @@ index 00000000..8c8636d7
 +    --committer-date      Use committer dates and times (default)
 +    --initials=author     Use author initials (default)
 +    --initials=committer  Use committer initials
-+    --intiials=author,committer
++    --initials=author,committer
 +                          Use author/committer initials and --two-initials
-+    --intiials=committer,author
++    --initials=committer,author
 +                          Use committer/author initials and --two-initials
 +    --time-zone=<zone>    Set TZ environment variable to <zone>
 +    --weekday             Show the weekday with the date

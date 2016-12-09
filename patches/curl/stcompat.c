@@ -971,7 +971,11 @@ SecIdentityRef cSecIdentityCreateWithCertificateAndKeyData(
                               NULL, &keychain);
     if (searchlist) {
       if (!err)
-        err = SecKeychainSetSearchList(searchlist);
+        /* This shouldn't fail, but we also shouldn't die if it does because
+         * we've already got the new keychain and can still go ahead.  It could
+         * mean the new temporary keychain is visible longer than we'd like
+         * though, but there's nothing we can do about that. */
+        (void)SecKeychainSetSearchList(searchlist);
       CFRelease(searchlist);
     }
     if (keych->dirs.home) {

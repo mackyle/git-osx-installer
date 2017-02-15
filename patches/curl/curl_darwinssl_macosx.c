@@ -146,6 +146,22 @@ static __inline void realfree(void *p) /* stupid curl */
 /* The last #include file should be: */
 #include "memdebug.h"
 
+/* With cURL version 7.52.0 getsessionid and addsessionid started taking a new
+ * fourth int parameter, so we implement the "new" version for older builds by
+ * just discarding the fourth parameter. */
+#if LIBCURL_VERSION_NUM < 0x073400 /* 7.52.0 */
+static __inline bool Curl_ssl_getsessionid_old(
+  struct connectdata *conn,
+  void **ssl_sessionid,
+  size_t *idsize) {return Curl_ssl_getsessionid(conn, ssl_sessionid, idsize);}
+static __inline CURLcode Curl_ssl_addsessionid_old(
+  struct connectdata *conn,
+  void *ssl_sessionid,
+  size_t idsize) {return Curl_ssl_addsessionid(conn, ssl_sessionid, idsize);}
+#define Curl_ssl_getsessionid(a,b,c,d) Curl_ssl_getsessionid_old(a,b,c)
+#define Curl_ssl_addsessionid(a,b,c,d) Curl_ssl_addsessionid_old(a,b,c)
+#endif /* version < 7.52.0 */
+
 /* With cURL version 7.50.0 struct SessionHandle was renamed to struct Curl_easy
  * so we use the new name (Curl_easy) but #define it to the old one for older
  * versions of cURL.  In addition, two new functions Curl_ssl_sessionid_lock and
@@ -597,7 +613,6 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 
   /* check to see if we've been told to use an explicit SSL/TLS version */
   switch(data->set.ssl.version) {
-    default:
     case CURL_SSLVERSION_DEFAULT:
     case CURL_SSLVERSION_TLSv1:
       (void)cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kTLSProtocol1,
@@ -623,6 +638,10 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
         return CURLE_SSL_CONNECT_ERROR;
       }
       break;
+    case CURL_SSLVERSION_TLSv1_2 + 1 /* CURL_SSLVERSION_TLSv1_3 */:
+      failf(data, "DarwinSSL: TLS 1.3 is not yet supported");
+      return CURLE_SSL_CONNECT_ERROR;
+      break;
     case CURL_SSLVERSION_SSLv3:
       err = cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kSSLProtocol3,
                                                            kSSLProtocol3);
@@ -639,6 +658,9 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
         return CURLE_SSL_CONNECT_ERROR;
       }
       break;
+    default:
+      failf(data, "Unrecognized parameter passed via CURLOPT_SSLVERSION");
+      return CURLE_SSL_CONNECT_ERROR;
   }
 
   if(data->set.str[STRING_CERT]) {
@@ -1033,7 +1055,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
 
     Curl_ssl_sessionid_lock(conn);
     if(!Curl_ssl_getsessionid(conn, (void **)&ssl_sessionid,
-                              &ssl_sessionid_len)) {
+                              &ssl_sessionid_len, sockindex)) {
       /* we got a session id, use it! */
       err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
       Curl_ssl_sessionid_unlock(conn);
@@ -1075,7 +1097,8 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
         return CURLE_SSL_CONNECT_ERROR;
       }
 
-      result = Curl_ssl_addsessionid(conn, ssl_sessionid, ssl_sessionid_len);
+      result = Curl_ssl_addsessionid(conn, ssl_sessionid, ssl_sessionid_len,
+                                     sockindex);
       Curl_ssl_sessionid_unlock(conn);
       if(result) {
         failf(data, "failed to store ssl session");

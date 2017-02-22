@@ -11,7 +11,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/lib/curl_ntlm_core.c b/lib/curl_ntlm_core.c
-index 812a0731..891bc11d 100644
+index e02983ce..5d32304a 100644
 --- a/lib/curl_ntlm_core.c
 +++ b/lib/curl_ntlm_core.c
 @@ -573,7 +573,10 @@ CURLcode Curl_ntlm_core_mk_nt_hash(struct Curl_easy *data,

@@ -6,15 +6,14 @@
  *                             \___|\___/|_| \_\_____|
  *
  * Copyright (C) 2012 - 2014, Nick Zitzmann, <nickzman@gmail.com>.
- * Copyright (C) 2012 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
- * Copyright (C) 2012 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 2012 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
- * MacOSX modifications copyright (C) 2014, 2015, 2016 Kyle J. McKay.
+ * MacOSX modifications copyright (C) 2014, 2015, 2016, 2017 Kyle J. McKay.
  * All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at http://curl.haxx.se/docs/copyright.html.
+ * are also available at https://curl.haxx.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -76,10 +75,9 @@ static __inline void realfree(void *p) /* stupid curl */
 
 #include "urldata.h" /* for the Curl_easy definition */
 
-#if LIBCURL_VERSION_NUM < 0x073300 /* 7.51.0 */
-#define SOCKET_READABLE(x,z) \
-  Curl_socket_check(x, CURL_SOCKET_BAD, CURL_SOCKET_BAD, z)
-#endif /* version < 7.51.0 */
+#if LIBCURL_VERSION_NUM < 0x073400 /* 7.52.0 */
+#error cURL 7.52.0 or later required (see tags for older compat)
+#endif
 
 #ifdef USE_DARWINSSL
 
@@ -133,45 +131,12 @@ static __inline void realfree(void *p) /* stupid curl */
 #include "connect.h"
 #include "select.h"
 #include "vtls.h"
-#if LIBCURL_VERSION_NUM >= 0x072900
 #include "darwinssl.h"
-#else
-#include "curl_darwinssl.h"
-#endif
-
-#define _MPRINTF_REPLACE /* use our functions only */
-#include <curl/mprintf.h>
+#include "curl_printf.h"
 
 #include "curl_memory.h"
 /* The last #include file should be: */
 #include "memdebug.h"
-
-/* With cURL version 7.52.0 getsessionid and addsessionid started taking a new
- * fourth int parameter, so we implement the "new" version for older builds by
- * just discarding the fourth parameter. */
-#if LIBCURL_VERSION_NUM < 0x073400 /* 7.52.0 */
-static __inline bool Curl_ssl_getsessionid_old(
-  struct connectdata *conn,
-  void **ssl_sessionid,
-  size_t *idsize) {return Curl_ssl_getsessionid(conn, ssl_sessionid, idsize);}
-static __inline CURLcode Curl_ssl_addsessionid_old(
-  struct connectdata *conn,
-  void *ssl_sessionid,
-  size_t idsize) {return Curl_ssl_addsessionid(conn, ssl_sessionid, idsize);}
-#define Curl_ssl_getsessionid(a,b,c,d) Curl_ssl_getsessionid_old(a,b,c)
-#define Curl_ssl_addsessionid(a,b,c,d) Curl_ssl_addsessionid_old(a,b,c)
-#endif /* version < 7.52.0 */
-
-/* With cURL version 7.50.0 struct SessionHandle was renamed to struct Curl_easy
- * so we use the new name (Curl_easy) but #define it to the old one for older
- * versions of cURL.  In addition, two new functions Curl_ssl_sessionid_lock and
- * Curl_ssl_sessionid_unlock must be used so those are defined away to nothing
- * for older cURL versions as well. */
-#if LIBCURL_VERSION_NUM < 0x073200
-#define Curl_easy SessionHandle
-#define Curl_ssl_sessionid_lock(c) (void)0
-#define Curl_ssl_sessionid_unlock(c) (void)0
-#endif
 
 /* The following two functions were ripped from Apple sample code,
  * with some modifications: */
@@ -257,7 +222,7 @@ static OSStatus SocketWrite(SSLConnectionRef connection,
 
   do {
     length = write(sock,
-                   (char*)dataPtr + bytesSent,
+                   (char *)dataPtr + bytesSent,
                    dataLen - bytesSent);
   } while((length > 0) &&
            ( (bytesSent += length) < dataLen) );
@@ -279,7 +244,8 @@ static OSStatus SocketWrite(SSLConnectionRef connection,
   return ortn;
 }
 
-CF_INLINE const char *SSLCipherNameForNumber(SSLCipherSuite cipher) {
+CF_INLINE const char *SSLCipherNameForNumber(SSLCipherSuite cipher)
+{
   switch (cipher) {
 #define CIPHER(x) case x: return #x
     /* SSL version 3.0 */
@@ -336,7 +302,8 @@ CF_INLINE const char *SSLCipherNameForNumber(SSLCipherSuite cipher) {
   return "SSL_NULL_WITH_NULL_NULL";
 }
 
-CF_INLINE const char *TLSCipherNameForNumber(SSLCipherSuite cipher) {
+CF_INLINE const char *TLSCipherNameForNumber(SSLCipherSuite cipher)
+{
   switch(cipher) {
 #define CIPHER(x) case x: return #x
     CIPHER(TLS_RSA_WITH_NULL_MD5);
@@ -597,6 +564,19 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   struct Curl_easy *data = conn->data;
   curl_socket_t sockfd = conn->sock[sockindex];
   struct ssl_connect_data *connssl = &conn->ssl[sockindex];
+  const char *ssl_cafile = SSL_CONN_CONFIG(CAfile);
+  bool ssl_verifypeer = SSL_CONN_CONFIG(verifypeer);
+  bool ssl_verifyhost = SSL_CONN_CONFIG(verifyhost);
+  char *ssl_cert = SSL_SET_OPTION(cert);
+  char *ssl_cert_type = SSL_SET_OPTION(cert_type);
+  char *ssl_key = SSL_SET_OPTION(key);
+  char *ssl_key_passwd = SSL_SET_OPTION(key_passwd);
+  const char *hostname = SSL_IS_PROXY() ? conn->http_proxy.host.name :
+    conn->host.name;
+  long port = SSL_IS_PROXY() ? conn->port : conn->remote_port;
+  const char *ssl_pinpubkey = SSL_IS_PROXY() ?
+    data->set.str[STRING_SSL_PINNEDPUBLICKEY_PROXY] :
+    data->set.str[STRING_SSL_PINNEDPUBLICKEY_ORIG];
   size_t all_ciphers_count = 0UL, allowed_ciphers_count = 0UL, i;
   SSLCipherSuite *all_ciphers = NULL, *allowed_ciphers = NULL;
   OSStatus err = noErr;
@@ -612,7 +592,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
   connssl->ssl_write_buffered_length = 0UL; /* reset buffered write length */
 
   /* check to see if we've been told to use an explicit SSL/TLS version */
-  switch(data->set.ssl.version) {
+  switch(conn->ssl_config.version) {
     case CURL_SSLVERSION_DEFAULT:
     case CURL_SSLVERSION_TLSv1:
       (void)cSSLSetProtocolVersionMinMax(connssl->ssl_ctx, kTLSProtocol1,
@@ -638,7 +618,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
         return CURLE_SSL_CONNECT_ERROR;
       }
       break;
-    case CURL_SSLVERSION_TLSv1_2 + 1 /* CURL_SSLVERSION_TLSv1_3 */:
+    case CURL_SSLVERSION_TLSv1_3:
       failf(data, "DarwinSSL: TLS 1.3 is not yet supported");
       return CURLE_SSL_CONNECT_ERROR;
       break;
@@ -663,9 +643,9 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       return CURLE_SSL_CONNECT_ERROR;
   }
 
-  if(data->set.str[STRING_CERT]) {
+  if(ssl_cert) {
     CFArrayRef certs = NULL;
-    bool is_cert_file = is_file(data->set.str[STRING_CERT]);
+    bool is_cert_file = is_file(ssl_cert);
 
     /* User wants to authenticate with a client cert. Look for it:
        If we detect that this is a file on disk, then let's load it.
@@ -680,44 +660,39 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       CFMutableStringRef hint = NULL;
       e.f = (errinfo_func_t)failf;
       e.u = data;
-      if(data->set.str[STRING_CERT_TYPE]) {
-        if(strcmp(data->set.str[STRING_CERT_TYPE], "DER") &&
-           strcmp(data->set.str[STRING_CERT_TYPE], "PEM")) {
-          failf(data, "not supported file type '%s' for certificate",
-                      data->set.str[STRING_CERT_TYPE]);
+      if(ssl_cert_type) {
+        if(strcmp(ssl_cert_type, "DER") &&
+           strcmp(ssl_cert_type, "PEM")) {
+          failf(data, "unsupported file type '%s' for certificate",
+                      ssl_cert_type);
           return CURLE_SSL_CERTPROBLEM;
         }
       }
-      certdata = CFDataCreateWithContentsOfFile(NULL,
-                                                data->set.str[STRING_CERT]);
+      certdata = CFDataCreateWithContentsOfFile(NULL, ssl_cert);
       if(!certdata) {
-        failf(data, "unable to read certificate data file '%s'",
-                    data->set.str[STRING_CERT]);
+        failf(data, "unable to read certificate data file '%s'", ssl_cert);
         return CURLE_SSL_CERTPROBLEM;
       }
-      hintstr = data->set.str[STRING_CERT];
+      hintstr = ssl_cert;
       certs = CreateCertsArrayWithData(certdata, &e);
       if(!certs) {
         CFRelease(certdata);
-        failf(data, "unable to load certificate data file '%s'",
-                    data->set.str[STRING_CERT]);
+        failf(data, "unable to load certificate data file '%s'", ssl_cert);
         return CURLE_SSL_CERTPROBLEM;
       }
-      if(data->set.str[STRING_KEY]) {
+      if(ssl_key) {
         CFRelease(certdata);
-        certdata = CFDataCreateWithContentsOfFile(NULL,
-                                                  data->set.str[STRING_KEY]);
+        certdata = CFDataCreateWithContentsOfFile(NULL, ssl_key);
         if(!certdata) {
           CFRelease(certs);
-          failf(data, "unable to read certificate key file '%s'",
-                      data->set.str[STRING_KEY]);
+          failf(data, "unable to read certificate key file '%s'", ssl_key);
           return CURLE_SSL_CERTPROBLEM;
         }
-        hintstr = data->set.str[STRING_KEY];
+        hintstr = ssl_key;
       }
-      if(data->set.str[STRING_KEY_PASSWD]) {
-        keypw = CFDataCreate(NULL, (UInt8 *)data->set.str[STRING_KEY_PASSWD],
-          strlen(data->set.str[STRING_KEY_PASSWD]));
+      if(ssl_key_passwd) {
+        keypw = CFDataCreate(NULL, (UInt8 *)ssl_key_passwd,
+          strlen(ssl_key_passwd));
       }
       if(hintstr) {
         const char *base = strrchr(hintstr, '/');
@@ -754,38 +729,37 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     else {
       SecIdentityRef cert_and_key = NULL;
       CFTypeRef certs_c[1];
-      if(data->set.str[STRING_KEY]) {
+      if(ssl_key) {
         infof(data, "WARNING: SSL: CURLOPT_SSLKEY is ignored by Secure Trans"
                     "port when CURLOPT_SSLCERT is a Keychain item label.\n");
       }
-      if(data->set.str[STRING_KEY_PASSWD]) {
+      if(ssl_key_passwd) {
         infof(data, "WARNING: SSL: CURLOPT_SSLKEYPASSWD is ignored by Secure T"
                     "ransport when CURLOPT_SSLCERT is a Keychain item label.\n"
              );
       }
-      err = CopyIdentityWithLabel(data->set.str[STRING_CERT], &cert_and_key);
+      err = CopyIdentityWithLabel(ssl_cert, &cert_and_key);
       if(err) {
         switch(err) {
           case errSecAuthFailed: case -25264: /* errSecPkcs12VerifyFailure */
             failf(data, "SSL: Incorrect password for the certificate \"%s\" "
-                        "and its private key.", data->set.str[STRING_CERT]);
+                        "and its private key.", ssl_cert);
             break;
           case -26275: /* errSecDecode */ case -25257:/* errSecUnknownFormat */
             failf(data, "SSL: Couldn't make sense of the data in the "
-                        "certificate \"%s\" and its private key.",
-                        data->set.str[STRING_CERT]);
+                        "certificate \"%s\" and its private key.", ssl_cert);
             break;
           case -25260: /* errSecPassphraseRequired */
             failf(data, "SSL The certificate \"%s\" requires a password.",
-                        data->set.str[STRING_CERT]);
+                        ssl_cert);
             break;
           case errSecItemNotFound:
             failf(data, "SSL: Can't find the certificate \"%s\" and its privat"
-                        "e key in the Keychain.", data->set.str[STRING_CERT]);
+                        "e key in the Keychain.", ssl_cert);
             break;
           default:
             failf(data, "SSL: Can't load the certificate \"%s\" and its privat"
-                        "e key: OSStatus %d", data->set.str[STRING_CERT], err);
+                        "e key: OSStatus %d", ssl_cert, err);
             break;
         }
         return CURLE_SSL_CERTPROBLEM;
@@ -815,23 +789,22 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     failf(data, "SSL: SSLSetEnableCertVerify() failed: OSStatus %d", err);
     return CURLE_SSL_CONNECT_ERROR;
   }
-  if(data->set.ssl.verifypeer) {
+  if(ssl_verifypeer) {
     /* The default anchors will be used unless SSLSetTrustedRoots is called
      * with an array containing at least 1 element */
-    if(data->set.str[STRING_SSL_CAPATH]) {
+    if(SSL_CONN_CONFIG(CApath)) {
       failf(data, "SSL: CURLOPT_CAPATH is not supported by Secure Transport");
       /* same error cURL would give without -Dhave_curlssl_ca_path */
       return CURLE_NOT_BUILT_IN;
     }
-    if(data->set.str[STRING_SSL_CAFILE]) {
+    if(ssl_cafile) {
       errinfo_t e;
       CFArrayRef cacerts;
       CFDataRef cadata = CFDataCreateWithContentsOfFile(kCFAllocatorDefault,
-                                             data->set.str[STRING_SSL_CAFILE]);
+                                                        ssl_cafile);
 
       if(!cadata) {
-        failf(data, "SSL: can't read CA certificate file %s",
-              data->set.str[STRING_SSL_CAFILE]);
+        failf(data, "SSL: can't read CA certificate file %s", ssl_cafile);
         return CURLE_SSL_CACERT_BADFILE;
       }
       e.f = (errinfo_func_t)failf;
@@ -843,8 +816,7 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
       cacerts = CreateCertsArrayWithData(cadata, &e);
       CFRelease(cadata);
       if(!cacerts) {
-        failf(data, "SSL: can't load CA certificate file %s",
-              data->set.str[STRING_SSL_CAFILE]);
+        failf(data, "SSL: can't load CA certificate file %s", ssl_cafile);
         return CURLE_SSL_CACERT_BADFILE;
       }
       connssl->ra = (void *)cacerts;
@@ -857,45 +829,43 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     }
   }
   else {
-    if(data->set.str[STRING_SSL_CAFILE] || data->set.str[STRING_SSL_CAPATH]) {
+    if(ssl_cafile || SSL_CONN_CONFIG(CApath)) {
       infof(data, "WARNING: SSL: CA certificate(s) configured, but certificate"
                   " verification is disabled\n");
     }
   }
 
   connssl->cf = 0;
-#if LIBCURL_VERSION_NUM >= 0x072700
   /* Collect public key pinning key(s). */
-  if(data->set.str[STRING_SSL_PINNEDPUBLICKEY]) {
+  if(ssl_pinpubkey) {
     errinfo_t e;
     CFArrayRef pubkeys;
     CFDataRef pindata;
 
     e.f = (errinfo_func_t)failf;
     e.u = data;
-    if(IsSha256HashList(data->set.str[STRING_SSL_PINNEDPUBLICKEY])) {
-      pubkeys = CreatePubKeySha256Array(
-                                data->set.str[STRING_SSL_PINNEDPUBLICKEY], &e);
+    if(IsSha256HashList(ssl_pinpubkey)) {
+      pubkeys = CreatePubKeySha256Array(ssl_pinpubkey, &e);
       if(!pubkeys) {
         failf(data, "SSL: can't parse pinned public key hashes %s",
-              data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+              ssl_pinpubkey);
         return CURLE_READ_ERROR;
       }
       connssl->cf |= 0x08;
     }
     else {
       pindata = CFDataCreateWithContentsOfFile(kCFAllocatorDefault,
-                                    data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+                                               ssl_pinpubkey);
       if(!pindata) {
         failf(data, "SSL: can't read pinned public key file %s",
-              data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+              ssl_pinpubkey);
         return CURLE_READ_ERROR;
       }
       pubkeys = CreatePubKeyArrayWithData(pindata, &e);
       CFRelease(pindata);
       if(!pubkeys) {
         failf(data, "SSL: can't load pinned public key file %s",
-              data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
+              ssl_pinpubkey);
         return CURLE_SSL_CACERT_BADFILE; /* no really good choice here */
       }
     }
@@ -905,21 +875,20 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     }
     connssl->pa = (void *)pubkeys;
   }
-#endif
 
   /* Configure hostname for SNI.
    * SNI requires SSLSetPeerDomainName().
    * RFC 6066 section 3 forbids IPv4 and IPv6 literal addresses in SNI.
    */
-  connssl->vh = data->set.ssl.verifyhost ? true : false;
-  if(conn->host.name && conn->host.name[0] && !strchr(conn->host.name, ':')) {
-    size_t hnl = strlen(conn->host.name);
+  connssl->vh = ssl_verifyhost ? true : false;
+  if(hostname && hostname[0] && !strchr(hostname, ':')) {
+    size_t hnl = strlen(hostname);
 
-    if(!IsIPv4Name(conn->host.name, hnl)) {
-      if(data->set.ssl.verifypeer)
+    if(!IsIPv4Name(hostname, hnl)) {
+      if(ssl_verifypeer)
         connssl->vh = true;
-      err = SSLSetPeerDomainName(connssl->ssl_ctx, conn->host.name,
-                                 strlen(conn->host.name));
+      err = SSLSetPeerDomainName(connssl->ssl_ctx, hostname,
+                                 strlen(hostname));
 
       if(err != noErr) {
         infof(data, "WARNING: SSL: SSLSetPeerDomainName() failed: OSStatus %d"
@@ -1041,15 +1010,13 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
     /* We want to enable 1/n-1 when using a CBC cipher unless the user
        specifically doesn't want us doing that: */
     cSSLSetSessionOption(connssl->ssl_ctx, kSSLSessionOptionSendOneByteRecord,
-                         !data->set.ssl_enable_beast);
-#if LIBCURL_VERSION_NUM >= 0x072a00
+                         !data->set.ssl.enable_beast);
     cSSLSetSessionOption(connssl->ssl_ctx, kSSLSessionOptionFalseStart,
                          data->set.ssl.falsestart); /* false start support */
-#endif
   }
 
   /* Check if there's a cached ID we can/should use here! */
-  if(conn->ssl_config.sessionid) {
+  if(data->set.general_ssl.sessionid) {
     char *ssl_sessionid;
     size_t ssl_sessionid_len;
 
@@ -1070,25 +1037,20 @@ static CURLcode darwinssl_connect_step1(struct connectdata *conn,
        to starting the handshake. */
     else {
       CURLcode result;
-#if LIBCURL_VERSION_NUM >= 0x072700
-#define PKSTR data->set.str[STRING_SSL_PINNEDPUBLICKEY]
-#else
-#define PKSTR NULL
-#endif
 #define NSTR(s) ((s)?(s):"")
       ssl_sessionid = NULL;
       asprintf(&ssl_sessionid, "%s:%s:%s:%d:%d:%s:%hu",
-               NSTR(data->set.str[STRING_SSL_CAFILE]),
-               NSTR(PKSTR), NSTR(data->set.str[STRING_CERT]),
-               data->set.ssl.verifypeer, data->set.ssl.verifyhost,
-               NSTR(conn->host.name), (unsigned short)conn->remote_port);
+               NSTR(ssl_cafile),
+               NSTR(ssl_pinpubkey),
+               NSTR(ssl_cert),
+               ssl_verifypeer, ssl_verifyhost,
+               NSTR(hostname), (unsigned short)conn->remote_port);
       if(ssl_sessionid == NULL) {
         failf(data, "SSL: asprintf failed: out of memory");
         return CURLE_SSL_CONNECT_ERROR;
       }
       ssl_sessionid_len = strlen(ssl_sessionid);
 #undef NSTR
-#undef PKSTR
 
       err = SSLSetPeerID(connssl->ssl_ctx, ssl_sessionid, ssl_sessionid_len);
       if(err != noErr) {
@@ -1145,6 +1107,10 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
   SSLCipherSuite cipher;
   SSLProtocol protocol = 0;
   unsigned vflags = 0;
+  bool ssl_verifypeer = SSL_CONN_CONFIG(verifypeer);
+  bool ssl_verifyhost = SSL_CONN_CONFIG(verifyhost);
+  const char *hostname = SSL_IS_PROXY() ? conn->http_proxy.host.name :
+    conn->host.name;
 
   DEBUGASSERT(ssl_connect_2 == connssl->connecting_state
               || ssl_connect_2_reading == connssl->connecting_state
@@ -1154,14 +1120,13 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
   err = SSLHandshake(connssl->ssl_ctx);
 
   /* set up the verify flags now */
-  if(data->set.ssl.verifyhost && !data->set.ssl.verifypeer && conn->host.name
-     && conn->host.name[0])
+  if(ssl_verifyhost && !ssl_verifypeer && hostname && hostname[0])
     vflags |= 0x04;
-  if(connssl->pa && !data->set.ssl.verifypeer && !vflags)
+  if(connssl->pa && !ssl_verifypeer && !vflags)
     vflags |= 0x02;
 
   if(err == errSSLServerAuthCompleted) {
-    if(data->set.ssl.verifypeer || vflags) {
+    if(ssl_verifypeer || vflags) {
       SecTrustRef trust = NULL;
       err = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
       if(err) {
@@ -1169,7 +1134,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
         return CURLE_SSL_CONNECT_ERROR;
       }
       err = VerifyTrustChain(trust, connssl->ra, connssl->cf|vflags, 0,
-        connssl->vh ? conn->host.name : NULL, (CFArrayRef)connssl->pa);
+        connssl->vh ? hostname : NULL, (CFArrayRef)connssl->pa);
       CFRelease(trust);
     }
     else {
@@ -1202,18 +1167,18 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     err2 = cSSLCopyPeerTrust(connssl->ssl_ctx, &trust);
     resumed = !err2 && !trust && is_ssl_ctx_connected(connssl->ssl_ctx);
     if(resumed) infof(data, "SSL successfully resumed session\n");
-    if(!err && !resumed && (data->set.ssl.verifypeer || vflags)) {
+    if(!err && !resumed && (ssl_verifypeer || vflags)) {
       if(err2) {
         failf(data, "SSL failed to retrieve SecTrust (%i)", (int)err);
         return CURLE_SSL_CONNECT_ERROR;
       }
       err = VerifyTrustChain(trust, connssl->ra, connssl->cf|vflags, 0,
-        connssl->vh ? conn->host.name : NULL, (CFArrayRef)connssl->pa);
+        connssl->vh ? hostname : NULL, (CFArrayRef)connssl->pa);
     }
 
     /* Try to show the peer certificates unless we've connected successfully
      * and have verified the peer */
-    if(err || !data->set.ssl.verifypeer) {
+    if(err || !ssl_verifypeer) {
       CFArrayRef srv_certs;
       OSStatus err3 = cSSLCopyPeerCertificates(connssl->ssl_ctx, &srv_certs);
 
@@ -1240,7 +1205,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
     switch (err) {
       case errSSLServerAuthCompleted:
         failf(data, "SSL unexpected errSSLServerAuthCompleted error in "
-                    "connection to %s", conn->host.name);
+                    "connection to %s", hostname);
         return CURLE_SSL_CONNECT_ERROR;
 
       /* These are all certificate problems with the server: */
@@ -1297,14 +1262,12 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
               "certificate did not match \"%s\"", conn->host.dispname);
         return CURLE_PEER_FAILED_VERIFICATION;
 
-#if LIBCURL_VERSION_NUM >= 0x072700
       /* This error is raised if public key pinning is enabled and the
          server certificate's public key does not match: */
       case errSecPinnedKeyMismatch:
         failf(data, "SSL certificate public key does not match pinned public "
               "key(s)");
         return CURLE_SSL_PINNEDPUBKEYNOTMATCH;
-#endif
 
       /* Generic handshake errors: */
       case errSSLConnectionRefused:
@@ -1327,7 +1290,7 @@ darwinssl_connect_step2(struct connectdata *conn, int sockindex)
         return CURLE_SSL_CONNECT_ERROR;
       default:
         failf(data, "Unknown SSL protocol error in connection to %s: %d",
-              conn->host.name, err);
+              hostname, err);
         return CURLE_SSL_CONNECT_ERROR;
     }
   }
@@ -1663,8 +1626,8 @@ bool Curl_darwinssl_data_pending(const struct connectdata *conn,
     return false;
 }
 
-int Curl_darwinssl_random(unsigned char *entropy,
-                          size_t length)
+CURLcode Curl_darwinssl_random(unsigned char *entropy,
+                               size_t length)
 {
   /* arc4random_buf() isn't available on cats older than Lion, so let's
      do this manually for the benefit of the older cats. */
@@ -1678,7 +1641,7 @@ int Curl_darwinssl_random(unsigned char *entropy,
     random_number >>= 8;
   }
   i = random_number = 0;
-  return 0;
+  return CURLE_OK;
 }
 
 void Curl_darwinssl_md5sum(unsigned char *tmp, /* input */
@@ -1698,7 +1661,8 @@ void Curl_darwinssl_md5sum(unsigned char *tmp, /* input */
 }
 
 bool Curl_darwinssl_false_start(void);
-bool Curl_darwinssl_false_start(void) {
+bool Curl_darwinssl_false_start(void)
+{
   return kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber10_9;
 }
 

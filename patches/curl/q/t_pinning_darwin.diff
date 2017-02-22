@@ -10,7 +10,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 4 insertions(+)
 
 diff --git a/lib/vtls/darwinssl.h b/lib/vtls/darwinssl.h
-index 8b185b67..6cafab7d 100644
+index 4bd41ca4..fa369e53 100644
 --- a/lib/vtls/darwinssl.h
 +++ b/lib/vtls/darwinssl.h
 @@ -53,6 +53,9 @@ bool Curl_darwinssl_false_start(void);
@@ -24,7 +24,7 @@ index 8b185b67..6cafab7d 100644
  #define curlssl_init() (1)
  #define curlssl_cleanup() Curl_nop_stmt
 diff --git a/tests/runtests.pl b/tests/runtests.pl
-index b8497f9c..f0dbc1b2 100755
+index 583ba3b7..89e8381b 100755
 --- a/tests/runtests.pl
 +++ b/tests/runtests.pl
 @@ -2411,6 +2411,7 @@ sub checksystem {

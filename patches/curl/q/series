@@ -3,5 +3,4 @@ t_ntlm_no-one-shot.diff -p1
 t_pinning_dummy-key.diff -p1
 t_pinning_darwin.diff -p1
 t_securetransport_extra-data.diff -p1
-t_vtls_reuse-client-session.diff -p1
 t_docs_manpage.diff -p1

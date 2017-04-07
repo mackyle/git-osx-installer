@@ -1,5 +1,0 @@
-t_ssl_server-chain.diff -p1
-t_ssl_extra-vars.diff -p1
-t_ssl_cadn-file.diff -p1
-t_server_pid-truncate.diff -p1
-t_server_idle-timeout.diff -p1

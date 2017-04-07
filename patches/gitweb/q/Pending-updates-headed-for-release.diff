@@ -11,7 +11,7 @@ Hopefully this will be empty most of the time.
  3 files changed, 14 insertions(+), 7 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 33d701d8..74d45769 100755
+index 7cf68f07..9d6bb15a 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -664,9 +664,11 @@ sub feature_extra_branch_refs {
@@ -37,7 +37,7 @@ index 33d701d8..74d45769 100755
  }
  sub evaluate_argv {
  	my $script_name = $ENV{'SCRIPT_NAME'} || $ENV{'SCRIPT_FILENAME'} || __FILE__;
-@@ -3293,7 +3295,7 @@ sub git_get_remotes_list {
+@@ -3307,7 +3309,7 @@ sub git_get_remotes_list {
  		next if $wanted and not $remote eq $wanted;
  		my ($url, $key) = ($1, $2);
  
@@ -46,7 +46,7 @@ index 33d701d8..74d45769 100755
  		$remotes{$remote}{$key} = $url;
  	}
  	close $fd or return;
-@@ -4102,10 +4104,14 @@ sub print_search_form {
+@@ -4117,10 +4119,14 @@ sub print_search_form {
  	} else {
  		$search_hash = "HEAD";
  	}
@@ -62,7 +62,7 @@ index 33d701d8..74d45769 100755
  	}
  	print $cgi->start_form(-method => "get", -action => $action) .
  	      "<div class=\"search\">\n" .
-@@ -7421,7 +7427,7 @@ sub git_log_generic {
+@@ -7435,7 +7441,7 @@ sub git_log_generic {
  			$cgi->a({-href => href(-replay=>1, page=>$page+1),
  			         -accesskey => "n", -title => "Alt-n"}, "next");
  	}

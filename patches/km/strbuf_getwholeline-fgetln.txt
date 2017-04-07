@@ -80,7 +80,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  3 files changed, 35 insertions(+), 8 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index ddd1bdfc..1b60bee0 100644
+index 76267262..d71568a0 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -384,6 +384,8 @@ all::
@@ -92,7 +92,7 @@ index ddd1bdfc..1b60bee0 100644
  
  GIT-VERSION-FILE: FORCE
  	@$(SHELL_PATH) ./GIT-VERSION-GEN
-@@ -1510,6 +1512,10 @@ ifdef HAVE_GETDELIM
+@@ -1514,6 +1516,10 @@ ifdef HAVE_GETDELIM
  	BASIC_CFLAGS += -DHAVE_GETDELIM
  endif
  
@@ -148,7 +148,7 @@ index b232908f..d5fd4dc8 100644
  ifeq ($(uname_S),AIX)
  	DEFAULT_PAGER = more
 diff --git a/strbuf.c b/strbuf.c
-index b839be49..d47f351f 100644
+index 8fec6579..eb62c5bd 100644
 --- a/strbuf.c
 +++ b/strbuf.c
 @@ -514,15 +514,31 @@ int strbuf_getwholeline(struct strbuf *sb, FILE *fp, int term)

@@ -16,10 +16,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  4 files changed, 101 insertions(+), 8 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f5ffc7fb..08bcef66 100755
+index 536d5442..1cf1b3ee 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -6819,7 +6819,11 @@ sub git_blame_common {
+@@ -6834,7 +6834,11 @@ sub git_blame_common {
  	print qq!<table id="blame_table" class="blame" width="100%">\n!.
  	      #qq!<col width="5.5em" /><col width="2.5em" /><col width="*" />\n!.
  	      qq!<thead>\n!.
@@ -32,7 +32,7 @@ index f5ffc7fb..08bcef66 100755
  	      qq!</thead>\n!.
  	      qq!<tbody>\n!;
  
-@@ -6839,6 +6843,8 @@ sub git_blame_common {
+@@ -6854,6 +6858,8 @@ sub git_blame_common {
  
  			print qq!<tr id="l$linenr" class="$color_class">!.
  			      qq!<td class="sha1"><a href=""> </a></td>!.
@@ -41,7 +41,7 @@ index f5ffc7fb..08bcef66 100755
  			      qq!<td class="linenr">!.
  			      qq!<a class="linenr" href="">$linenr</a></td>!;
  			print qq!<td class="pre">! . esc_html($line) . "</td>\n";
-@@ -6885,10 +6891,10 @@ sub git_blame_common {
+@@ -6900,10 +6906,10 @@ sub git_blame_common {
  			$tr_class .= ' multiple-previous' if ($meta->{'nprevious'} > 1);
  			print "<tr id=\"l$lineno\" class=\"$tr_class\">\n";
  			if ($group_size) {
@@ -54,7 +54,7 @@ index f5ffc7fb..08bcef66 100755
  				print $cgi->a({-href => href(action=>"commit",
  				                             hash=>$full_rev,
  				                             file_name=>$file_name)},
-@@ -6902,6 +6908,8 @@ sub git_blame_common {
+@@ -6917,6 +6923,8 @@ sub git_blame_common {
  					}
  				}
  				print "</td>\n";

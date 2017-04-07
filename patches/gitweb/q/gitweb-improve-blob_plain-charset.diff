@@ -13,7 +13,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 103 insertions(+), 29 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 37cadc2f..4feb8206 100755
+index f144ab30..7b83f0d1 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -175,7 +175,7 @@ our $strict_export = "++GITWEB_STRICT_EXPORT++";
@@ -25,7 +25,7 @@ index 37cadc2f..4feb8206 100755
  our $default_text_plain_charset  = undef;
  
  # file to use for guessing MIME types before trying /etc/mime.types
-@@ -4222,6 +4222,7 @@ sub insert_file {
+@@ -4245,6 +4245,7 @@ sub insert_file {
  sub mimetype_guess_file {
  	my $filename = shift;
  	my $mimemap = shift;
@@ -33,7 +33,7 @@ index 37cadc2f..4feb8206 100755
  	-r $mimemap or return undef;
  
  	my %mimemap;
-@@ -4235,12 +4236,25 @@ sub mimetype_guess_file {
+@@ -4258,12 +4259,25 @@ sub mimetype_guess_file {
  	}
  	close($mh);
  
@@ -61,7 +61,7 @@ index 37cadc2f..4feb8206 100755
  	my $mime;
  	$filename =~ /\./ or return undef;
  
-@@ -4250,48 +4264,105 @@ sub mimetype_guess {
+@@ -4273,48 +4287,105 @@ sub mimetype_guess {
  			# it is relative to project
  			$file = "$projectroot/$project/$file";
  		}
@@ -192,7 +192,7 @@ index 37cadc2f..4feb8206 100755
  }
  
  # peek the first upto 128 bytes off a file handle
-@@ -7737,7 +7808,8 @@ sub git_blob_plain {
+@@ -7762,7 +7833,8 @@ sub git_blob_plain {
  	binmode($fd);
  
  	# content-type (can include charset)
@@ -202,7 +202,7 @@ index 37cadc2f..4feb8206 100755
  
  	# "save as" filename, even when no $file_name is given
  	my $save_as = "$hash";
-@@ -7773,6 +7845,7 @@ sub git_blob_plain {
+@@ -7798,6 +7870,7 @@ sub git_blob_plain {
  			. '; filename="' . $save_as . '"');
  	binmode STDOUT, ':raw';
  	$fcgi_raw_mode = 1;
@@ -210,7 +210,7 @@ index 37cadc2f..4feb8206 100755
  	my $buf;
  	while (read($fd, $buf, 32768)) {
  		print $buf;
-@@ -7801,6 +7874,7 @@ sub git_blob {
+@@ -7826,6 +7899,7 @@ sub git_blob {
  	my $have_blame = gitweb_check_feature('blame');
  	defined(my $fd = git_cmd_pipe "cat-file", "blob", $hash)
  		or die_error(500, "Couldn't cat $file_name, $hash");

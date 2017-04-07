@@ -24,10 +24,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 35 insertions(+), 4 deletions(-)
 
 diff --git a/Documentation/config.txt b/Documentation/config.txt
-index 21fdddf2..91b8d307 100644
+index 1fee83ca..a7164a2d 100644
 --- a/Documentation/config.txt
 +++ b/Documentation/config.txt
-@@ -2183,8 +2183,10 @@ pack.windowMemory::
+@@ -2210,8 +2210,10 @@ pack.windowMemory::
  	The maximum size of memory that is consumed by each thread
  	in linkgit:git-pack-objects[1] for pack window memory when
  	no limit is given on the command line.  The value can be
@@ -41,10 +41,10 @@ index 21fdddf2..91b8d307 100644
  pack.compression::
  	An integer -1..9, indicating the compression level for objects
 diff --git a/builtin/pack-objects.c b/builtin/pack-objects.c
-index 0954375b..29c952b9 100644
+index 8841f8b3..03934dca 100644
 --- a/builtin/pack-objects.c
 +++ b/builtin/pack-objects.c
-@@ -19,11 +19,18 @@
+@@ -19,12 +19,19 @@
  #include "refs.h"
  #include "streaming.h"
  #include "thread-utils.h"
@@ -53,6 +53,7 @@ index 0954375b..29c952b9 100644
  #include "reachable.h"
  #include "sha1-array.h"
  #include "argv-array.h"
+ #include "mru.h"
  
 +#if SSIZE_MAX <= LONG_MAX
 +#define WINDOW_MEMORY_MAX ((long)SSIZE_MAX)
@@ -72,7 +73,7 @@ index 0954375b..29c952b9 100644
  
  /*
   * stats
-@@ -2630,6 +2637,24 @@ static void get_object_list(int ac, const char **av)
+@@ -2737,6 +2744,24 @@ static void get_object_list(int ac, const char **av)
  	sha1_array_clear(&recent_objects);
  }
  
@@ -97,7 +98,7 @@ index 0954375b..29c952b9 100644
  static int option_parse_index_version(const struct option *opt,
  				      const char *arg, int unset)
  {
-@@ -2801,9 +2826,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+@@ -2906,9 +2931,13 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
  		delta_search_threads = online_cpus();
  
  #ifdef NO_PTHREADS

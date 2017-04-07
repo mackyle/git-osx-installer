@@ -2712,7 +2712,7 @@ index 00000000..93461f73
 +https://github.com/mackyle/pcreposix-compat
 diff --git a/config.mak b/config.mak
 new file mode 100644
-index 00000000..b38e74a4
+index 00000000..87991d04
 --- /dev/null
 +++ b/config.mak
 @@ -0,0 +1,73 @@
@@ -2788,7 +2788,7 @@ index 00000000..b38e74a4
 +
 +# Add pcreposix-compat compiler and linker options
 +BASIC_CFLAGS += -I$(PCREPOSIXINC)
-+BASIC_LDFLAGS += -L$(PCREPOSIXLIB) -lpcreposix -lpcre
++EXTLIBS += -L$(PCREPOSIXLIB) -lpcreposix -lpcre
 diff --git a/doc/html/pcreposix.html b/doc/html/pcreposix.html
 index 2cfce6d9..8fa415cd 100644
 --- a/doc/html/pcreposix.html

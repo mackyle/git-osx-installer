@@ -32,10 +32,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  4 files changed, 79 insertions(+), 11 deletions(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index a79e3502..5ba5ddf0 100644
+index e6320891..ede078e1 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
-@@ -424,6 +424,15 @@ $default_projects_order::
+@@ -431,6 +431,15 @@ $default_projects_order::
  +
  Default value is "project".  Unknown value means unsorted.
  
@@ -72,7 +72,7 @@ index 96156e5e..f1b9aa21 100644
  summary::
  	Displays summary about given repository.  This is the default command if
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 64c4daa1..6897b53d 100755
+index ccfd4ab8..4d8279bf 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -202,6 +202,11 @@ our $prevent_xss = 0;
@@ -111,7 +111,7 @@ index 64c4daa1..6897b53d 100755
  	    !$project) {
  		die_error(400, "Project needed");
  	}
-@@ -5594,7 +5600,7 @@ sub git_project_search_form {
+@@ -5609,7 +5615,7 @@ sub git_project_search_form {
  
  	my $limit = '';
  	if ($project_filter) {
@@ -120,7 +120,7 @@ index 64c4daa1..6897b53d 100755
  	}
  
  	print "<div class=\"projsearch\">\n";
-@@ -5611,9 +5617,16 @@ sub git_project_search_form {
+@@ -5626,9 +5632,16 @@ sub git_project_search_form {
  	      "</span>\n" .
  	      $cgi->submit(-name => 'btnS', -value => 'Search') .
  	      $cgi->end_form() . "\n" .
@@ -138,7 +138,7 @@ index 64c4daa1..6897b53d 100755
  	print "</div>\n";
  }
  
-@@ -5852,7 +5865,7 @@ sub git_project_list_body {
+@@ -5867,7 +5880,7 @@ sub git_project_list_body {
  	if ($from > $to) {
  		print "<center>\n".
  		      "<b>No such projects found</b><br />\n".
@@ -147,7 +147,7 @@ index 64c4daa1..6897b53d 100755
  		      "</center>\n<br />\n";
  		return;
  	}
-@@ -6534,7 +6547,8 @@ sub git_search_grep_body {
+@@ -6549,7 +6562,8 @@ sub git_search_grep_body {
  ## ======================================================================
  ## actions
  
@@ -157,7 +157,7 @@ index 64c4daa1..6897b53d 100755
  	my $order = $input_params{'order'};
  	if (defined $order && $order !~ m/none|project|descr|owner|age/) {
  		die_error(400, "Unknown order parameter");
-@@ -6542,18 +6556,54 @@ sub git_project_list {
+@@ -6557,18 +6571,54 @@ sub git_project_list {
  
  	my @list = git_get_projects_list($project_filter, $strict_export);
  	if (!@list) {

@@ -14,7 +14,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 26 insertions(+), 4 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index c4df54c7..59bd4000 100755
+index a12532aa..ba445bbf 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -805,6 +805,29 @@ sub evaluate_gitweb_config {
@@ -64,15 +64,15 @@ index c4df54c7..59bd4000 100755
  	}
  }
  
-@@ -4111,9 +4135,7 @@ sub run_highlighter {
- 
+@@ -4126,9 +4150,7 @@ sub run_highlighter {
  	close $fd;
+ 	my $syntax_arg = (defined $syntax) ? "--syntax $syntax" : "--force";
  	open $fd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
 -	          quote_command($^X, '-CO', '-MEncode=decode,FB_DEFAULT', '-pse',
 -	            '$_ = decode($fe, $_, FB_DEFAULT) if !utf8::decode($_);',
 -	            '--', "-fe=$fallback_encoding")." | ".
 +	          $to_utf8_pipe_command.
  	          quote_command($highlight_bin).
- 	          " --replace-tabs=8 --fragment --syntax $syntax |"
+ 	          " --replace-tabs=8 --fragment $syntax_arg |"
  		or die_error(500, "Couldn't open file or run syntax highlighter");
 ---

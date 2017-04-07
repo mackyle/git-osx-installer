@@ -11,12 +11,12 @@ a README.html file that consists of only XML <!-- comments -->.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- gitweb/gitweb.perl       | 60 ++++++++++++++++++++++++++++++++++++++++++++----
- gitweb/static/gitweb.css | 48 +++++++++++++++++++++++++++++++++-----
- 2 files changed, 97 insertions(+), 11 deletions(-)
+ gitweb/gitweb.perl       |  60 +++++++++++++++--
+ gitweb/static/gitweb.css | 165 +++++++++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 214 insertions(+), 11 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 0306b4d6..7f0392ec 100755
+index e66bcf0f..4a20ef8c 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -200,6 +200,13 @@ our $fallback_encoding = 'latin1';
@@ -33,7 +33,7 @@ index 0306b4d6..7f0392ec 100755
  # Disables features that would allow repository owners to inject script into
  # the gitweb domain.
  our $prevent_xss = 0;
-@@ -4229,6 +4236,33 @@ sub insert_file {
+@@ -4245,6 +4252,33 @@ sub insert_file {
  	close $fd;
  }
  
@@ -67,7 +67,7 @@ index 0306b4d6..7f0392ec 100755
  ## ......................................................................
  ## mimetype related functions
  
-@@ -7396,11 +7430,27 @@ sub git_summary {
+@@ -7414,11 +7448,27 @@ sub git_summary {
  
  	# If XSS prevention is on, we don't include README.html.
  	# TODO: Allow a readme in some safe format.
@@ -101,7 +101,7 @@ index 0306b4d6..7f0392ec 100755
  
  	# we need to request one more than 16 (0..15) to check if
 diff --git a/gitweb/static/gitweb.css b/gitweb/static/gitweb.css
-index 652127e7..4e0841f0 100644
+index 652127e7..0f2e044b 100644
 --- a/gitweb/static/gitweb.css
 +++ b/gitweb/static/gitweb.css
 @@ -8,11 +8,15 @@ body {
@@ -133,7 +133,7 @@ index 652127e7..4e0841f0 100644
  a.list img.avatar {
  	border-style: none;
  }
-@@ -131,14 +139,42 @@ span.title {
+@@ -131,14 +139,159 @@ span.title {
  	display: block;
  }
  
@@ -169,12 +169,129 @@ index 652127e7..4e0841f0 100644
 +	margin: 0 3ex;
 +	padding: 1ex;
 +	background-color: #eee;
++	overflow: auto;
 +}
 +
 +div.readme pre.plaintext {
 +	margin: 0;
 +	padding: 0;
 +	background-color: inherit;
++}
++
++ol._markdown-ol {
++	counter-reset: _markdown-item;
++}
++ol._markdown-ol[start="0"] {
++	counter-reset: _markdown-item -1;
++}
++ol._markdown-ol[start="5"] {
++	counter-reset: _markdown-item 4;
++}
++ol._markdown-ol[start="10"] {
++	counter-reset: _markdown-item 9;
++}
++ol._markdown-ol > span._markdown-ol-incr {
++	counter-increment: _markdown-item;
++}
++ol._markdown-ol > span._markdown-ol-incr-2 {
++	counter-increment: _markdown-item 2;
++}
++ol._markdown-ol > span._markdown-ol-incr-5 {
++	counter-increment: _markdown-item 5;
++}
++ol._markdown-ol > span._markdown-ol-incr-10 {
++	counter-increment: _markdown-item 10;
++}
++ol._markdown-lc-greek, li._markdown-lc-greek {
++	list-style-type: lower-greek;
++}
++ol._markdown-ol > li {
++	counter-increment: _markdown-item;
++}
++ol._markdown-ol > li._markdown-li,
++ol._markdown-ol > li._markdown-li-lc,
++ol._markdown-ol > li._markdown-li-lc-greek,
++ol._markdown-ol > li._markdown-li-uc {
++	list-style-type: none;
++	display: block;
++}
++ol._markdown-ol > li._markdown-li:before,
++ol._markdown-ol > li._markdown-li-lc:before,
++ol._markdown-ol > li._markdown-li-lc-greek:before,
++ol._markdown-ol > li._markdown-li-uc:before {
++	position: absolute;
++	text-align: right;
++	white-space: nowrap;
++	margin-left: -9ex;
++	width: 9ex;
++}
++ol._markdown-ol > li._markdown-li[type="1"]:before {
++	content: counter(_markdown-item, decimal) ")\A0 \A0 ";
++}
++ol._markdown-ol > li._markdown-li-lc[type="i"]:before,
++ol._markdown-ol > li._markdown-li-lc[type="I"]:before {
++	content: counter(_markdown-item, lower-roman) ")\A0 \A0 ";
++}
++ol._markdown-ol > li._markdown-li-uc[type="I"]:before,
++ol._markdown-ol > li._markdown-li-uc[type="i"]:before {
++	content: counter(_markdown-item, upper-roman) ")\A0 \A0 ";
++}
++ol._markdown-ol > li._markdown-li-lc[type="a"]:before,
++ol._markdown-ol > li._markdown-li-lc[type="A"]:before {
++	content: counter(_markdown-item, lower-alpha) ")\A0 \A0 ";
++}
++ol._markdown-ol > li._markdown-li-lc-greek[type="a"]:before,
++ol._markdown-ol > li._markdown-li-lc-greek[type="A"]:before {
++	content: counter(_markdown-item, lower-greek) ")\A0 \A0 ";
++}
++ol._markdown-ol > li._markdown-li-uc[type="A"]:before,
++ol._markdown-ol > li._markdown-li-uc[type="a"]:before {
++	content: counter(_markdown-item, upper-alpha) ")\A0 \A0 ";
++}
++
++li._markdown-checkbox-on,
++li._markdown-checkbox-off {
++	list-style-type: none;
++	display: block;
++}
++li._markdown-checkbox-on > span:first-child + span + span,
++li._markdown-checkbox-off > span:first-child + span + span {
++	position: absolute;
++	clip: rect(0,0,0,0);
++}
++li._markdown-checkbox-on > span:first-child,
++li._markdown-checkbox-off > span:first-child,
++li._markdown-checkbox-on > span:first-child + span,
++li._markdown-checkbox-off > span:first-child + span {
++	display: block;
++	position: absolute;
++	margin-left: -3ex;
++	width: 1em;
++	height: 1em;
++}
++li._markdown-checkbox-on > span:first-child > span:first-child,
++li._markdown-checkbox-off > span:first-child > span:first-child {
++	display: block;
++	position: absolute;
++	left: 0.75pt; top: 0.75pt; right: 0.75pt; bottom: 0.75pt;
++}
++li._markdown-checkbox-on > span:first-child > span:first-child:before,
++li._markdown-checkbox-off > span:first-child > span:first-child:before {
++	display: inline-block;
++	position: relative;
++	right: 1pt;
++	width: 100%;
++	height: 100%;
++	border: 1pt solid;
++	content: "";
++}
++li._markdown-checkbox-on > span:first-child + span:before {
++	position: relative;
++	left: 2pt;
++	bottom: 1pt;
++	font-size: 125%;
++	line-height: 80%;
++	content: "\2713";
 +}
 +
  div.title_text {

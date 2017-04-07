@@ -1,0 +1,36 @@
+From: "Kyle J. McKay" <mackyle@gmail.com>
+Subject: [PATCH] t7810-grep: use test_expect_failure for undefined behavior
+
+POSIX says \x has undefined behavior where x is any non-special
+character such as a letter like 'x' or 'p'.
+
+In 7675c7bd01b8 (t7810: avoid assumption about invalid regex syntax,
+2017-01-11, v2.11.1), the problem of relying on "undefined behavior"
+was corrected for "\x" but not for "\p".
+
+Mark the remaining test that's likely to cause problems as
+"test_expect_failure" since it relies on "undefined behavior" to
+succeed.
+
+A better solution would be along the same lines as 7675c7bd01b8
+but this will do in a pinch.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+---
+ t/t7810-grep.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/t/t7810-grep.sh b/t/t7810-grep.sh
+index 19f0108f..fa6c9d94 100755
+--- a/t/t7810-grep.sh
++++ b/t/t7810-grep.sh
+@@ -997,7 +997,7 @@ test_expect_success LIBPCRE 'grep -P pattern' '
+ 	test_cmp expected actual
+ '
+ 
+-test_expect_success 'grep pattern with grep.extendedRegexp=true' '
++test_expect_failure 'grep pattern with grep.extendedRegexp=true' '
+ 	>empty &&
+ 	test_must_fail git -c grep.extendedregexp=true \
+ 		grep "\p{Ps}.*?\p{Pe}" hello.c >actual &&
+---

@@ -29,10 +29,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 48 insertions(+), 4 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index cc85742d..65e2347f 100755
+index 6f5c69c2..691d1288 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -2851,7 +2851,7 @@ sub format_diff_line {
+@@ -2867,7 +2867,7 @@ sub format_diff_line {
  		}
  	}
  
@@ -41,7 +41,7 @@ index cc85742d..65e2347f 100755
  	$diff_classes .= " $diff_class" if ($diff_class);
  	$line = "<div class=\"$diff_classes\">$line</div>\n";
  
-@@ -7115,8 +7115,8 @@ sub git_search_files {
+@@ -7133,8 +7133,8 @@ sub git_search_files {
  			}
  			print "<div class=\"pre\">" .
  				$cgi->a({-href => $file_href.'#l'.$lno,
@@ -52,7 +52,7 @@ index cc85742d..65e2347f 100755
  		}
  	}
  	if ($lastfile) {
-@@ -7950,7 +7950,7 @@ sub git_blob {
+@@ -7968,7 +7968,7 @@ sub git_blob {
  			chomp $line;
  			$nr++;
  			$line = untabify($line);

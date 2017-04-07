@@ -10,7 +10,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index d92d992e..2f4f667c 100755
+index c3845417..b05c7eb6 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -1806,7 +1806,7 @@ sub quot_cec {

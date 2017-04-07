@@ -25,7 +25,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 2f4f667c..a62cfc68 100755
+index b05c7eb6..998c2453 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -1758,6 +1758,7 @@ sub esc_html {
@@ -60,7 +60,7 @@ index 2f4f667c..a62cfc68 100755
  		$str =~ s/[[:cntrl:]]/?/g;
  		return $cgi->span({-title=>$str}, esc_html($chopped));
  	}
-@@ -2272,6 +2276,7 @@ sub format_subject_html {
+@@ -2286,6 +2290,7 @@ sub format_subject_html {
  	$extra = '' unless defined($extra);
  
  	if (length($short) < length($long)) {

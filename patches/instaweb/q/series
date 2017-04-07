@@ -9,3 +9,4 @@ t_instaweb_default-to-local.diff -p1
 t_instaweb_no-kill-nothing.diff -p1
 t_instaweb_auto-port.diff -p1
 t_instaweb_restrict-bare.diff -p1
+t_instaweb_worktree.diff -p1

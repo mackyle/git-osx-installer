@@ -13,15 +13,15 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 56856aae..7553bcbd 100755
+index 7b83f0d1..dec53403 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -2361,7 +2361,7 @@ sub format_log_line_html {
- 	$line =~ s{\b([0-9a-fA-F]{8,40})\b}{
+@@ -2377,7 +2377,7 @@ sub format_log_line_html {
+     }{
  		$cgi->a({-href => href(action=>"object", hash=>$1),
  					-class => "text"}, $1);
--	}eg;
-+	}eg unless $line =~ /^\s*git-svn-id:/;
+-	}egx;
++	}egx unless $line =~ /^\s*git-svn-id:/;
  
  	return $line;
  }

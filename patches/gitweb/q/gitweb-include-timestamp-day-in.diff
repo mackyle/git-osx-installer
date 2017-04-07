@@ -12,10 +12,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 18700690..91680365 100755
+index bc1bb4bd..c0cc1dbc 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -3768,6 +3768,7 @@ sub parse_date {
+@@ -3784,6 +3784,7 @@ sub parse_date {
  	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday) = gmtime($local);
  	$date{'hour_local'} = $hour;
  	$date{'minute_local'} = $min;
@@ -23,7 +23,7 @@ index 18700690..91680365 100755
  	$date{'tz_local'} = $tz;
  	$date{'iso-tz'} = sprintf("%04d-%02d-%02d %02d:%02d:%02d %s",
  	                          1900+$year, $mon+1, $mday,
-@@ -5050,12 +5051,12 @@ sub format_timestamp_html {
+@@ -5068,12 +5069,12 @@ sub format_timestamp_html {
  		$strtime = qq!<span class="$datetime_class">$strtime</span>!;
  	}
  

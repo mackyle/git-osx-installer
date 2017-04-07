@@ -10,10 +10,10 @@ Signed-off-by: Kyle J. McKay
  1 file changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 7fce8873..dc2b6ad7 100755
+index 28a19a73..1990da95 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -6079,7 +6079,7 @@ sub git_project_list_rows {
+@@ -6094,7 +6094,7 @@ sub git_project_list_rows {
  
  sub git_project_list_body {
  	# actually uses global variable $project
@@ -22,7 +22,7 @@ index 7fce8873..dc2b6ad7 100755
  	my @projects = @$projlist;
  
  	my $check_forks = gitweb_check_feature('forks');
-@@ -6088,9 +6088,12 @@ sub git_project_list_body {
+@@ -6103,9 +6103,12 @@ sub git_project_list_body {
  	$check_forks = undef
  		if ($tagfilter || $search_regexp);
  
@@ -38,7 +38,7 @@ index 7fce8873..dc2b6ad7 100755
  	# search_projects_list pre-fills required info
  	@projects = search_projects_list(\@projects,
  	                                 'search_regexp' => $search_regexp,
-@@ -6800,6 +6803,10 @@ sub git_project_list_load {
+@@ -6815,6 +6818,10 @@ sub git_project_list_load {
  	}
  
  	my @list = git_get_projects_list($project_filter, $strict_export);
@@ -49,7 +49,7 @@ index 7fce8873..dc2b6ad7 100755
  	if (!@list) {
  		die_error(404, "No projects found") unless $empty_list_ok;
  	}
-@@ -6834,7 +6841,7 @@ sub git_frontpage {
+@@ -6849,7 +6856,7 @@ sub git_frontpage {
  			print git_show_project_tagcloud($cloud, 64);
  		}
  	} else {
@@ -58,7 +58,7 @@ index 7fce8873..dc2b6ad7 100755
  	}
  	git_footer_html();
  }
-@@ -6848,7 +6855,7 @@ sub git_project_list {
+@@ -6863,7 +6870,7 @@ sub git_project_list {
  		print "</div>\n";
  	}
  	git_project_search_form();

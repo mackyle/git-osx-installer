@@ -19,18 +19,18 @@ This is much less surprising to the user than seeing all these
 other repositories or taking an excessive amount of time to
 display just the one repository.
 
-Adding support for $projects_list_restrict  is only the first
+Adding support for $projects_list_restrict is only the first
 step.  git-instaweb must also be enhanced to set
 $projects_list_restrict when being run in a bare repository
 in order to get the desired effect.
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- gitweb/gitweb.perl | 23 ++++++++++++++++++++++-
- 1 file changed, 22 insertions(+), 1 deletion(-)
+ gitweb/gitweb.perl | 25 +++++++++++++++++++++++--
+ 1 file changed, 23 insertions(+), 2 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 7a38e475..25207f5d 100755
+index 1ee4d6bf..14a4af8a 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -130,6 +130,14 @@ our $logo_label = "git homepage";
@@ -48,7 +48,7 @@ index 7a38e475..25207f5d 100755
  # the width (in characters) of the projects list "Description" column
  our $projects_list_description_width = 25;
  
-@@ -3399,12 +3407,21 @@ sub git_get_projects_list {
+@@ -3415,12 +3423,21 @@ sub git_get_projects_list {
  		$dir =~ s!/+$!!;
  		my $pfxlen = length("$dir");
  		my $pfxdepth = ($dir =~ tr!/!!);
@@ -71,7 +71,7 @@ index 7a38e475..25207f5d 100755
  		File::Find::find({
  			follow_fast => 1, # follow symbolic links
  			follow_skip => 2, # ignore duplicates
-@@ -3454,6 +3471,10 @@ sub git_get_projects_list {
+@@ -3470,6 +3487,10 @@ sub git_get_projects_list {
  				}
  				# only directories can be git repositories
  				return unless (-d $_);
@@ -82,4 +82,13 @@ index 7a38e475..25207f5d 100755
  				# don't traverse too deep (Find is super slow on os x)
  				# $project_maxdepth excludes depth of $projectroot
  				if (($File::Find::name =~ tr!/!!) - $pfxdepth > $project_maxdepth) {
+@@ -3485,7 +3506,7 @@ sub git_get_projects_list {
+ 				# we check related file in $projectroot
+ 				if (check_export_ok("$projectroot/$path")) {
+ 					push @list, { path => $path };
+-					$File::Find::prune = 1;
++					$File::Find::prune = 1 unless defined($restrict) && ($File::Find::name =~ tr!/!!) - $pfxdepth <= 1;
+ 				}
+ 			},
+ 		}, "$dir");
 ---

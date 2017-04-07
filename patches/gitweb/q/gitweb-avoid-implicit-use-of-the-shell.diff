@@ -7,8 +7,8 @@ can be set in GITWEB_CONFIG if necessary to increase security.
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
  gitweb/Makefile    |  9 +++++----
- gitweb/gitweb.perl | 20 +++++++++++++-------
- 2 files changed, 18 insertions(+), 11 deletions(-)
+ gitweb/gitweb.perl | 21 +++++++++++++++------
+ 2 files changed, 20 insertions(+), 10 deletions(-)
 
 diff --git a/gitweb/Makefile b/gitweb/Makefile
 index cd194d05..8aab6c99 100644
@@ -52,7 +52,7 @@ index cd194d05..8aab6c99 100644
  GITWEB-BUILD-OPTIONS: FORCE
  	@rm -f $@+
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f8458ac2..61f23e33 100755
+index 9ca129eb..be7bf206 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -203,6 +203,10 @@ our @diff_opts = ('-M'); # taken from git_commit
@@ -66,23 +66,24 @@ index f8458ac2..61f23e33 100755
  # Path to the highlight executable to use (must be the one from
  # http://www.andre-simon.de due to assumptions about parameters and output).
  # Useful if highlight is not installed on your webserver's PATH.
-@@ -4339,10 +4343,11 @@ sub run_highlighter {
+@@ -4362,9 +4366,13 @@ sub run_highlighter {
  	my ($fd, $syntax) = @_;
  	return $fd unless $fd && !eof($fd) && defined $highlight_bin && defined $syntax;
  
 -	defined(open my $hifd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
--	          $to_utf8_pipe_command.
 -	          quote_command($highlight_bin).
 -	          " --replace-tabs=8 --fragment --syntax $syntax |")
 +	defined(my $hifd = cmd_pipe $posix_shell_bin, '-c',
 +		quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
-+		$to_utf8_pipe_command.
++		quote_command($^X, '-CO', '-MEncode=decode,FB_DEFAULT', '-pse',
++		  '$_ = decode($fe, $_, FB_DEFAULT) if !utf8::decode($_);',
++		  '--', "-fe=$fallback_encoding")." | ".
 +		quote_command($highlight_bin).
 +		" --replace-tabs=8 --fragment --syntax $syntax")
  		or die_error(500, "Couldn't open file or run syntax highlighter");
  	if (eof $hifd) {
  		# just in case, should not happen as we tested !eof($fd) above
-@@ -8051,12 +8056,13 @@ sub git_snapshot {
+@@ -8073,12 +8081,13 @@ sub git_snapshot {
  	my %co = parse_commit($hash);
  	exit_if_unmodified_since($co{'committer_epoch'}) if %co;
  
@@ -98,7 +99,7 @@ index f8458ac2..61f23e33 100755
  	}
  
  	$filename =~ s/(["\\])/\\$1/g;
-@@ -8071,7 +8077,7 @@ sub git_snapshot {
+@@ -8093,7 +8102,7 @@ sub git_snapshot {
  		%co ? (-last_modified => $latest_date{'rfc2822'}) : (),
  		-status => '200 OK');
  

@@ -22,7 +22,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 33 insertions(+), 15 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index f3b4ace4..64c4daa1 100755
+index 1817c212..ccfd4ab8 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -480,8 +480,11 @@ our %feature = (
@@ -59,7 +59,7 @@ index f3b4ace4..64c4daa1 100755
  }
  
  # now read PATH_INFO and update the parameter list for missing parameters
-@@ -2976,7 +2985,7 @@ sub git_gather_all_ctags {
+@@ -2990,7 +2999,7 @@ sub git_gather_all_ctags {
  }
  
  sub git_populate_project_tagcloud {
@@ -68,7 +68,7 @@ index f3b4ace4..64c4daa1 100755
  
  	# First, merge different-cased tags; tags vote on casing
  	my %ctags_lc;
-@@ -2990,7 +2999,7 @@ sub git_populate_project_tagcloud {
+@@ -3004,7 +3013,7 @@ sub git_populate_project_tagcloud {
  	}
  
  	my $cloud;
@@ -77,7 +77,7 @@ index f3b4ace4..64c4daa1 100755
  	if (eval { require HTML::TagCloud; 1; }) {
  		$cloud = HTML::TagCloud->new;
  		foreach my $ctag (sort keys %ctags_lc) {
-@@ -3003,7 +3012,7 @@ sub git_populate_project_tagcloud {
+@@ -3017,7 +3026,7 @@ sub git_populate_project_tagcloud {
  			if (defined $matched && $matched eq $ctag) {
  				$title = qq(<span class="match">$title</span>);
  			}
@@ -86,7 +86,7 @@ index f3b4ace4..64c4daa1 100755
  			            $ctags_lc{$ctag}->{count});
  		}
  	} else {
-@@ -3015,7 +3024,7 @@ sub git_populate_project_tagcloud {
+@@ -3029,7 +3038,7 @@ sub git_populate_project_tagcloud {
  			}
  			$cloud->{$ctag}{count} = $ctags_lc{$ctag}->{count};
  			$cloud->{$ctag}{ctag} =
@@ -95,7 +95,7 @@ index f3b4ace4..64c4daa1 100755
  		}
  	}
  	return $cloud;
-@@ -5812,12 +5821,12 @@ sub git_project_list_rows {
+@@ -5827,12 +5836,12 @@ sub git_project_list_rows {
  
  sub git_project_list_body {
  	# actually uses global variable $project
@@ -110,7 +110,7 @@ index f3b4ace4..64c4daa1 100755
  	$check_forks = undef
  		if ($tagfilter || $search_regexp);
  
-@@ -5852,7 +5861,7 @@ sub git_project_list_body {
+@@ -5867,7 +5876,7 @@ sub git_project_list_body {
  
  	if ($show_ctags) {
  		my $ctags = git_gather_all_ctags(\@projects);
@@ -119,7 +119,7 @@ index f3b4ace4..64c4daa1 100755
  		print git_show_project_tagcloud($cloud, 64);
  	}
  
-@@ -6564,7 +6573,7 @@ sub git_forks {
+@@ -6579,7 +6588,7 @@ sub git_forks {
  	git_header_html();
  	git_print_page_nav('','');
  	git_print_header_div('summary', "$project forks");
@@ -128,7 +128,7 @@ index f3b4ace4..64c4daa1 100755
  	git_footer_html();
  }
  
-@@ -6652,12 +6661,18 @@ sub git_summary {
+@@ -6667,12 +6676,18 @@ sub git_summary {
  	my $show_ctags = gitweb_check_feature('ctags');
  	if ($show_ctags) {
  		my $ctags = git_get_project_ctags($project);
@@ -151,7 +151,7 @@ index f3b4ace4..64c4daa1 100755
  			      "</tr>\n";
  		}
  	}
-@@ -6707,7 +6722,7 @@ sub git_summary {
+@@ -6722,7 +6737,7 @@ sub git_summary {
  		git_project_list_body(\@forklist, 'age', 0, 15,
  		                      $#forklist <= 15 ? undef :
  		                      $cgi->a({-href => href(action=>"forks")}, "..."),

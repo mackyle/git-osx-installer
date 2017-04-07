@@ -34,17 +34,17 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  create mode 100644 sys-utils.h
 
 diff --git a/Makefile b/Makefile
-index ddd1bdfc..0b1f1b26 100644
+index 76267262..13ca52e3 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -828,6 +828,7 @@ LIB_OBJS += string-list.o
+@@ -830,6 +830,7 @@ LIB_OBJS += string-list.o
  LIB_OBJS += submodule.o
  LIB_OBJS += submodule-config.o
  LIB_OBJS += symlinks.o
 +LIB_OBJS += sys-utils.o
  LIB_OBJS += tag.o
  LIB_OBJS += tempfile.o
- LIB_OBJS += trace.o
+ LIB_OBJS += tmp-objdir.o
 diff --git a/config.mak.uname b/config.mak.uname
 index b232908f..cf1a4fa8 100644
 --- a/config.mak.uname

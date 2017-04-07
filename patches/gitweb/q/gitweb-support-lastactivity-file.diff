@@ -23,10 +23,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  2 files changed, 64 insertions(+), 1 deletion(-)
 
 diff --git a/Documentation/gitweb.conf.txt b/Documentation/gitweb.conf.txt
-index 5ba5ddf0..f77628cf 100644
+index ede078e1..c5a78204 100644
 --- a/Documentation/gitweb.conf.txt
 +++ b/Documentation/gitweb.conf.txt
-@@ -530,6 +530,28 @@ $omit_age_column::
+@@ -537,6 +537,28 @@ $omit_age_column::
  	If true, omit the column with date of the most current commit on the
  	projects list page. It can save a bit of I/O and a fork per repository.
  
@@ -56,7 +56,7 @@ index 5ba5ddf0..f77628cf 100644
  	If true prevents displaying information about repository owner.
  
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 6897b53d..6144e699 100755
+index 4d8279bf..94d1b3a1 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -18,6 +18,7 @@ use Fcntl ':mode';
@@ -78,7 +78,7 @@ index 6897b53d..6144e699 100755
  # don't generate information about owners of repositories
  our $omit_owner=0;
  
-@@ -3292,11 +3297,47 @@ sub git_get_project_owner {
+@@ -3306,11 +3311,47 @@ sub git_get_project_owner {
  	return $owner;
  }
  

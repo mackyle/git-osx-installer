@@ -14,7 +14,7 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 41 insertions(+), 6 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 74d45769..f5ffc7fb 100755
+index 9d6bb15a..536d5442 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -320,6 +320,22 @@ our %feature = (
@@ -40,7 +40,7 @@ index 74d45769..f5ffc7fb 100755
  	# Enable the 'snapshot' link, providing a compressed archive of any
  	# tree. This can potentially generate high traffic if you have large
  	# project.
-@@ -4154,6 +4170,16 @@ sub git_header_html {
+@@ -4169,6 +4185,16 @@ sub git_header_html {
  <meta name="generator" content="gitweb/$version git/$git_version$mod_perl_version"/>
  <meta name="robots" content="index, nofollow"/>
  <title>$title</title>
@@ -57,7 +57,7 @@ index 74d45769..f5ffc7fb 100755
  EOF
  	# the stylesheet, favicon etc urls won't work correctly with path_info
  	# unless we set the appropriate base URL
-@@ -4255,6 +4281,9 @@ sub git_footer_html {
+@@ -4270,6 +4296,9 @@ sub git_footer_html {
  
  		print qq!<script type="text/javascript">\n!.
  		      qq!window.onload = function () {\n!;
@@ -67,7 +67,7 @@ index 74d45769..f5ffc7fb 100755
  		if (gitweb_check_feature('javascript-actions')) {
  			print qq!	fixLinks();\n!;
  		}
-@@ -4720,7 +4749,8 @@ sub git_print_tree_entry {
+@@ -4735,7 +4764,8 @@ sub git_print_tree_entry {
  		if ($have_blame) {
  			print " | " .
  			      $cgi->a({-href => href(action=>"blame", hash=>$t->{'hash'},
@@ -77,7 +77,7 @@ index 74d45769..f5ffc7fb 100755
  			              "blame");
  		}
  		if (defined $hash_base) {
-@@ -5006,7 +5036,8 @@ sub git_difftree_body {
+@@ -5021,7 +5051,8 @@ sub git_difftree_body {
  			              "blob") . " | ";
  			if ($have_blame) {
  				print $cgi->a({-href => href(action=>"blame", hash_base=>$parent,
@@ -87,7 +87,7 @@ index 74d45769..f5ffc7fb 100755
  				              "blame") . " | ";
  			}
  			print $cgi->a({-href => href(action=>"history", hash_base=>$parent,
-@@ -5057,7 +5088,8 @@ sub git_difftree_body {
+@@ -5072,7 +5103,8 @@ sub git_difftree_body {
  			               "blob") . " | ";
  			if ($have_blame) {
  				print $cgi->a({-href => href(action=>"blame", hash_base=>$hash,
@@ -97,7 +97,7 @@ index 74d45769..f5ffc7fb 100755
  				              "blame") . " | ";
  			}
  			print $cgi->a({-href => href(action=>"history", hash_base=>$hash,
-@@ -5103,7 +5135,8 @@ sub git_difftree_body {
+@@ -5118,7 +5150,8 @@ sub git_difftree_body {
  			              "blob") . " | ";
  			if ($have_blame) {
  				print $cgi->a({-href => href(action=>"blame", hash_base=>$hash,
@@ -107,7 +107,7 @@ index 74d45769..f5ffc7fb 100755
  				              "blame") . " | ";
  			}
  			print $cgi->a({-href => href(action=>"history", hash_base=>$hash,
-@@ -7078,7 +7111,8 @@ sub git_blob {
+@@ -7092,7 +7125,8 @@ sub git_blob {
  		if (defined $file_name) {
  			if ($have_blame) {
  				$formats_nav .=
@@ -117,7 +117,7 @@ index 74d45769..f5ffc7fb 100755
  					        "blame") .
  					" | ";
  			}
-@@ -8328,7 +8362,8 @@ XML
+@@ -8342,7 +8376,8 @@ XML
  			              -title => "diff"}, 'D');
  			if ($have_blame) {
  				print $cgi->a({-href => href(-full=>1, action=>"blame",

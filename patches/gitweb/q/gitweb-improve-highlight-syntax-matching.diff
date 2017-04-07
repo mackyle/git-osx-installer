@@ -11,11 +11,11 @@ The extended list of extensions is compatible with both highlight
 
 Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
 ---
- gitweb/gitweb.perl | 230 ++++++++++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 209 insertions(+), 21 deletions(-)
+ gitweb/gitweb.perl | 231 ++++++++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 209 insertions(+), 22 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 86ad7c20..f8458ac2 100755
+index ab5f4dc4..9ca129eb 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
 @@ -304,20 +304,136 @@ our %highlight_basename = (
@@ -45,8 +45,8 @@ index 86ad7c20..f8458ac2 100755
 +		      qr,^#!\s*/usr/bin/env\s+(?:\w+=\w*\s+)*(?:python)(?:\s|$),mo ],
 +	'sh'     => [ qr,^#!\s*/(?:\w+/)*(?:[bd]ash|t?csh|[akz]?sh)(?:\s|$),mo,
 +		      qr,^#!\s*/usr/bin/env\s+(?:\w+=\w*\s+)*(?:[bd]ash|t?csh|[akz]?sh)(?:\s|$),mo ],
-+	'rb'     => [ qr,^#!\s*/(?:\w+/)*(?:perl)(?:\s|$),mo,
-+		      qr,^#!\s*/usr/bin/env\s+(?:\w+=\w*\s+)*(?:perl)(?:\s|$),mo ],
++	'rb'     => [ qr,^#!\s*/(?:\w+/)*(?:ruby)(?:\s|$),mo,
++		      qr,^#!\s*/usr/bin/env\s+(?:\w+=\w*\s+)*(?:ruby)(?:\s|$),mo ],
  );
  # match by extension
  our %highlight_ext = (
@@ -163,7 +163,7 @@ index 86ad7c20..f8458ac2 100755
  );
  
  # You define site-wide feature defaults here; override them with
-@@ -4142,15 +4258,73 @@ sub blob_contenttype {
+@@ -4165,15 +4281,73 @@ sub blob_contenttype {
  	return $type;
  }
  
@@ -211,7 +211,7 @@ index 86ad7c20..f8458ac2 100755
  # guess file syntax for syntax highlighting; return undef if no highlighting
  # the name of syntax can (in the future) depend on syntax highlighter used
  sub guess_file_syntax {
--	my ($highlight, $mimetype, $file_name) = @_;
+-	my ($highlight, $file_name) = @_;
 -	return undef unless ($highlight && defined $file_name);
 +	my ($fd, $mimetype, $file_name) = @_;
 +	return undef unless $fd && defined $file_name &&
@@ -239,21 +239,22 @@ index 86ad7c20..f8458ac2 100755
  	$basename =~ /\.([^.]*)$/;
  	my $ext = $1 or return undef;
  	return $highlight_ext{$ext}
-@@ -4162,16 +4336,30 @@ sub guess_file_syntax {
+@@ -4185,17 +4359,29 @@ sub guess_file_syntax {
  # run highlighter and return FD of its output,
  # or return original FD if no highlighting
  sub run_highlighter {
 -	my ($fd, $highlight, $syntax) = @_;
--	return $fd unless ($highlight && defined $syntax);
+-	return $fd unless ($highlight);
 +	my ($fd, $syntax) = @_;
 +	return $fd unless $fd && !eof($fd) && defined $highlight_bin && defined $syntax;
  
 -	close $fd;
+-	my $syntax_arg = (defined $syntax) ? "--syntax $syntax" : "--force";
 -	open $fd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
+-	          $to_utf8_pipe_command.
 +	defined(open my $hifd, quote_command(git_cmd(), "cat-file", "blob", $hash)." | ".
- 	          $to_utf8_pipe_command.
  	          quote_command($highlight_bin).
--	          " --replace-tabs=8 --fragment --syntax $syntax |"
+-	          " --replace-tabs=8 --fragment $syntax_arg |"
 +	          " --replace-tabs=8 --fragment --syntax $syntax |")
  		or die_error(500, "Couldn't open file or run syntax highlighter");
 -	return $fd;
@@ -276,14 +277,13 @@ index 86ad7c20..f8458ac2 100755
  }
  
  ## ======================================================================
-@@ -7579,10 +7767,10 @@ sub git_blob {
+@@ -7603,9 +7789,10 @@ sub git_blob {
  	# we can have blame only for text/* mimetype
  	$have_blame &&= ($mimetype =~ m!^text/!);
  
 -	my $highlight = gitweb_check_feature('highlight');
--	my $syntax = guess_file_syntax($highlight, $mimetype, $file_name);
--	$fd = run_highlighter($fd, $highlight, $syntax)
--		if $syntax;
+-	my $syntax = guess_file_syntax($highlight, $file_name);
+-	$fd = run_highlighter($fd, $highlight, $syntax);
 +	my $highlight = gitweb_check_feature('highlight') && defined $highlight_bin;
 +	my $syntax = guess_file_syntax($fd, $mimetype, $file_name) if $highlight;
 +	my $highlight_mode_active;
@@ -291,11 +291,11 @@ index 86ad7c20..f8458ac2 100755
  
  	git_header_html(undef, $expires);
  	my $formats_nav = '';
-@@ -7636,7 +7824,7 @@ sub git_blob {
+@@ -7659,7 +7846,7 @@ sub git_blob {
  			$line = untabify($line);
  			printf qq!<div class="pre"><a id="l%i" href="%s#l%i" class="linenr">%4i</a> %s</div>\n!,
  			       $nr, esc_attr(href(-replay => 1)), $nr, $nr,
--			       $syntax ? sanitize($line) : esc_html($line, -nbsp=>1);
+-			       $highlight ? sanitize($line) : esc_html($line, -nbsp=>1);
 +			       $highlight_mode_active ? sanitize($line) : esc_html($line, -nbsp=>1);
  		}
  	}

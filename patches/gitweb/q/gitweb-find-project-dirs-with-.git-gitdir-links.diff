@@ -11,10 +11,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 37 insertions(+)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 6ab0971e..7a38e475 100755
+index f3412b5f..1ee4d6bf 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -3415,6 +3415,43 @@ sub git_get_projects_list {
+@@ -3431,6 +3431,43 @@ sub git_get_projects_list {
  				our $projectroot;
  				# skip project-list toplevel, if we get it.
  				return if (m!^[/.]$!);

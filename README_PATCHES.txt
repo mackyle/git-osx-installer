@@ -106,6 +106,7 @@ Git Patches
   - `patches/instaweb/q/t_instaweb_no-kill-nothing.diff`
   - `patches/instaweb/q/t_instaweb_auto-port.diff`
   - `patches/instaweb/q/t_instaweb_restrict-bare.diff`
+  - `patches/instaweb/q/t_instaweb_worktree.diff`
 
   My own patches to improve the usability of git instaweb by enabling source
   highlighting if highlight is available, using the installed copy of
@@ -121,7 +122,8 @@ Git Patches
   $projects_list_restrict when running in a bare repository.  The ipv6 patch is
   only effective when using lighttpd as the web server (which is the default).
   The fcgi patch enables FCGI mode when the needed FCGI perl module is present.
-  Have not been posted elsewhere.
+  The worktree patch makes instaweb work properly when used with `git worktree`
+  instances.  Have not been posted elsewhere.
 
 * Add submodule support to gitweb:
 
@@ -189,7 +191,6 @@ support Mac OS X 10.4 at all as released.
   - `patches/curl/stcompat.h`
   - `patches/curl/q/t_ntlm_no-one-shot.diff`
   - `patches/curl/q/t_securetransport_extra-data.diff`
-  - `patches/curl/q/t_vtls_reuse-client-session.diff`
   - `patches/curl/q/t_pinning_darwin.diff`
   - `patches/curl/q/t_pinning_dummy-key.diff`
   - `patches/curl/q/t_docs_manpage.diff`
@@ -252,12 +253,12 @@ GnuPG Patches
 
 The standard build of gpg does not allow one to create any keys with bit
 lengths larger than 4096 bits.  (Once created, existing versions of gpg can
-use such a key without problems.)  However, according to NIST 800-57, a RSA key
-3072 bits in length only provides 128 bits of security strength.  In order to
-comply with NIST policy on the use of AES to protect national information and
-meet the TOP SECRET requirements a security strength of at least 192 bits is
-required.  That necessitates an RSA key of 7680 bits (see NIST 800-57).  Hence
-the gpg patch to permit creation of such keys.
+use such a key without problems.)  However, according to NIST 800-57, an RSA
+key 3072 bits in length only provides 128 bits of security strength.  In order
+to comply with NIST policy on the use of AES to protect national information
+and meet the TOP SECRET requirements a security strength of at least 192 bits
+is required.  That necessitates an RSA key of 7680 bits (see NIST 800-57).
+Hence the gpg patch to permit creation of such keys.
 
 * Always allow larger RSA keys up to 16384 bits to be created
 

@@ -14,10 +14,10 @@ Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
  1 file changed, 22 insertions(+), 3 deletions(-)
 
 diff --git a/gitweb/gitweb.perl b/gitweb/gitweb.perl
-index 65e2347f..c9c8a8ef 100755
+index 691d1288..6d8b389d 100755
 --- a/gitweb/gitweb.perl
 +++ b/gitweb/gitweb.perl
-@@ -7440,12 +7440,17 @@ sub git_tag {
+@@ -7458,12 +7458,17 @@ sub git_tag {
  		die_error(404, "Unknown tag object");
  	}
  
@@ -35,7 +35,7 @@ index 65e2347f..c9c8a8ef 100755
  	      "<tr>\n" .
  	      "<td>object</td>\n" .
  	      "<td>" . $cgi->a({-class => "list", -href => href(action=>$tag{'type'}, hash=>$tag{'object'})},
-@@ -7881,9 +7886,11 @@ sub git_blob {
+@@ -7899,9 +7904,11 @@ sub git_blob {
  		# blobs defined by non-textual hash id's can be cached
  		$expires = "+1d";
  	}
@@ -48,7 +48,7 @@ index 65e2347f..c9c8a8ef 100755
  		or die_error(500, "Couldn't cat $file_name, $hash");
  	binmode($fd);
  	my $mimetype = blob_mimetype($fd, $file_name);
-@@ -7934,6 +7941,11 @@ sub git_blob {
+@@ -7952,6 +7959,11 @@ sub git_blob {
  		      "<div class=\"title\">".esc_html($hash)."</div>\n";
  	}
  	git_print_page_path($file_name, "blob", $hash_base);
@@ -60,7 +60,7 @@ index 65e2347f..c9c8a8ef 100755
  	print "<div class=\"page_body\">\n";
  	if ($mimetype =~ m!^image/!) {
  		print qq!<img class="blob" type="!.esc_attr($mimetype).qq!"!;
-@@ -7973,6 +7985,8 @@ sub git_tree {
+@@ -7991,6 +8003,8 @@ sub git_tree {
  		}
  	}
  	die_error(404, "No such tree") unless defined($hash);
@@ -69,7 +69,7 @@ index 65e2347f..c9c8a8ef 100755
  
  	my $show_sizes = gitweb_check_feature('show-sizes');
  	my $have_blame = gitweb_check_feature('blame');
-@@ -7981,7 +7995,7 @@ sub git_tree {
+@@ -7999,7 +8013,7 @@ sub git_tree {
  	{
  		local $/ = "\0";
  		defined(my $fd = git_cmd_pipe "ls-tree", '-z',
@@ -78,7 +78,7 @@ index 65e2347f..c9c8a8ef 100755
  			or die_error(500, "Open git-ls-tree failed");
  		@entries = map { chomp; to_utf8($_) } <$fd>;
  		close $fd
-@@ -8023,6 +8037,11 @@ sub git_tree {
+@@ -8041,6 +8055,11 @@ sub git_tree {
  		}
  		git_print_page_path($file_name, 'tree', $hash_base);
  	}
@@ -90,7 +90,7 @@ index 65e2347f..c9c8a8ef 100755
  	print "<div class=\"page_body\">\n";
  	print "<table class=\"tree\">\n";
  	my $alternate = 1;
-@@ -8366,8 +8385,8 @@ sub git_commit {
+@@ -8384,8 +8403,8 @@ sub git_commit {
  	}
  	print "<div class=\"title_text\">\n" .
  	      "<table class=\"object_header\">\n";

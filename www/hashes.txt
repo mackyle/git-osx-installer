@@ -113,6 +113,17 @@ The Git OS X Installer repository may be cloned from any of these URLs:
  * git://repo.or.cz/git-osx-installer
 
 
+Git 2.11.1 OS X Installer
+-------------------------
+
+    TAG:    v2.11.1
+    SIZE:   13539616 bytes
+    MD5:    5c60b689a247a82db0959fa6ae6f6009
+    SHA1:   170d4003995b3f61e9d90c4dce26d952e6a3233f
+    BLOB:   7b05ded6a165654adaa523a7e36d78b12b80c626
+    SHA256: f0ecff26a593f7586834df12091ea12f222e0741653241049b35e9584e63ef56
+
+
 Git 2.10.2 OS X Installer
 -------------------------
 

@@ -26,7 +26,27 @@
   <id>urn:uuid:8c3cdd92-11f4-44d4-a90b-ae20c7f2a963</id>
   <icon>http://mackyle.github.io/git-osx-installer/gitosxinstaller-icon.png</icon>
   <logo>http://mackyle.github.io/git-osx-installer/gitosxinstaller-logo.png</logo>
-  <updated>2016-11-08T12:00:00-08:00</updated>
+  <updated>2017-04-07T16:00:00-07:00</updated>
+
+  <entry>
+    <title>Git 2.11.1 OS X Installer</title>
+    <link rel="alternate" type="text/html" href="http://mackyle.github.io/git-osx-installer/#gitosx-v2.11.1_in"/>
+    <id>urn:uuid:397fbda2-e36f-4498-b5f8-e8c13582069a</id>
+    <published>2017-04-07T16:00:00-07:00</published>
+    <updated>2017-04-07T16:00:00-07:00</updated>
+    <summary>Mac OS X 10.4+ universal installer for Git version 2.11.1</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p style="font-size:125%;font-weight:bold;margin-bottom:1ex">Mac OS X 10.4+ universal installer for Git version 2.11.1</p>
+        <a href="https://bitbucket.org/mackyle/git-osx-installer/downloads/git-2.11.1-osx-installer.dmg">git-2.11.1-osx-installer.dmg</a><br/>
+        <span>SIZE: </span><tt>13</tt><span> MiB</span><br/>
+        <span>MD5: </span><tt>5c60b689a247a82db0959fa6ae6f6009</tt><br/>
+        <span>SHA1: </span><tt>170d4003995b3f61e9d90c4dce26d952e6a3233f</tt><br/>
+        <span>BLOB: </span><tt>7b05ded6a165654adaa523a7e36d78b12b80c626</tt><br/>
+        <span>SHA256: </span><tt>f0ecff26a593f7586834df12091ea12f222e0741653241049b35e9584e63ef56</tt><br/>
+      </div>
+    </content>
+  </entry>
 
   <entry>
     <title>Git 2.10.2 OS X Installer</title>

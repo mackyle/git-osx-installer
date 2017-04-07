@@ -1,0 +1,352 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] pcreposix: REG_PCRE and friends
+
+The pcreposix interface provides "POSIX" semantics by default
+but has a familiar POSIX-friendly interface that may be more
+comfortable (or at least familiar) to use.
+
+However, users of PCRE and/or Perl are probably not expecting
+"POSIX" semantics for regular expressions.
+
+So it becomes a quandry, use the "POSIX-friendly" interface
+that may already be familiar and easy to code to but give up
+PCRE/Perl semantics OR learn a new, possibly unfamiliar
+interface in order to get "familiar" PCRE/Perl regular
+expression semantics.
+
+To alleviate this problem, introduce the "REG_PCRE" option
+with these benefits:
+
+* It's one of the shortest "REG_..." names  :)
+* It makes code using it self-documenting about what's going on
+* When it's not used and only "POSIX" "REG_..." names are used
+  then mostly only "POSIX" behavior occurs which also helps
+  reduce confusion.
+
+But, there are some useful PCRE options that are not currently
+accessible via the pcreposix option and for REG_PCRE to be fully
+usable in a true "PCRE" mode they need to be provided as well.
+
+Therefore effect the following changes to pcreposix:
+
+1. Introduce "REG_PCRE" with the following behavior:
+
+   a) Setting REG_PCRE implies REG_EXTENDED which means that
+      PCRE_POSIC_BASIC_ESC will no longer be set for
+      !REG_EXTENDED.  No BREs with REG_PCRE.
+   b) Setting REG_PCRE makes REG_NEWLINE strictly an
+      alias for REG_MULTILINE.  In other words all of
+      the extra "macro" logic to activate the various "POSIX"
+      semantics PCRE options for !REG_NEWLINE and REG_NEWLINE
+      is disabled.  This means that !REG_NEWLINE will no longer
+      force PCRE_DOTALL|PCRE_DOLLAR_ENDONLY and REG_NEWLINE
+      will only set PCRE_MULTILINE but will no longer force
+      PCRE_NOT_EXCLUDES_NL.
+
+2. Introduce REG_EXPANDED as follows:
+
+   a) Maps directly to PCRE_EXTENDED
+   b) May be used with or without REG_PCRE
+   c) May be used with or without REG_EXTENDED
+   d) Ditto for all the other options
+
+3. Introduce REG_DOLLARENDONLY as follows:
+
+   a) Maps directly to PCRE_DOLLAR_ENDONLY
+   b) Makes this accessible in REG_PCRE mode
+   c) Still implied by !REG_PCRE && !REG_NEWLINE
+   d) Not available on 16-bit wide "int" type platorms
+
+4. Introduce REG_ANCHORED as follows:
+
+   a) Maps directly to PCRE_ANCHORED
+   b) May be used independently of other options
+   c) Not available on 16-bit wide "int" type platorms
+
+With these changes it's easy to use the regcomp() function
+to get PCRE/Perl semantics:
+
+  * Always set REG_PCRE in the cflags argument to regcomp()
+  * For "(?i)" also set REG_ICASE
+  * For "(?s)" also set REG_DOTALL
+  * For "(?m)" also set REG_MULTILINE
+  * For "(?x)" also set REG_EXPANDED (look out for typos here)
+
+For non-NUL terminated and/or embedded NUL patterns and/or subjects
+use the REG_PEND and/or REG_STARTEND options respectively.
+
+With these changes "pcreposix" means and provides two different
+paradigms:
+
+ 1. "POSIX"-semantics regex.h implemented using the "PCRE" engine
+ 2. "PCRE"-semantics regex accessible via the "POSIX" regex.h API
+
+If the caller sticks to using only POSIX-defined "REG_..." options
+(and possibly the BSDism extensions), then behavior is strictly
+(mostly) POSIX -- in REG_EXTENDED mode most all of the PCRE/Perl
+extensions are available but since these extensions would either be
+invalid or undefined POSIX patterns the result is still POSIX semantics
+compatible.
+
+If the caller uses REG_PCRE then patterns behave as expected just like
+normal PCRE patterns but they are then available via the familiar
+POSIX regex.h API.
+
+Old code that expects the legacy "pcreposix" behavior need only start
+passing the "REG_PCRE" flag in calls to regcomp() in the cflags
+argument.
+
+To make that code work with both the legacy "pcreposix" implementation
+and the new implementation it should contain something like this:
+
+#include <pcreposix.h>
+#ifndef REG_PCRE
+/* pcreposix.c ignores unknown bits so passing REG_PCRE to a legacy
+** pcreposix implementation ends up doing nothing, but since those
+** are always in REG_PCRE mode anyway it works out as intended. */
+#define REG_PCRE ((int)0x8000) /* cast needed on 16-bit int platforms */
+#endif
+
+Then stick to using only the REG_ICASE, REG_NEWLINE (an alias for
+REG_MULTILINE when REG_PCRE is set) and REG_DOTALL options (or others
+that are POSIX or were available in legacy pcreposix.h such as the
+REG_STARTEND BSDism and REG_UTF8, REG_NOTEMPTY, REG_UNGREEDY and
+REG_UCP PCRE options).
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcreposix.c |  37 +++++++++++++++++---
+ pcreposix.h | 112 ++++++++++++++++++++++++++++++++++++++++++++++--------------
+ 2 files changed, 119 insertions(+), 30 deletions(-)
+
+diff --git a/pcreposix.c b/pcreposix.c
+index 6d3878c2..08e26d31 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -7,6 +7,8 @@ and semantics are as close as possible to those of the Perl 5 language.
+ 
+                        Written by Philip Hazel
+            Copyright (c) 1997-2016 University of Cambridge
++           Copyright (c) 2017 Kyle J. McKay <mackyle@gmail.com>
++           All Rights Reserved
+ 
+ -----------------------------------------------------------------------------
+ Redistribution and use in source and binary forms, with or without
+@@ -66,6 +68,16 @@ does so after it has set PCRE_EXP_DECL to "export" if it is not already set. */
+ #include "pcre_internal.h"
+ #include "pcreposix.h"
+ 
++/* Known option bits */
++
++#define REGCOMP_OPTIONS \
++  (REG_ICASE|REG_NEWLINE|REG_DOTALL|REG_NOSUB|REG_UTF8|REG_PEND|REG_UNGREEDY| \
++   REG_UCP|REG_MULTILINE|REG_NOSPEC|REG_EXPANDED|REG_BASIC|REG_EXTENDED| \
++   REG_PCRE|REG_DENDONLY|REG_ANCHORED|REG_JAVASCPT)
++
++#define REGEXEC_OPTIONS \
++  (REG_NOTBOL|REG_NOTEOL|REG_STARTEND|REG_NOTEMPTY)
++
+ 
+ /* Table to translate PCRE compile time error codes into POSIX error codes. */
+ 
+@@ -279,6 +291,7 @@ char altpattern[(sizeof(void *) * 2) + 1];
+ 
+ if (preg == NULL) return REG_INVARG;
+ preg->re_pcre = NULL;
++if ((cflags & REGCOMP_OPTIONS) != cflags) return REG_INVARG;
+ 
+ if ((cflags & REG_PEND) != 0)
+   {
+@@ -330,8 +343,9 @@ if ((cflags & REG_PEND) != 0)
+ else if (pattern == NULL) return REG_INVARG;
+ 
+ CHECK_OPTS:
+-if ((cflags & REG_EXTENDED) == 0) options |= PCRE_POSIX_BASIC_ESC;
+-if ((cflags & REG_EXTENDED) != 0) options |= PCRE_POSIX_EXTENDED;
++#define USE_EXTENDED (REG_EXTENDED|REG_PCRE|REG_JAVASCPT)
++if ((cflags & USE_EXTENDED) == 0) options |= PCRE_POSIX_BASIC_ESC;
++if ((cflags & USE_EXTENDED) == REG_EXTENDED) options |= PCRE_POSIX_EXTENDED;
+ 
+ if ((cflags & REG_PEND) != 0)     options |= PCRE_ALLOW_EMBEDDED_NUL;
+ 
+@@ -344,9 +358,17 @@ if ((cflags & REG_UTF8) != 0)     options |= PCRE_UTF8;
+ if ((cflags & REG_UCP) != 0)      options |= PCRE_UCP;
+ if ((cflags & REG_UNGREEDY) != 0) options |= PCRE_UNGREEDY;
+ if ((cflags & REG_NOSPEC) != 0)   options |= PCRE_VERBATIM;
++if ((cflags & REG_EXPANDED) != 0) options |= PCRE_EXTENDED;
++/* These ones only work on platforms where ints are wider than 16 bits */
++if ((cflags & REG_DENDONLY) != 0) options |= PCRE_DOLLAR_ENDONLY;
++if ((cflags & REG_ANCHORED) != 0) options |= PCRE_ANCHORED;
++if ((cflags & REG_JAVASCPT) != 0) options |= PCRE_JAVASCRIPT_COMPAT;
+ 
+-if ((cflags & REG_NEWLINE) == 0)  options |= PCRE_DOTALL | PCRE_DOLLAR_ENDONLY;
+-if ((cflags & REG_NEWLINE) != 0)  options |= PCRE_NOT_EXCLUDES_NL;
++if ((cflags & (REG_PCRE|REG_JAVASCPT)) == 0)
++  {
++  if ((cflags & REG_NEWLINE) == 0)  options |= PCRE_DOTALL | PCRE_DOLLAR_ENDONLY;
++  if ((cflags & REG_NEWLINE) != 0)  options |= PCRE_NOT_EXCLUDES_NL;
++  }
+ 
+ preg->re_pcre = pcre_compile2(pattern, options, &errorcode, &errorptr,
+   &erroffset, NULL);
+@@ -395,7 +417,12 @@ int options = 0;
+ int *ovector = NULL;
+ int small_ovector[POSIX_MALLOC_THRESHOLD * 3];
+ BOOL allocated_ovector = FALSE;
+-BOOL nosub =
++BOOL nosub;
++
++if (preg == NULL) return REG_INVARG;
++if ((eflags & REGEXEC_OPTIONS) != eflags) return REG_INVARG;
++
++nosub =
+   (REAL_PCRE_OPTIONS((const pcre *)preg->re_pcre) & PCRE_NO_AUTO_CAPTURE) != 0;
+ 
+ if ((eflags & REG_NOTBOL) != 0) options |= PCRE_NOTBOL;
+diff --git a/pcreposix.h b/pcreposix.h
+index 248f7977..413fc566 100644
+--- a/pcreposix.h
++++ b/pcreposix.h
+@@ -1,6 +1,6 @@
+-/*************************************************
+-*       Perl-Compatible Regular Expressions      *
+-*************************************************/
++/**********************************************************
++*       Perl-Compatible Regular Expressions + POSIX       *
++***********************************************************/
+ 
+ #ifndef _PCREPOSIX_H
+ #define _PCREPOSIX_H
+@@ -9,7 +9,9 @@
+ Compatible Regular Expression library. It defines the things POSIX says should
+ be there. I hope.
+ 
+-            Copyright (c) 1997-2012 University of Cambridge
++            Copyright (C) 1997-2012 University of Cambridge
++            Copyright (C) 2017 Kyle J. McKay <mackyle@gmail.com>
++            All Rights Reserved
+ 
+ -----------------------------------------------------------------------------
+ Redistribution and use in source and binary forms, with or without
+@@ -40,7 +42,9 @@ POSSIBILITY OF SUCH DAMAGE.
+ -----------------------------------------------------------------------------
+ */
+ 
+-/* Have to include stdlib.h in order to ensure that size_t is defined. */
++/* Have to include stdlib.h or stddef.h in order to ensure that size_t is
++** defined, but stdlib.h has historically been used and may be more
++** ubiquitous and therefore more compatible so it's still used here. */
+ 
+ #include <stdlib.h>
+ 
+@@ -50,26 +54,84 @@ POSSIBILITY OF SUCH DAMAGE.
+ extern "C" {
+ #endif
+ 
+-/* Options, mostly defined by POSIX, but with some extras. */
+-
+-#define REG_ICASE     0x0001   /* Maps to PCRE_CASELESS */
+-#define REG_NEWLINE   0x0002   /* Affects four different PCRE options */
+-#define REG_NOTBOL    0x0004   /* Maps to PCRE_NOTBOL */
+-#define REG_NOTEOL    0x0008   /* Maps to PCRE_NOTEOL */
+-#define REG_DOTALL    0x0010   /* NOT defined by POSIX; maps to PCRE_DOTALL */
+-#define REG_NOSUB     0x0020   /* Maps to PCRE_NO_AUTO_CAPTURE */
+-#define REG_UTF8      0x0040   /* NOT defined by POSIX; maps to PCRE_UTF8 */
+-/* These next two overlap since there's no conflict */
+-#define REG_PEND      0x0080   /* BSD feature: pattern ends at re_endp addr */
+-#define REG_STARTEND  0x0080   /* BSD feature: pass subject string by so,eo */
+-#define REG_NOTEMPTY  0x0100   /* NOT defined by POSIX; maps to PCRE_NOTEMPTY */
+-#define REG_UNGREEDY  0x0200   /* NOT defined by POSIX; maps to PCRE_UNGREEDY */
+-#define REG_UCP       0x0400   /* NOT defined by POSIX; maps to PCRE_UCP */
+-#define REG_MULTILINE 0x0800   /* NOT defined by POSIX; maps to PCRE_MULTILINE */
+-#define REG_NOSPEC    0x2000   /* BSD feature: treat pattern as literal string */
+-
+-#define REG_BASIC     0        /* BSD define */
+-#define REG_EXTENDED  0x1000   /* Maps to !PCRE_POSIX_BASIC_ESC */
++/*
++** regcomp options
++**
++** mostly defined by POSIX, but with some extras
++*/
++
++#define REG_BASIC      0        /* BSD compatibility define */
++
++#define REG_ICASE      0x0001   /* Maps to PCRE_CASELESS */
++#define REG_NEWLINE    0x0002   /* Affects four different PCRE options */
++#define REG_MULTILINE  0x0004   /* NOT defined by POSIX; maps to PCRE_MULTILINE */
++#define REG_EXPANDED   0x0008   /* NOT defined by POSIX; maps to PCRE_EXTENDED */
++#define REG_DOTALL     0x0010   /* NOT defined by POSIX; maps to PCRE_DOTALL */
++#define REG_NOSUB      0x0020   /* Maps to PCRE_NO_AUTO_CAPTURE */
++#define REG_UTF8       0x0040   /* NOT defined by POSIX; maps to PCRE_UTF8 */
++#define REG_PEND       0x0080   /* BSD feature: pattern ends at re_endp addr */
++#define REG_EXTENDED   0x0100   /* Maps to !PCRE_POSIX_BASIC_ESC */
++#define REG_UNGREEDY   0x0200   /* NOT defined by POSIX; maps to PCRE_UNGREEDY */
++#define REG_UCP        0x0400   /* NOT defined by POSIX; maps to PCRE_UCP */
++#define REG_DENDONLY   0x0800   /* Maps to PCRE_DOLLAR_ENDONLY */
++#define REG_ANCHORED   0x1000   /* Maps to PCRE_ANCHORED */
++#define REG_NOSPEC     0x2000   /* BSD feature: treat pattern as literal string */
++#define REG_JAVASCPT   0x4000   /* Maps to PCRE_JAVASCRIPT_COMPAT + REG_PCRE */
++#define REG_PCRE ((int)0x8000)  /* cast needed with 16-bit ints */
++
++/*
++** regexec options
++**
++** mostly defined by POSIX, but with some extras
++*/
++
++#define REG_NOTBOL     0x0004   /* Maps to PCRE_NOTBOL */
++#define REG_NOTEOL     0x0008   /* Maps to PCRE_NOTEOL */
++#define REG_STARTEND   0x0080   /* BSD feature: pass subject string by so,eo */
++#define REG_NOTEMPTY   0x0100   /* NOT defined by POSIX; maps to PCRE_NOTEMPTY */
++
++/*
++** REG_PCRE and friends
++**
++
++When REG_PCRE is set in the cflags (3rd) argument to the regcomp function
++then the following behavior occurs:
++
++(The notation "!REG_EXTENDED" below means the "REG_EXTENDED" flag was NOT
++ included in the cflags argument and similarly for other "!REG_..." notation.)
++
++  a) All PCRE regular expression extensions are allowed.  Most of them are
++     allowed in plain REG_EXTENDED mode, but only the ones that would fall into
++     the "undefined behavior" area of a POSIX regular expression.  Setting the
++     REG_PCRE option allows all possible PCRE regular expressions.
++
++  b) Setting REG_PCRE implies REG_EXTENDED but with PCRE extensions which
++     means that PCRE_POSIC_BASIC_ESC will no longer be set for !REG_EXTENDED.
++     Do not try and use Basic Regular Expressions (BREs) with REG_PCRE!  Duh.
++
++  c) Setting REG_PCRE makes REG_NEWLINE strictly an alias for REG_MULTILINE.
++     In other words all of the extra "macro" logic to activate the various
++     "POSIX" semantics PCRE options for !REG_NEWLINE and REG_NEWLINE is
++     disabled.  This means that !REG_NEWLINE will no longer force both
++     PCRE_DOTALL and PCRE_DOLLAR_ENDONLY and REG_NEWLINE will only set
++     PCRE_MULTILINE but will no longer force PCRE_NOT_EXCLUDES_NL.
++
++The following table may be helpful when using REG_PCRE:
++
++  PCRE & Perl  Option to use for regcomp  POSIX   REG_PCRE/!REG_PCRE Defaults
++  -----------  -------------------------  ------  -----------------------------
++  (?i) or /i   REG_ICASE                  Yes     Off/Off
++  (?s) or /s   REG_DOTALL                 No      Off/On unless REG_NEWLINE set
++  (?m) or /m   REG_MULTILINE/REG_NEWLINE  No/Yes  Off/Off (REG_NEWLINE => more)
++  (?x) or /x   REG_EXPANDED               No      Off/Off
++
++In !REG_PCRE (aka POSIX) mode, !REG_NEWLINE sets both PCRE_DOTALL and
++PCRE_DOLLAR_ENDONLY whereas REG_NEWLINE sets both PCRE_MULTILINE and
++PCRE_NOT_EXCLUDES_NL.  In REG_PCRE (aka PCRE) mode, REG_NEWLINE is strictly
++an alias for REG_MULTILINE (all magic macro logic is disabled).
++
++Setting REG_JAVASCPT implies REG_PCRE.  All the comments above about REG_PCRE
++also apply to REG_JAVASCPT but REG_JAVASCPT also sets PCRE_JAVASCRIPT_COMPAT. */
+ 
+ /* Error values. Not all these are relevant or used by the wrapper. */
+ 
+
+-- 
+tg: (ef68f1fc..) t/extras-reg-pcre (depends on: t/posix-reg-extended)

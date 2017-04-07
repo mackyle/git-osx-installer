@@ -1,0 +1,70 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] pcreposix.h: use error #define's not enum
+
+To be strictly POSIX compatible, the error number constants
+must be declared using #define's NOT with an enum.
+
+Make it so.
+
+Note that the actual error number values themselves remain
+unchanged.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcreposix.h | 37 +++++++++++++++++--------------------
+ 1 file changed, 17 insertions(+), 20 deletions(-)
+
+diff --git a/pcreposix.h b/pcreposix.h
+index 413fc566..e1c0a044 100644
+--- a/pcreposix.h
++++ b/pcreposix.h
+@@ -135,26 +135,23 @@ also apply to REG_JAVASCPT but REG_JAVASCPT also sets PCRE_JAVASCRIPT_COMPAT. */
+ 
+ /* Error values. Not all these are relevant or used by the wrapper. */
+ 
+-enum {
+-  REG_ASSERT = 1,  /* internal error ? */
+-  REG_BADBR,       /* invalid repeat counts in {} */
+-  REG_BADPAT,      /* pattern error */
+-  REG_BADRPT,      /* ? * + invalid */
+-  REG_EBRACE,      /* unbalanced {} */
+-  REG_EBRACK,      /* unbalanced [] */
+-  REG_ECOLLATE,    /* collation error - not relevant */
+-  REG_ECTYPE,      /* bad class */
+-  REG_EESCAPE,     /* bad escape sequence */
+-  REG_EMPTY,       /* empty expression */
+-  REG_EPAREN,      /* unbalanced () */
+-  REG_ERANGE,      /* bad range inside [] */
+-  REG_ESIZE,       /* expression too big */
+-  REG_ESPACE,      /* failed to get memory */
+-  REG_ESUBREG,     /* bad back reference */
+-  REG_INVARG,      /* bad argument */
+-  REG_NOMATCH      /* match failed */
+-};
+-
++#define REG_ASSERT       1   /* internal error ? */
++#define REG_BADBR        2   /* invalid repeat counts in {} */
++#define REG_BADPAT       3   /* pattern error */
++#define REG_BADRPT       4   /* ? * + invalid */
++#define REG_EBRACE       5   /* unbalanced {} */
++#define REG_EBRACK       6   /* unbalanced [] */
++#define REG_ECOLLATE     7   /* collation error - not relevant */
++#define REG_ECTYPE       8   /* bad class */
++#define REG_EESCAPE      9   /* bad escape sequence */
++#define REG_EMPTY       10   /* empty expression */
++#define REG_EPAREN      11   /* unbalanced () */
++#define REG_ERANGE      12   /* bad range inside [] */
++#define REG_ESIZE       13   /* expression too big */
++#define REG_ESPACE      14   /* failed to get memory */
++#define REG_ESUBREG     15   /* bad back reference */
++#define REG_INVARG      16   /* bad argument */
++#define REG_NOMATCH     17   /* match failed */
+ 
+ /* The structure representing a compiled regular expression. */
+ 
+
+-- 
+tg: (ce2a4541..) t/posix-defines-not-enum (depends on: t/extras-reg-pcre)

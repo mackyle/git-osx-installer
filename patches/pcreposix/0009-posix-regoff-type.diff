@@ -1,0 +1,94 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] pcreposix: make regoff_t more POSIX friendly
+
+The POSIX standard requires that the regoff_t be a signed integer
+type that can hold the largest value that can be stored in either a
+ptrdiff_t type or a ssize_t type.
+
+We can just use a long except on LLP64 architectures and we need
+only check two defines for those in which case we need a long long.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcreposix.c | 20 +++++++++++++-------
+ pcreposix.h | 10 +++++++++-
+ 2 files changed, 22 insertions(+), 8 deletions(-)
+
+diff --git a/pcreposix.c b/pcreposix.c
+index 08e26d31..c2834f37 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -412,7 +412,8 @@ PCREPOSIX_EXP_DEFN int PCRE_CALL_CONVENTION
+ regexec(const regex_t *preg, const char *string, size_t nmatch,
+   regmatch_t pmatch[], int eflags)
+ {
+-int rc, so, eo;
++int rc, len;
++size_t so, eo;
+ int options = 0;
+ int *ovector = NULL;
+ int small_ovector[POSIX_MALLOC_THRESHOLD * 3];
+@@ -460,16 +461,21 @@ start location rather than being passed as a PCRE "starting offset". */
+ if ((eflags & REG_STARTEND) != 0)
+   {
+   if (pmatch == NULL) return REG_INVARG;
+-  so = pmatch[0].rm_so;
+-  eo = pmatch[0].rm_eo;
++  if (pmatch[0].rm_so < 0 || pmatch[0].rm_eo < pmatch[0].rm_so) return REG_INVARG;
++  so = (size_t)pmatch[0].rm_so;
++  eo = (size_t)pmatch[0].rm_eo;
++  if ((regoff_t)so != pmatch[0].rm_so || (regoff_t)eo != pmatch[0].rm_eo)
++    return REG_INVARG;
+   }
+ else
+   {
+   so = 0;
+-  eo = (int)strlen(string);
++  eo = strlen(string);
+   }
+ 
+-rc = pcre_exec((const pcre *)preg->re_pcre, NULL, string + so, (eo - so),
++len = (int)(eo - so);
++if ((size_t)len != (eo - so)) return REG_INVARG;
++rc = pcre_exec((const pcre *)preg->re_pcre, NULL, string + so, len,
+   0, options, ovector, (int)(nmatch * 3));
+ 
+ if (rc == 0) rc = (int)nmatch;    /* All captured slots were filled in */
+@@ -483,8 +489,8 @@ if (rc >= 0)
+     {
+     for (i = 0; i < (size_t)rc; i++)
+       {
+-      pmatch[i].rm_so = ovector[i*2];
+-      pmatch[i].rm_eo = ovector[i*2+1];
++      pmatch[i].rm_so = (regoff_t)ovector[i*2];
++      pmatch[i].rm_eo = (regoff_t)ovector[i*2+1];
+       }
+     if (allocated_ovector) free(ovector);
+     for (; i < nmatch; i++) pmatch[i].rm_so = pmatch[i].rm_eo = -1;
+diff --git a/pcreposix.h b/pcreposix.h
+index e1c0a044..11a5c9f6 100644
+--- a/pcreposix.h
++++ b/pcreposix.h
+@@ -164,7 +164,15 @@ typedef struct {
+ 
+ /* The structure in which a captured offset is returned. */
+ 
+-typedef int regoff_t;
++/* POSIX requires this be a signed int type that can hold the largest value of
++either an ssize_t or a ptrdiff_t type.  A long will do nicely on all but LLP64
++architectures where a long long is needed instead. */
++
++#if defined(__LLP64__) || defined(_WIN64)
++typedef long long regoff_t;
++#else
++typedef long regoff_t;
++#endif
+ 
+ typedef struct {
+   regoff_t rm_so;
+
+-- 
+tg: (62dffdc8..) t/posix-regoff-type (depends on: t/posix-defines-not-enum)

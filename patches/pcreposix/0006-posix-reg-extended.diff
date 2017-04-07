@@ -1,0 +1,143 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] improve pcreposix REG_EXTENDED POSIX emulation
+
+For the most part, the extensions that PCRE/Perl have added fall
+under "undefined behavior" so there's no need to disable them when
+doing POSIX emulation.  However, there are the odd few that need
+to get escaped (such as backslash within a character class).
+
+Add a new PCRE_POSIX_EXTENDED option to activate escaping for those.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcre.h.generic  |  1 +
+ pcre.h.in       |  1 +
+ pcre_compile.c  | 13 +++++++------
+ pcre_internal.h |  7 ++++++-
+ pcreposix.c     |  1 +
+ 5 files changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/pcre.h.generic b/pcre.h.generic
+index cf8242d1..906ca3d3 100644
+--- a/pcre.h.generic
++++ b/pcre.h.generic
+@@ -173,6 +173,7 @@ with J. */
+ #define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
+ #define PCRE_VERBATIM           0x40000400  /* C1        ) Extended */
+ #define PCRE_ALLOW_EMBEDDED_NUL 0x40008000  /* C1        ) Extended */
++#define PCRE_POSIX_EXTENDED     0x48000000  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre.h.in b/pcre.h.in
+index 07e43a1b..8d1bb7bb 100644
+--- a/pcre.h.in
++++ b/pcre.h.in
+@@ -173,6 +173,7 @@ with J. */
+ #define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
+ #define PCRE_VERBATIM           0x40000400  /* C1        ) Extended */
+ #define PCRE_ALLOW_EMBEDDED_NUL 0x40008000  /* C1        ) Extended */
++#define PCRE_POSIX_EXTENDED     0x48000000  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre_compile.c b/pcre_compile.c
+index f04efe48..345c89ee 100644
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -4496,6 +4496,7 @@ pcre_uchar *orig_code = code;
+ pcre_uchar *tempcode;
+ BOOL inescq = (cd->extended_options & PCRE_VERBATIM_BIT) != 0;
+ BOOL basicre = (cd->extended_options & PCRE_POSIX_BASIC_ESC_BIT) != 0;
++BOOL posixre = (cd->extended_options & PCRE_POSIX_RE_BITS) != 0;
+ BOOL embednul = (cd->extended_options & PCRE_ALLOW_EMBEDDED_NUL_BIT) != 0;
+ BOOL groupsetfirstchar = FALSE;
+ const pcre_uchar *ptr = *ptrptr;
+@@ -4948,7 +4949,7 @@ for (;; ptr++)
+     for (;;)
+       {
+       c = *(++ptr);
+-      if (c == CHAR_BACKSLASH && (!basicre || nestptr))
++      if (c == CHAR_BACKSLASH && (!posixre || nestptr))
+         {
+         if (ptr[1] == CHAR_E)
+           ptr++;
+@@ -5251,7 +5252,7 @@ for (;; ptr++)
+       as literal characters (by default), or are faulted if
+       PCRE_EXTRA is set. */
+ 
+-      if (c == CHAR_BACKSLASH && (!basicre || nestptr))
++      if (c == CHAR_BACKSLASH && (!posixre || nestptr))
+         {
+         escape = check_escape(&ptr, &ec, errorcodeptr, cd->bracount, options,
+           TRUE);
+@@ -5402,7 +5403,7 @@ for (;; ptr++)
+       code for handling \Q and \E is messy. */
+ 
+       CHECK_RANGE:
+-      while (ptr[1] == CHAR_BACKSLASH && ptr[2] == CHAR_E && (!basicre || nestptr))
++      while (ptr[1] == CHAR_BACKSLASH && ptr[2] == CHAR_E && (!posixre || nestptr))
+         {
+         inescq = FALSE;
+         ptr += 2;
+@@ -5419,12 +5420,12 @@ for (;; ptr++)
+         {
+         pcre_uint32 d;
+         ptr += 2;
+-        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_E && (!basicre || nestptr)) ptr += 2;
++        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_E && (!posixre || nestptr)) ptr += 2;
+ 
+         /* If we hit \Q (not followed by \E) at this point, go into escaped
+         mode. */
+ 
+-        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_Q && (!basicre || nestptr))
++        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_Q && (!posixre || nestptr))
+           {
+           ptr += 2;
+           if (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_E)
+@@ -5461,7 +5462,7 @@ for (;; ptr++)
+ 
+         if (!inescq)
+           {
+-          if (d == CHAR_BACKSLASH && (!basicre || nestptr))
++          if (d == CHAR_BACKSLASH && (!posixre || nestptr))
+             {
+             int descape;
+             descape = check_escape(&ptr, &d, errorcodeptr, cd->bracount, options, TRUE);
+diff --git a/pcre_internal.h b/pcre_internal.h
+index 48966eda..b4c659d6 100644
+--- a/pcre_internal.h
++++ b/pcre_internal.h
+@@ -1132,10 +1132,15 @@ bits are present -- at least one reused non-public API bit must also be set. */
+ #define PCRE_POSIX_BASIC_ESC_BIT    (PCRE_POSIX_BASIC_ESC    & ~PCRE_XC1OPTIONS)
+ #define PCRE_VERBATIM_BIT           (PCRE_VERBATIM           & ~PCRE_XC1OPTIONS)
+ #define PCRE_ALLOW_EMBEDDED_NUL_BIT (PCRE_ALLOW_EMBEDDED_NUL & ~PCRE_XC1OPTIONS)
++#define PCRE_POSIX_EXTENDED_BIT     (PCRE_POSIX_EXTENDED     & ~PCRE_XC1OPTIONS)
++
++/* A POSIX macro of sorts */
++#define PCRE_POSIX_RE_BITS \
++   (PCRE_POSIX_BASIC_ESC_BIT|PCRE_POSIX_EXTENDED_BIT)
+ 
+ #define PUBLIC_EXTENDED_COMPILE_OPTIONS \
+    (PCRE_NOT_EXCLUDES_NL|PCRE_POSIX_BASIC_ESC|PCRE_VERBATIM| \
+-    PCRE_ALLOW_EMBEDDED_NUL)
++    PCRE_ALLOW_EMBEDDED_NUL|PCRE_POSIX_EXTENDED)
+ 
+ #if (PUBLIC_COMPILE_OPTIONS & PUBLIC_EXTENDED_COMPILE_OPTIONS) != 0
+ #error PUBLIC_EXTENDED_COMPILE_OPTIONS conflicts with PUBLIC_COMPILE_OPTIONS
+diff --git a/pcreposix.c b/pcreposix.c
+index 96336820..6d3878c2 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -331,6 +331,7 @@ else if (pattern == NULL) return REG_INVARG;
+ 
+ CHECK_OPTS:
+ if ((cflags & REG_EXTENDED) == 0) options |= PCRE_POSIX_BASIC_ESC;
++if ((cflags & REG_EXTENDED) != 0) options |= PCRE_POSIX_EXTENDED;
+ 
+ if ((cflags & REG_PEND) != 0)     options |= PCRE_ALLOW_EMBEDDED_NUL;
+ 
+
+-- 
+tg: (0ec326aa..) t/posix-reg-extended (depends on: t/compat-reg-pend)

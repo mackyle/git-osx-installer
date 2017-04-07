@@ -1,0 +1,12 @@
+0001-pcre-extended-options.diff -p1
+0002-posix-reg-newline.diff -p1
+0003-posix-reg-basic.diff -p1
+0004-compat-reg-nospec.diff -p1
+0005-compat-reg-pend.diff -p1
+0006-posix-reg-extended.diff -p1
+0007-extras-reg-pcre.diff -p1
+0008-posix-defines-not-enum.diff -p1
+0009-posix-regoff-type.diff -p1
+0010-compat-reg-startend.diff -p1
+0011-compat-version.diff -p1
+0012-compat-readme.diff -p1

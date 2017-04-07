@@ -1,0 +1,459 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] support pcreposix !REG_EXTENDED POSIX emulation
+
+The pcreposix wrapper emulates the POSIX regex library fairly well
+for those aspects of the standard it supports.  However, support
+for !REG_EXTENDED (aka BREs "Basic Regular Expressions") is missing.
+
+Unfortunately, this greatly limits its ability to be used as a
+drop-in replacement.
+
+In order to add support for !REG_EXTENDED patterns (aka BREs),
+the following changes are effected:
+
+1. A new PCRE_POSIX_BASIC_ESC option is provided.
+
+   This is implemented in the standard PCRE library and is
+   available for any caller to use.  It causes all occurrences
+   of '+', '?' and '|' to always be automatically escaped meaning
+   they always match literally and it causes '(', ')', '{', and '}'
+   to become escaped (i.e. preceded by a backslash '\') if they
+   are not or to ignore a preceding backslash if they are.
+   (Obviously if they are inside a character class their behavior
+   remains unchanged even when using this option.)
+
+   This has the effect of changing the grouping delimiters from
+   '(' and ')' to '\(' and '\)' and the quantifier delimiters
+   from '{' and '}' to '\{' and '\}' while making any bare
+   '(', ')', '{', or '}' characters match literally.
+
+   This is how POSIX BREs are specified.  Note that because the
+   '+', '?' and '|' characters are always matched literally
+   with this option (whether preceded by a backslash or not),
+   alternation and minimal matching become inaccessible.
+
+2. The pcreposix wrapper adds the following behavior:
+
+   REG_EXTENDED unset:
+     PCRE_POSIX_BASIC_ESC is set
+
+   This obviously necessitates changing the definition of
+   REG_EXTENDED to a value other than 0.
+
+3. A new REG_BASIC define is added with the value 0.
+
+   The BSDish headers define this so it's nice to have
+   for compatibility.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcre.h.generic        |  1 +
+ pcre.h.in             |  1 +
+ pcre_compile.c        | 73 +++++++++++++++++++++++++++++++++++++--------------
+ pcre_internal.h       |  3 ++-
+ pcreposix.c           |  2 ++
+ pcreposix.h           |  6 ++---
+ pcretest.c            |  4 +--
+ testdata/testinput14  | 18 +++++++++++++
+ testdata/testoutput14 | 29 ++++++++++++++++++++
+ 9 files changed, 110 insertions(+), 27 deletions(-)
+
+diff --git a/pcre.h.generic b/pcre.h.generic
+index 2b32445b..e54eb5f2 100644
+--- a/pcre.h.generic
++++ b/pcre.h.generic
+@@ -170,6 +170,7 @@ with J. */
+ #define PCRE_NOTEMPTY_ATSTART   0x10000000  /*    E D J */
+ #define PCRE_UCP                0x20000000  /* C3       */
+ #define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
++#define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre.h.in b/pcre.h.in
+index 04450558..fc54c00c 100644
+--- a/pcre.h.in
++++ b/pcre.h.in
+@@ -170,6 +170,7 @@ with J. */
+ #define PCRE_NOTEMPTY_ATSTART   0x10000000  /*    E D J */
+ #define PCRE_UCP                0x20000000  /* C3       */
+ #define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
++#define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre_compile.c b/pcre_compile.c
+index 4b69fced..2c6e9693 100644
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -964,21 +964,26 @@ Returns:    TRUE or FALSE
+ */
+ 
+ static BOOL
+-is_counted_repeat(const pcre_uchar *p)
++is_counted_repeat(const pcre_uchar *p, BOOL basicre)
+ {
+ if (!IS_DIGIT(*p)) return FALSE;
+ p++;
+ while (IS_DIGIT(*p)) p++;
+-if (*p == CHAR_RIGHT_CURLY_BRACKET) return TRUE;
++if ((*p == CHAR_RIGHT_CURLY_BRACKET && !basicre) ||
++    (basicre && *p == CHAR_BACKSLASH && p[1] == CHAR_RIGHT_CURLY_BRACKET))
++  return TRUE;
+ 
+ if (*p++ != CHAR_COMMA) return FALSE;
+-if (*p == CHAR_RIGHT_CURLY_BRACKET) return TRUE;
++if ((*p == CHAR_RIGHT_CURLY_BRACKET && !basicre) ||
++    (basicre && *p == CHAR_BACKSLASH && p[1] == CHAR_RIGHT_CURLY_BRACKET))
++  return TRUE;
+ 
+ if (!IS_DIGIT(*p)) return FALSE;
+ p++;
+ while (IS_DIGIT(*p)) p++;
+ 
+-return (*p == CHAR_RIGHT_CURLY_BRACKET);
++return ((*p == CHAR_RIGHT_CURLY_BRACKET && !basicre) ||
++        (basicre && *p == CHAR_BACKSLASH && p[1] == CHAR_RIGHT_CURLY_BRACKET));
+ }
+ 
+ 
+@@ -1477,7 +1482,7 @@ newline". PCRE does not support \N{name}. However, it does support
+ quantification such as \N{2,3}. */
+ 
+ if (escape == ESC_N && ptr[1] == CHAR_LEFT_CURLY_BRACKET &&
+-     !is_counted_repeat(ptr+2))
++     !is_counted_repeat(ptr+2, FALSE))
+   *errorcodeptr = ERR37;
+ 
+ /* If PCRE_UCP is set, we change the values for \d etc. */
+@@ -1626,9 +1631,10 @@ while (IS_DIGIT(*p))
+     }
+   }
+ 
++if (*p == CHAR_BACKSLASH) ++p;
+ if (*p == CHAR_RIGHT_CURLY_BRACKET) max = min; else
+   {
+-  if (*(++p) != CHAR_RIGHT_CURLY_BRACKET)
++  if (*(++p) != CHAR_RIGHT_CURLY_BRACKET && *p != CHAR_BACKSLASH)
+     {
+     max = 0;
+     while(IS_DIGIT(*p))
+@@ -1646,6 +1652,7 @@ if (*p == CHAR_RIGHT_CURLY_BRACKET) max = min; else
+       return p;
+       }
+     }
++  if (*p == CHAR_BACKSLASH) ++p;
+   }
+ 
+ *minp = min;
+@@ -4482,6 +4489,7 @@ pcre_uchar *last_code = code;
+ pcre_uchar *orig_code = code;
+ pcre_uchar *tempcode;
+ BOOL inescq = FALSE;
++BOOL basicre = (cd->extended_options & PCRE_POSIX_BASIC_ESC_BIT) != 0;
+ BOOL groupsetfirstchar = FALSE;
+ const pcre_uchar *ptr = *ptrptr;
+ const pcre_uchar *tempptr;
+@@ -4490,6 +4498,7 @@ pcre_uchar *previous = NULL;
+ pcre_uchar *previous_callout = NULL;
+ size_t item_hwm_offset = 0;
+ pcre_uint8 classbits[32];
++pcre_uchar sub_basic_esc[3];
+ 
+ /* We can fish out the UTF-8 setting once and for all into a BOOL, but we
+ must not do this for other options (e.g. PCRE_EXTENDED) because they may change
+@@ -4591,6 +4600,29 @@ for (;; ptr++)
+     c = *ptr;
+     }
+ 
++  if (nestptr == NULL && !inescq && basicre)
++    {
++    if (c == CHAR_LEFT_PARENTHESIS || c == CHAR_RIGHT_PARENTHESIS ||
++       c == CHAR_LEFT_CURLY_BRACKET || c == CHAR_RIGHT_CURLY_BRACKET ||
++       c == CHAR_QUESTION_MARK || c == CHAR_PLUS || c == CHAR_VERTICAL_LINE)
++      {
++      sub_basic_esc[2] = CHAR_NULL;
++      sub_basic_esc[1] = c;
++      sub_basic_esc[0] = c = CHAR_BACKSLASH;
++      nestptr = ptr + 1;
++      ptr = sub_basic_esc;
++      }
++    else if (c == CHAR_BACKSLASH &&
++             !((CHAR_1 <= ptr[1] && ptr[1] <= CHAR_9) || ptr[1] == CHAR_DOT ||
++               ptr[1] == CHAR_BACKSLASH || ptr[1] == CHAR_PLUS ||
++               ptr[1] == CHAR_QUESTION_MARK || ptr[1] == CHAR_VERTICAL_LINE ||
++               ptr[1] == CHAR_LEFT_SQUARE_BRACKET || ptr[1] == CHAR_ASTERISK ||
++               ptr[1] == CHAR_CIRCUMFLEX_ACCENT || ptr[1] == CHAR_DOLLAR_SIGN))
++      {
++      c = *(++ptr);
++      }
++    }
++
+   /* If we are in the pre-compile phase, accumulate the length used for the
+   previous cycle of this loop. */
+ 
+@@ -4730,7 +4762,7 @@ for (;; ptr++)
+   and its quantifier. */
+ 
+   if (c == CHAR_LEFT_PARENTHESIS && ptr[1] == CHAR_QUESTION_MARK &&
+-      ptr[2] == CHAR_NUMBER_SIGN)
++      ptr[2] == CHAR_NUMBER_SIGN && (!basicre || nestptr))
+     {
+     ptr += 3;
+     while (*ptr != CHAR_NULL && *ptr != CHAR_RIGHT_PARENTHESIS) ptr++;
+@@ -4746,7 +4778,7 @@ for (;; ptr++)
+ 
+   is_quantifier =
+     c == CHAR_ASTERISK || c == CHAR_PLUS || c == CHAR_QUESTION_MARK ||
+-    (c == CHAR_LEFT_CURLY_BRACKET && is_counted_repeat(ptr+1));
++    (c == CHAR_LEFT_CURLY_BRACKET && is_counted_repeat(ptr+1, basicre && !nestptr));
+ 
+   /* Fill in length of a previous callout, except when the next thing is a
+   quantifier or when processing a property substitution string in UCP mode. */
+@@ -4898,7 +4930,7 @@ for (;; ptr++)
+     for (;;)
+       {
+       c = *(++ptr);
+-      if (c == CHAR_BACKSLASH)
++      if (c == CHAR_BACKSLASH && (!basicre || nestptr))
+         {
+         if (ptr[1] == CHAR_E)
+           ptr++;
+@@ -5194,7 +5226,7 @@ for (;; ptr++)
+       as literal characters (by default), or are faulted if
+       PCRE_EXTRA is set. */
+ 
+-      if (c == CHAR_BACKSLASH)
++      if (c == CHAR_BACKSLASH && (!basicre || nestptr))
+         {
+         escape = check_escape(&ptr, &ec, errorcodeptr, cd->bracount, options,
+           TRUE);
+@@ -5345,7 +5377,7 @@ for (;; ptr++)
+       code for handling \Q and \E is messy. */
+ 
+       CHECK_RANGE:
+-      while (ptr[1] == CHAR_BACKSLASH && ptr[2] == CHAR_E)
++      while (ptr[1] == CHAR_BACKSLASH && ptr[2] == CHAR_E && (!basicre || nestptr))
+         {
+         inescq = FALSE;
+         ptr += 2;
+@@ -5362,12 +5394,12 @@ for (;; ptr++)
+         {
+         pcre_uint32 d;
+         ptr += 2;
+-        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_E) ptr += 2;
++        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_E && (!basicre || nestptr)) ptr += 2;
+ 
+         /* If we hit \Q (not followed by \E) at this point, go into escaped
+         mode. */
+ 
+-        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_Q)
++        while (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_Q && (!basicre || nestptr))
+           {
+           ptr += 2;
+           if (*ptr == CHAR_BACKSLASH && ptr[1] == CHAR_E)
+@@ -5404,7 +5436,7 @@ for (;; ptr++)
+ 
+         if (!inescq)
+           {
+-          if (d == CHAR_BACKSLASH)
++          if (d == CHAR_BACKSLASH && (!basicre || nestptr))
+             {
+             int descape;
+             descape = check_escape(&ptr, &d, errorcodeptr, cd->bracount, options, TRUE);
+@@ -5772,13 +5804,13 @@ for (;; ptr++)
+     but if PCRE_UNGREEDY is set, it works the other way round. We change the
+     repeat type to the non-default. */
+ 
+-    if (ptr[1] == CHAR_PLUS)
++    if (ptr[1] == CHAR_PLUS && (!basicre || nestptr))
+       {
+       repeat_type = 0;                  /* Force greedy */
+       possessive_quantifier = TRUE;
+       ptr++;
+       }
+-    else if (ptr[1] == CHAR_QUESTION_MARK)
++    else if (ptr[1] == CHAR_QUESTION_MARK && (!basicre || nestptr))
+       {
+       repeat_type = greedy_non_default;
+       ptr++;
+@@ -6625,7 +6657,7 @@ for (;; ptr++)
+ 
+     /* Now deal with various "verbs" that can be introduced by '*'. */
+ 
+-    if (ptr[0] == CHAR_ASTERISK && (ptr[1] == ':'
++    if (ptr[0] == CHAR_ASTERISK && (!basicre || nestptr) && (ptr[1] == ':'
+          || (MAX_255(ptr[1]) && ((cd->ctypes[ptr[1]] & ctype_letter) != 0))))
+       {
+       int i, namelen;
+@@ -6777,7 +6809,7 @@ for (;; ptr++)
+     /* Deal with the extended parentheses; all are introduced by '?', and the
+     appearance of any of them means that this is not a capturing group. */
+ 
+-    if (*ptr == CHAR_QUESTION_MARK)
++    if (*ptr == CHAR_QUESTION_MARK && (!basicre || nestptr))
+       {
+       int i, set, unset, namelen;
+       int *optset;
+@@ -7089,7 +7121,7 @@ for (;; ptr++)
+         ptr++;
+         if (*ptr == CHAR_RIGHT_PARENTHESIS && ptr[1] != CHAR_ASTERISK &&
+              ptr[1] != CHAR_PLUS && ptr[1] != CHAR_QUESTION_MARK &&
+-            (ptr[1] != CHAR_LEFT_CURLY_BRACKET || !is_counted_repeat(ptr+2)))
++            (ptr[1] != CHAR_LEFT_CURLY_BRACKET || !is_counted_repeat(ptr+2, FALSE)))
+           {
+           *code++ = OP_FAIL;
+           previous = NULL;
+@@ -9164,7 +9196,8 @@ the offset for later. */
+ cd->external_flags = 0;   /* Initialize here for LIMIT_MATCH/RECURSION */
+ 
+ while (ptr[skipatstart] == CHAR_LEFT_PARENTHESIS &&
+-       ptr[skipatstart+1] == CHAR_ASTERISK)
++       ptr[skipatstart+1] == CHAR_ASTERISK &&
++       !(options2 & PCRE_POSIX_BASIC_ESC_BIT))
+   {
+   int newnl = 0;
+   int newbsr = 0;
+diff --git a/pcre_internal.h b/pcre_internal.h
+index 6054867c..9a40f046 100644
+--- a/pcre_internal.h
++++ b/pcre_internal.h
+@@ -1125,9 +1125,10 @@ bits are present -- at least one reused non-public API bit must also be set. */
+ #define PCRE_XC1OPTIONS    0x40000000  /* extended compile-only public api */
+ 
+ #define PCRE_NOT_EXCLUDES_NL_BIT  (PCRE_NOT_EXCLUDES_NL & ~PCRE_XC1OPTIONS)
++#define PCRE_POSIX_BASIC_ESC_BIT  (PCRE_POSIX_BASIC_ESC & ~PCRE_XC1OPTIONS)
+ 
+ #define PUBLIC_EXTENDED_COMPILE_OPTIONS \
+-   (PCRE_NOT_EXCLUDES_NL)
++   (PCRE_NOT_EXCLUDES_NL|PCRE_POSIX_BASIC_ESC)
+ 
+ #if (PUBLIC_COMPILE_OPTIONS & PUBLIC_EXTENDED_COMPILE_OPTIONS) != 0
+ #error PUBLIC_EXTENDED_COMPILE_OPTIONS conflicts with PUBLIC_COMPILE_OPTIONS
+diff --git a/pcreposix.c b/pcreposix.c
+index 026f525b..4d576d09 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -274,6 +274,8 @@ int errorcode;
+ int options = 0;
+ int re_nsub = 0;
+ 
++if ((cflags & REG_EXTENDED) == 0) options |= PCRE_POSIX_BASIC_ESC;
++
+ if ((cflags & REG_ICASE) != 0)    options |= PCRE_CASELESS;
+ #define REG_XXXLINE (REG_MULTILINE|REG_NEWLINE)
+ if ((cflags & REG_XXXLINE) != 0)  options |= PCRE_MULTILINE;
+diff --git a/pcreposix.h b/pcreposix.h
+index e2cc94b8..44911231 100644
+--- a/pcreposix.h
++++ b/pcreposix.h
+@@ -65,10 +65,8 @@ extern "C" {
+ #define REG_UCP       0x0400   /* NOT defined by POSIX; maps to PCRE_UCP */
+ #define REG_MULTILINE 0x0800   /* NOT defined by POSIX; maps to PCRE_MULTILINE */
+ 
+-/* This is not used by PCRE, but by defining it we make it easier
+-to slot PCRE into existing programs that make POSIX calls. */
+-
+-#define REG_EXTENDED  0
++#define REG_BASIC     0        /* BSD define */
++#define REG_EXTENDED  0x1000   /* Maps to !PCRE_POSIX_BASIC_ESC */
+ 
+ /* Error values. Not all these are relevant or used by the wrapper. */
+ 
+diff --git a/pcretest.c b/pcretest.c
+index 5b73a918..090c6de7 100644
+--- a/pcretest.c
++++ b/pcretest.c
+@@ -3793,7 +3793,7 @@ while (!done)
+       case 'O': options |= PCRE_NO_AUTO_POSSESS; break;
+ 
+ #if !defined NOPOSIX
+-      case 'P': do_posix = 1; break;
++      case 'P': do_posix += 1; break;
+ #endif
+ 
+       case 'Q':
+@@ -3929,7 +3929,7 @@ while (!done)
+   if (posix || do_posix)
+     {
+     int rc;
+-    int cflags = 0;
++    int cflags = do_posix < 2 ? REG_EXTENDED : REG_BASIC;
+ 
+     if ((options & PCRE_CASELESS) != 0) cflags |= REG_ICASE;
+     if ((options & PCRE_MULTILINE) != 0) cflags |= REG_NEWLINE;
+diff --git a/testdata/testinput14 b/testdata/testinput14
+index f3ce5687..f4836df9 100644
+--- a/testdata/testinput14
++++ b/testdata/testinput14
+@@ -105,6 +105,24 @@
+     x_y\nz
+     x\ny\nz
+ 
++/^\(ab*\)*\1$/PP
++    ababbabb
++    ** Failers
++    ababbabb\n
++    ababbab
++
++/(*UTF)\(?:\)\\Q[X]\\E[\Q\E]\{3,3\}|\\E+./PP
++    (UTF)?:\\QX\\EEQ\\|\\E+\n
++
++/^\(\^\)\{1,1\}\1\\\.\*\[\]\]\$$/PP
++    ^^\\.*[]]$
++
++/X\?Y\+\|Z/PP
++    X?Y+|Z
++
++/X?Y+|Z/PP
++    X?Y+|Z
++
+ /-- End of POSIX tests --/ 
+ 
+ /a\Cb/
+diff --git a/testdata/testoutput14 b/testdata/testoutput14
+index b9a8fde6..5b7f6067 100644
+--- a/testdata/testoutput14
++++ b/testdata/testoutput14
+@@ -177,6 +177,35 @@ No match: POSIX code 17: match failed
+     x\ny\nz
+ No match: POSIX code 17: match failed
+ 
++/^\(ab*\)*\1$/PP
++    ababbabb
++ 0: ababbabb
++ 1: abb
++    ** Failers
++No match: POSIX code 17: match failed
++    ababbabb\n
++No match: POSIX code 17: match failed
++    ababbab
++No match: POSIX code 17: match failed
++
++/(*UTF)\(?:\)\\Q[X]\\E[\Q\E]\{3,3\}|\\E+./PP
++    (UTF)?:\\QX\\EEQ\\|\\E+\n
++ 0: (UTF)?:\QX\EEQ\|\E+\x0a
++ 1: ?:
++
++/^\(\^\)\{1,1\}\1\\\.\*\[\]\]\$$/PP
++    ^^\\.*[]]$
++ 0: ^^\.*[]]$
++ 1: ^
++
++/X\?Y\+\|Z/PP
++    X?Y+|Z
++ 0: X?Y+|Z
++
++/X?Y+|Z/PP
++    X?Y+|Z
++ 0: X?Y+|Z
++
+ /-- End of POSIX tests --/ 
+ 
+ /a\Cb/
+
+-- 
+tg: (c8be0c0d..) t/posix-reg-basic (depends on: t/posix-reg-newline)

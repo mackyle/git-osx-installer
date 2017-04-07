@@ -1,0 +1,127 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] support extended pcre compile options
+
+The number of unused option bits available for use in the
+pcre compile functions "options" parameter has almost been
+exhausted if the size of an "int" type is only 32 bits.
+
+In fact, there are only two unused bits left when using
+an int type that is 32 bits wide.  The two unused bits
+are the most significant bits, but using the most
+significant bit may be unwise as the type being used
+to pass the bits is "int" rather than "unsigned" and
+setting the most significant bit would drive the value
+negative which could have unforeseen consequences.
+
+However, many of the bits are reserved for internal
+use and could potentially be re-used provided they
+are then extracted to another variable and cleared.
+
+Therefore define the last remaining unused non-sign bit
+as an "extended options are present" bit.
+
+If this bit is set, then any non-public assigned bits
+may be reused to pass additional flags provided they
+are "C1  Affects compile only" settings that can then
+be cleared out and moved to a separate variable.
+
+It is considered an error for only the "extended options
+are present" bit to be set without at least one additional
+"reused" bit being set.
+
+Since all preexisting versions of the PCRE library complain
+and return an error if any non-public API option bits are
+set when the compile function is called, attempts by new
+code to use the new options with an old shared library will
+correctly immediately generate an error return.
+
+While this change does not actually add any new extended
+option bits itself, it does add all the necessary checks
+and bit manipulations to make them usable and easily added.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcre_compile.c  | 13 ++++++++++++-
+ pcre_internal.h | 13 +++++++++++++
+ 2 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/pcre_compile.c b/pcre_compile.c
+index de92313e..5976985a 100644
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -9049,6 +9049,7 @@ pcre_uint32 firstchar, reqchar;
+ pcre_uint32 limit_match = PCRE_UINT32_MAX;
+ pcre_uint32 limit_recursion = PCRE_UINT32_MAX;
+ int newline;
++int options2;
+ int errorcode = 0;
+ int skipatstart = 0;
+ BOOL utf;
+@@ -9111,12 +9112,21 @@ cd->ctypes = tables + ctypes_offset;
+ 
+ /* Check that all undefined public option bits are zero */
+ 
+-if ((options & ~PUBLIC_COMPILE_OPTIONS) != 0)
++if ((options & ~(PUBLIC_COMPILE_OPTIONS | PUBLIC_EXTENDED_COMPILE_OPTIONS)) != 0 ||
++    (((options & PCRE_XC1OPTIONS) != 0) &&
++     (options & (PUBLIC_EXTENDED_COMPILE_OPTIONS & ~PCRE_XC1OPTIONS)) == 0) ||
++    (((options & PCRE_XC1OPTIONS) == 0) &&
++     (options & (PUBLIC_EXTENDED_COMPILE_OPTIONS & ~PCRE_XC1OPTIONS)) != 0))
+   {
+   errorcode = ERR17;
+   goto PCRE_EARLY_ERROR_RETURN;
+   }
+ 
++/* Extract the extended public options (stripping the PCRE_XC1OPTIONS bit) */
++
++options2 = options & (PUBLIC_EXTENDED_COMPILE_OPTIONS & ~PCRE_XC1OPTIONS);
++options &= ~PUBLIC_EXTENDED_COMPILE_OPTIONS;
++
+ /* If PCRE_NEVER_UTF is set, remember it. */
+ 
+ if ((options & PCRE_NEVER_UTF) != 0) never_utf = TRUE;
+@@ -9355,6 +9365,7 @@ cd->parens_depth = 0;
+ cd->assert_depth = 0;
+ cd->max_lookbehind = 0;
+ cd->external_options = options;
++cd->extended_options = options2;
+ cd->open_caps = NULL;
+ 
+ /* Now do the pre-compile. On error, errorcode will be set non-zero, so we
+diff --git a/pcre_internal.h b/pcre_internal.h
+index 2923b29f..adb94067 100644
+--- a/pcre_internal.h
++++ b/pcre_internal.h
+@@ -1119,6 +1119,18 @@ time, run time, or study time, respectively. */
+    PCRE_DUPNAMES|PCRE_NEWLINE_BITS|PCRE_BSR_ANYCRLF|PCRE_BSR_UNICODE| \
+    PCRE_JAVASCRIPT_COMPAT|PCRE_UCP|PCRE_NO_START_OPTIMIZE|PCRE_NEVER_UTF)
+ 
++/* If this bit is set then "extended public 'C1  Affects compile only'" option
++bits are present -- at least one reused non-public API bit must also be set. */
++
++#define PCRE_XC1OPTIONS    0x40000000  /* extended compile-only public api */
++
++#define PUBLIC_EXTENDED_COMPILE_OPTIONS \
++   (0)
++
++#if (PUBLIC_COMPILE_OPTIONS & PUBLIC_EXTENDED_COMPILE_OPTIONS) != 0
++#error PUBLIC_EXTENDED_COMPILE_OPTIONS conflicts with PUBLIC_COMPILE_OPTIONS
++#endif
++
+ #define PUBLIC_EXEC_OPTIONS \
+   (PCRE_ANCHORED|PCRE_NOTBOL|PCRE_NOTEOL|PCRE_NOTEMPTY|PCRE_NOTEMPTY_ATSTART| \
+    PCRE_NO_UTF8_CHECK|PCRE_PARTIAL_HARD|PCRE_PARTIAL_SOFT|PCRE_NEWLINE_BITS| \
+@@ -2448,6 +2460,7 @@ typedef struct compile_data {
+   int  parens_depth;                /* Depth of nested parentheses */
+   int  assert_depth;                /* Depth of nested assertions */
+   pcre_uint32 external_options;     /* External (initial) options */
++  pcre_uint32 extended_options;     /* External extended (initial) options */
+   pcre_uint32 external_flags;       /* External flag bits to be set */
+   int  req_varyopt;                 /* "After variable item" flag for reqbyte */
+   BOOL had_accept;                  /* (*ACCEPT) encountered */
+
+-- 
+tg: (84bd6c4d..) t/pcre-extended-options (depends on: t/vendor)

@@ -1,0 +1,443 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] pcreposix: add REG_PEND support
+
+The REG_PEND regcomp() option allows the pattern string to
+consist of arbitrary bytes (i.e. not necessarily NUL terminated
+and possibly containing embedded NUL bytes).
+
+This is a BSDism, but since it's not too horribly difficult to
+implement and it improves regex.h compatibility go ahead and
+implement it.
+
+To implement this the following changes are effected:
+
+1. A new PCRE_ALLOW_EMBEDDED_NUL option is provided.
+
+   This only provides part of the support in that while
+   it allows embedded NULs (they are lexically treated as
+   \000 literal code point matches both inside and
+   outside of character classes only), it still requires
+   the pattern to have a terminating NUL.
+
+   Secondly this option provides a means to pass the
+   pattern in as a starting pointer and an ending pointer
+   which MUST be >= the staring pointer and MUST point to
+   a NUL byte if it's > the starting pointer.  If not, a
+   bad options error (ERR17) is immediately returned.
+
+   Look at the code to see how this is accomplished
+   without altering the function signatures.  Be warned
+   though that your eyes might POP RIGHT OUT OF YOUR HEAD
+   when you look at it!  ;)
+
+2. The BSDish REG_PEND option is provided that works as
+   follows:
+
+   If the re_endp pointer is less than the pattern pointer
+   an immediate REG_INVARG error is returned.
+
+   Note that PCRE's ERR17 is also translated by pcreposix
+   to a REG_INVARG error.  This is not a coincidence.
+
+   Otherwise a malloc'd buffer of re_endp-pattern+1 bytes
+   is allocated, the last byte is set to NUL and the
+   PCRE_ALLOW_EMBEDDED_NUL option is passed.  The buffer
+   is immediately freed after the compile call since any
+   error offets are still valid for the original, uncopied
+   pattern.
+
+   Except, the following two optimizations are done to avoid
+   needing to make a malloc'd + NUL copy in some cases:
+
+    1. if pattern == re_endp then a static "" string is passed
+       and the REG_PEND option is ignored.
+
+    2. if re_endp and (re_endp - 1) are in the same 1K page
+       then *re_endp is checked and if it's already a NUL
+       then no copy is made.  This should be safe on all
+       platforms regardless of any memory protection settings.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcre.h.generic  |  1 +
+ pcre.h.in       |  1 +
+ pcre_compile.c  | 96 +++++++++++++++++++++++++++++++++++++++++++++++++++++----
+ pcre_internal.h | 14 ++++++---
+ pcreposix.c     | 59 +++++++++++++++++++++++++++++++++++
+ pcreposix.h     |  3 ++
+ 6 files changed, 164 insertions(+), 10 deletions(-)
+
+diff --git a/pcre.h.generic b/pcre.h.generic
+index cbbf34de..cf8242d1 100644
+--- a/pcre.h.generic
++++ b/pcre.h.generic
+@@ -172,6 +172,7 @@ with J. */
+ #define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
+ #define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
+ #define PCRE_VERBATIM           0x40000400  /* C1        ) Extended */
++#define PCRE_ALLOW_EMBEDDED_NUL 0x40008000  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre.h.in b/pcre.h.in
+index 1aac471e..07e43a1b 100644
+--- a/pcre.h.in
++++ b/pcre.h.in
+@@ -172,6 +172,7 @@ with J. */
+ #define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
+ #define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
+ #define PCRE_VERBATIM           0x40000400  /* C1        ) Extended */
++#define PCRE_ALLOW_EMBEDDED_NUL 0x40008000  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre_compile.c b/pcre_compile.c
+index 85a7da33..f04efe48 100644
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -285,6 +285,12 @@ static const pcre_uchar sub_implicit_rsb_newline[] = {
+   CHAR_RIGHT_SQUARE_BRACKET, CHAR_BACKSLASH, CHAR_n, '\0' };
+ 
+ 
++/* Substitute for embedded literal NUL. */
++
++static const pcre_uchar sub_embedded_nul[] = {
++  CHAR_BACKSLASH, CHAR_0, CHAR_0, CHAR_0, '\0' };
++
++
+ /* Tables of names of POSIX character classes and their lengths. The names are
+ now all in a single string, to reduce the number of relocations when a shared
+ library is dynamically loaded. The list of lengths is terminated by a zero
+@@ -4490,6 +4496,7 @@ pcre_uchar *orig_code = code;
+ pcre_uchar *tempcode;
+ BOOL inescq = (cd->extended_options & PCRE_VERBATIM_BIT) != 0;
+ BOOL basicre = (cd->extended_options & PCRE_POSIX_BASIC_ESC_BIT) != 0;
++BOOL embednul = (cd->extended_options & PCRE_ALLOW_EMBEDDED_NUL_BIT) != 0;
+ BOOL groupsetfirstchar = FALSE;
+ const pcre_uchar *ptr = *ptrptr;
+ const pcre_uchar *tempptr;
+@@ -4600,6 +4607,13 @@ for (;; ptr++)
+     c = *ptr;
+     }
+ 
++  if (c == CHAR_NULL && !inescq && embednul && ptr < cd->end_pattern)
++    {
++    nestptr = ptr + 1;
++    ptr = sub_embedded_nul;
++    c = *ptr;
++    }
++
+   if (nestptr == NULL && !inescq && basicre)
+     {
+     if (c == CHAR_LEFT_PARENTHESIS || c == CHAR_RIGHT_PARENTHESIS ||
+@@ -4692,7 +4706,8 @@ for (;; ptr++)
+   /* If in \Q...\E, check for the end; if not, we have a literal. Otherwise an
+   isolated \E is ignored. */
+ 
+-  if (c != CHAR_NULL)
++  if (c != CHAR_NULL ||
++      (inescq && nestptr == NULL && embednul && ptr < cd->end_pattern))
+     {
+     if (c == CHAR_BACKSLASH && ptr[1] == CHAR_E &&
+         (cd->extended_options & PCRE_VERBATIM_BIT) == 0)
+@@ -4738,7 +4753,7 @@ for (;; ptr++)
+     if (c == CHAR_NUMBER_SIGN)
+       {
+       ptr++;
+-      while (*ptr != CHAR_NULL)
++      while (*ptr != CHAR_NULL || (nestptr == NULL && embednul && ptr < cd->end_pattern))
+         {
+         if (IS_NEWLINE(ptr))         /* For non-fixed-length newline cases, */
+           {                          /* IS_NEWLINE sets cd->nllen. */
+@@ -4766,7 +4781,9 @@ for (;; ptr++)
+       ptr[2] == CHAR_NUMBER_SIGN && (!basicre || nestptr))
+     {
+     ptr += 3;
+-    while (*ptr != CHAR_NULL && *ptr != CHAR_RIGHT_PARENTHESIS) ptr++;
++    while ((*ptr != CHAR_NULL ||
++            (nestptr == NULL && embednul && ptr < cd->end_pattern)) &&
++           *ptr != CHAR_RIGHT_PARENTHESIS) ptr++;
+     if (*ptr == CHAR_NULL)
+       {
+       *errorcodeptr = ERR18;
+@@ -5015,6 +5032,13 @@ for (;; ptr++)
+       c = *ptr;
+       }
+ 
++    if (c == CHAR_NULL && nestptr == NULL && embednul && ptr < cd->end_pattern)
++      {
++      nestptr = ptr + 1;
++      ptr = sub_embedded_nul;
++      c = *ptr;
++      }
++
+     /* Process characters until ] is reached. By writing this as a "do" it
+     means that an initial ] is taken as a data character. At the start of the
+     loop, c contains the first byte of the character. */
+@@ -5590,7 +5614,10 @@ for (;; ptr++)
+ 
+     while (((c = *(++ptr)) != CHAR_NULL ||
+            (nestptr != NULL &&
+-             (ptr = nestptr, nestptr = NULL, c = *(++ptr)) != CHAR_NULL)) &&
++             (ptr = nestptr, nestptr = NULL, c = *(++ptr)) != CHAR_NULL) ||
++           (inescq && embednul && ptr < cd->end_pattern) ||
++           (embednul && ptr < cd->end_pattern &&
++             (nestptr = ptr + 1, ptr = sub_embedded_nul, c = *(++ptr)) != CHAR_NULL)) &&
+            (c != CHAR_RIGHT_SQUARE_BRACKET || inescq));
+ 
+     /* Check for missing terminating ']' */
+@@ -5783,7 +5810,7 @@ for (;; ptr++)
+         while (MAX_255(*p) && (cd->ctypes[*p] & ctype_space) != 0) p++;
+         if (*p != CHAR_NUMBER_SIGN) break;
+         p++;
+-        while (*p != CHAR_NULL)
++        while (*p != CHAR_NULL || (nestptr == NULL && embednul && p < cd->end_pattern))
+           {
+           if (IS_NEWLINE(p))         /* For non-fixed-length newline cases, */
+             {                        /* IS_NEWLINE sets cd->nllen. */
+@@ -7807,6 +7834,8 @@ for (;; ptr++)
+     tempbracount = cd->bracount;          /* Save value before bracket */
+     length_prevgroup = 0;                 /* Initialize for pre-compile phase */
+ 
++    if (embednul && nestptr != NULL)
++      cd->extended_options &= ~PCRE_ALLOW_EMBEDDED_NUL_BIT;
+     if (!compile_regex(
+          newoptions,                      /* The complete new option state */
+          &tempcode,                       /* Where to put code (updated) */
+@@ -7828,6 +7857,8 @@ for (;; ptr++)
+            &length_prevgroup              /* Pre-compile phase */
+          ))
+       goto FAILED;
++    if (embednul && nestptr != NULL)
++      cd->extended_options |= PCRE_ALLOW_EMBEDDED_NUL_BIT;
+ 
+     cd->parens_depth -= 1;
+ 
+@@ -9118,6 +9149,7 @@ size_t size;
+ pcre_uchar *code;
+ const pcre_uchar *codestart;
+ const pcre_uchar *ptr;
++const pcre_uchar *endptr;
+ compile_data compile_block;
+ compile_data *cd = &compile_block;
+ 
+@@ -9178,6 +9210,7 @@ if ((options & ~(PUBLIC_COMPILE_OPTIONS | PUBLIC_EXTENDED_COMPILE_OPTIONS)) != 0
+     (((options & PCRE_XC1OPTIONS) == 0) &&
+      (options & (PUBLIC_EXTENDED_COMPILE_OPTIONS & ~PCRE_XC1OPTIONS)) != 0))
+   {
++  BADOPTIONS:
+   errorcode = ERR17;
+   goto PCRE_EARLY_ERROR_RETURN;
+   }
+@@ -9187,6 +9220,54 @@ if ((options & ~(PUBLIC_COMPILE_OPTIONS | PUBLIC_EXTENDED_COMPILE_OPTIONS)) != 0
+ options2 = options & (PUBLIC_EXTENDED_COMPILE_OPTIONS & ~PCRE_XC1OPTIONS);
+ options &= ~PUBLIC_EXTENDED_COMPILE_OPTIONS;
+ 
++/*
++***
++*** LOOK AWAY NOW!!!  YOUR EYES WILL BUG OUT OF YOUR HEAD IF YOU DON'T!!!  ;)
++***
++*/
++/* Handle PCRE_ALLOW_EMBEDDED_NUL_BIT here. */
++
++if (options2 & PCRE_ALLOW_EMBEDDED_NUL_BIT)
++  {
++# define ISXDIG(x) (digitab[x] & ctype_xdigit)
++# define XVAL(x) (IS_DIGIT(x)?((x)&0xf):(((x)+0x9)&0xf)) /* ASCII or EBCDIC */
++# define XPTR(x) ((const pcre_uchar *)(void *)(uintptr_t)(x))
++  const unsigned char *uptr = (const unsigned char *)pattern;
++  const pcre_uchar **vptrs;
++  uintptr_t vinfo = 0;
++  int xdigcnt = sizeof(void *) * 2;
++
++  while (xdigcnt && ISXDIG(*uptr))
++    {
++    vinfo <<= 4;
++    vinfo |= XVAL(*uptr);
++    ++uptr;
++    --xdigcnt;
++    }
++  if (xdigcnt || *uptr) goto BADOPTIONS;
++  vptrs = (const pcre_uchar **)XPTR(vinfo);
++  if (vptrs[0] != XPTR(0x4841434b /* odd magic number ;) */) ||
++      vptrs[1] != XPTR(0x01010101 /* version number one */))
++    goto BADOPTIONS;
++
++  endptr = vptrs[3];
++  if (vptrs[2] == endptr)
++    {
++    /* only case where trailing NUL may be omitted */
++    ptr = sub_embedded_nul + 4; /* sub_embedded_nul is always "\\000\0" */
++    options2 &= ~PCRE_ALLOW_EMBEDDED_NUL_BIT;
++    }
++  else
++    {
++    if (*endptr) goto BADOPTIONS;
++    }
++  ptr = vptrs[2];
++  pattern = (const char *)ptr;
++# undef ISXDIG
++# undef XVAL
++# undef XPTR
++  }
++
+ /* If PCRE_NEVER_UTF is set, remember it. */
+ 
+ if ((options & PCRE_NEVER_UTF) != 0) never_utf = TRUE;
+@@ -9420,7 +9501,10 @@ cd->workspace_size = COMPILE_WORK_SIZE;
+ cd->named_groups = named_groups;
+ cd->named_group_list_size = NAMED_GROUP_LIST_SIZE;
+ cd->start_pattern = (const pcre_uchar *)pattern;
+-cd->end_pattern = (const pcre_uchar *)(pattern + STRLEN_UC((const pcre_uchar *)pattern));
++if (options2 & PCRE_ALLOW_EMBEDDED_NUL_BIT)
++  cd->end_pattern = endptr;
++else
++  cd->end_pattern = (const pcre_uchar *)(pattern + STRLEN_UC((const pcre_uchar *)pattern));
+ cd->req_varyopt = 0;
+ cd->parens_depth = 0;
+ cd->assert_depth = 0;
+diff --git a/pcre_internal.h b/pcre_internal.h
+index 52122e1a..48966eda 100644
+--- a/pcre_internal.h
++++ b/pcre_internal.h
+@@ -235,6 +235,10 @@ by "configure". */
+ #include <inttypes.h>
+ #endif
+ 
++#if !defined(UINTPTR_MAX) && !defined(uintptr_t) && !defined(HAVE_INTTYPES_H)
++#error Cannot determine a type for pointer-sized unsigned integers
++#endif
++
+ #if defined INT64_MAX || defined int64_t
+ #define INT64_OR_DOUBLE int64_t
+ #else
+@@ -1124,12 +1128,14 @@ bits are present -- at least one reused non-public API bit must also be set. */
+ 
+ #define PCRE_XC1OPTIONS    0x40000000  /* extended compile-only public api */
+ 
+-#define PCRE_NOT_EXCLUDES_NL_BIT  (PCRE_NOT_EXCLUDES_NL & ~PCRE_XC1OPTIONS)
+-#define PCRE_POSIX_BASIC_ESC_BIT  (PCRE_POSIX_BASIC_ESC & ~PCRE_XC1OPTIONS)
+-#define PCRE_VERBATIM_BIT         (PCRE_VERBATIM        & ~PCRE_XC1OPTIONS)
++#define PCRE_NOT_EXCLUDES_NL_BIT    (PCRE_NOT_EXCLUDES_NL    & ~PCRE_XC1OPTIONS)
++#define PCRE_POSIX_BASIC_ESC_BIT    (PCRE_POSIX_BASIC_ESC    & ~PCRE_XC1OPTIONS)
++#define PCRE_VERBATIM_BIT           (PCRE_VERBATIM           & ~PCRE_XC1OPTIONS)
++#define PCRE_ALLOW_EMBEDDED_NUL_BIT (PCRE_ALLOW_EMBEDDED_NUL & ~PCRE_XC1OPTIONS)
+ 
+ #define PUBLIC_EXTENDED_COMPILE_OPTIONS \
+-   (PCRE_NOT_EXCLUDES_NL|PCRE_POSIX_BASIC_ESC|PCRE_VERBATIM)
++   (PCRE_NOT_EXCLUDES_NL|PCRE_POSIX_BASIC_ESC|PCRE_VERBATIM| \
++    PCRE_ALLOW_EMBEDDED_NUL)
+ 
+ #if (PUBLIC_COMPILE_OPTIONS & PUBLIC_EXTENDED_COMPILE_OPTIONS) != 0
+ #error PUBLIC_EXTENDED_COMPILE_OPTIONS conflicts with PUBLIC_COMPILE_OPTIONS
+diff --git a/pcreposix.c b/pcreposix.c
+index 29f60a77..96336820 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -269,13 +269,71 @@ PCREPOSIX_EXP_DEFN int PCRE_CALL_CONVENTION
+ regcomp(regex_t *preg, const char *pattern, int cflags)
+ {
+ const char *errorptr;
++char *dupez = NULL;
+ int erroffset;
+ int errorcode;
+ int options = 0;
+ int re_nsub = 0;
++const char *vptrs[4];
++char altpattern[(sizeof(void *) * 2) + 1];
+ 
++if (preg == NULL) return REG_INVARG;
++preg->re_pcre = NULL;
++
++if ((cflags & REG_PEND) != 0)
++  {
++  uintptr_t page1, page2, ptr;
++  int i;
++
++  if (preg->re_endp < pattern) return REG_INVARG;
++  if (pattern == preg->re_endp)
++    {
++    pattern = "";
++    cflags &= ~REG_PEND;
++    goto CHECK_OPTS;
++    }
++  if (pattern == NULL) return REG_INVARG;
++# define PAGE1KM1 ((uintptr_t)(1024U-1U))
++  page2 = (uintptr_t)(void *)preg->re_endp;
++  page1 = page2 - 1U;
++  page1 &= ~PAGE1KM1;
++  page2 &= ~PAGE1KM1;
++# undef PAGE1KM1
++  if (page1 == page2 && *(preg->re_endp) == 0)
++    {
++    vptrs[2] = pattern;
++    vptrs[3] = preg->re_endp;
++    goto BUILD_PTRS;
++    }
++  dupez = (char *)malloc((preg->re_endp - pattern) + 1);
++  if (!dupez) return REG_ESPACE;
++  vptrs[2] = dupez;
++  vptrs[3] = dupez + (preg->re_endp - pattern);
++  memcpy(dupez, pattern, preg->re_endp - pattern);
++  dupez[preg->re_endp - pattern] = 0;
++  BUILD_PTRS:
++# define XPTR(x) ((const char *)(void *)(uintptr_t)(x))
++  vptrs[0] = XPTR(0x4841434b /* odd magic number ;) */);
++  vptrs[1] = XPTR(0x01010101 /* version number one */);
++# undef XPTR
++  ptr = (uintptr_t)(void *)&vptrs[0];
++  i = sizeof(void *) * 2;
++  altpattern[i] = 0;
++  while (i--)
++    {
++    unsigned nibble = ptr & 0xf;
++    ptr >>= 4;
++    altpattern[i] = (nibble <= 9) ? (CHAR_0 + nibble) : (CHAR_a + (nibble - 10));
++    }
++  pattern = altpattern;
++  }
++else if (pattern == NULL) return REG_INVARG;
++
++CHECK_OPTS:
+ if ((cflags & REG_EXTENDED) == 0) options |= PCRE_POSIX_BASIC_ESC;
+ 
++if ((cflags & REG_PEND) != 0)     options |= PCRE_ALLOW_EMBEDDED_NUL;
++
+ if ((cflags & REG_ICASE) != 0)    options |= PCRE_CASELESS;
+ #define REG_XXXLINE (REG_MULTILINE|REG_NEWLINE)
+ if ((cflags & REG_XXXLINE) != 0)  options |= PCRE_MULTILINE;
+@@ -292,6 +350,7 @@ if ((cflags & REG_NEWLINE) != 0)  options |= PCRE_NOT_EXCLUDES_NL;
+ preg->re_pcre = pcre_compile2(pattern, options, &errorcode, &errorptr,
+   &erroffset, NULL);
+ preg->re_erroffset = erroffset;
++if (dupez) free(dupez);
+ 
+ /* Safety: if the error code is too big for the translation vector (which
+ should not happen, but we all make mistakes), return REG_BADPAT. */
+diff --git a/pcreposix.h b/pcreposix.h
+index 853d3326..248f7977 100644
+--- a/pcreposix.h
++++ b/pcreposix.h
+@@ -59,6 +59,8 @@ extern "C" {
+ #define REG_DOTALL    0x0010   /* NOT defined by POSIX; maps to PCRE_DOTALL */
+ #define REG_NOSUB     0x0020   /* Maps to PCRE_NO_AUTO_CAPTURE */
+ #define REG_UTF8      0x0040   /* NOT defined by POSIX; maps to PCRE_UTF8 */
++/* These next two overlap since there's no conflict */
++#define REG_PEND      0x0080   /* BSD feature: pattern ends at re_endp addr */
+ #define REG_STARTEND  0x0080   /* BSD feature: pass subject string by so,eo */
+ #define REG_NOTEMPTY  0x0100   /* NOT defined by POSIX; maps to PCRE_NOTEMPTY */
+ #define REG_UNGREEDY  0x0200   /* NOT defined by POSIX; maps to PCRE_UNGREEDY */
+@@ -98,6 +100,7 @@ typedef struct {
+   void *re_pcre;
+   size_t re_nsub;
+   size_t re_erroffset;
++  const char *re_endp; /* REG_PEND only */
+ } regex_t;
+ 
+ /* The structure in which a captured offset is returned. */
+
+-- 
+tg: (b03f1ec4..) t/compat-reg-pend (depends on: t/compat-reg-nospec)

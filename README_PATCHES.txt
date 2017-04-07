@@ -199,6 +199,42 @@ support Mac OS X 10.4 at all as released.
   - `patches/curl/q/t_mk-ca-bundle_improvements.diff`
 
 
+PCRE Patches
+------------
+
+The PCRE library provides a POSIX wrapper that allows the PCRE library to be
+used in place of the regular POSIX regex routines.  Unfortunately, the standard
+PCRE wrapper lacks full POSIX compatibility for the REG_NEWLINE option and does
+not have any BRE (Basic Regular Expression) support at all.
+
+These patches provide a fully usable `regex.h` substitute via an enhanced and
+completely POSIX compatible pcreposix library which allows it to be used with
+Git so that the Git NO_REGEX compilation option can be avoided.
+
+The Git NO_REGEX compilation option causes a Git-provided regular expression
+library to be used.  Unfortunately, it has some severe problems and is best
+avoided.  For full details see <https://github.com/mackyle/pcreposix-compat>.
+
+With these patches, the PCRE posix wrapper library is used to replace the
+unwanted Git NO_REGEX compatibility library with a much more robust version
+that uses the PCRE backend.
+
+* PCRE pcreposix improvement patches
+
+  - `patches/pcreposix/0001-pcre-extended-options.diff`
+  - `patches/pcreposix/0002-posix-reg-newline.diff`
+  - `patches/pcreposix/0003-posix-reg-basic.diff`
+  - `patches/pcreposix/0004-compat-reg-nospec.diff`
+  - `patches/pcreposix/0005-compat-reg-pend.diff`
+  - `patches/pcreposix/0006-posix-reg-extended.diff`
+  - `patches/pcreposix/0007-extras-reg-pcre.diff`
+  - `patches/pcreposix/0008-posix-defines-not-enum.diff`
+  - `patches/pcreposix/0009-posix-regoff-type.diff`
+  - `patches/pcreposix/0010-compat-reg-startend.diff`
+  - `patches/pcreposix/0011-compat-version.diff`
+  - `patches/pcreposix/0012-compat-readme.diff`
+
+
 Lighttpd Patches
 ----------------
 

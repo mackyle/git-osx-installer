@@ -1,0 +1,425 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] improve pcreposix REG_NEWLINE POSIX emulation
+
+The pcreposix wrapper emulates the POSIX regex library fairly well
+except in one respect, REG_NEWLINE.
+
+Unfortunately, this greatly limits its ability to be used as a
+drop-in replacement.
+
+To improve POSIX REG_NEWLINE compatibility, the following changes
+are effected:
+
+1. The existing REG_NEWLINE is renamed to REG_MULTILINE.
+
+   In other words, REG_MULTILINE becomes a pass-through to the
+   PCRE_MULTILINE option.
+
+2. A new PCRE_NOT_EXCLUDES_NL option is provided.
+
+   This is implemented in the standard PCRE library and is
+   available for any caller to use.  If a character class
+   begins with "^" AND this option is set then it will NOT
+   match "\n" (or whatever "\n" might happen to be matching).
+
+3. A new "macro" REG_NEWLINE option is implemented with
+   the following behavior:
+
+   REG_NEWLINE unset:
+     PCRE_DOTALL is set
+     PCRE_DOLLAR_ENDONLY is set
+
+   REG_NEWLINE set:
+     PCRE_NOT_EXCLUDES_NL is set
+     PCRE_MULTILINE is set
+
+   Note that REG_NEWLINE never unsets any PCRE options so if
+   it is combined with use of REG_DOTALL and/or REG_MULTILINE
+   the results may not match POSIX semantics, but since neither
+   REG_DOTALL nor REG_MULTILINE are POSIX in the first place
+   using them already violates POSIX semantics to begin with.
+
+   While these changes do affect the behavior of the pcreposix
+   wrapper, no defines have been removed and only two have been
+   added (one to pcre and one to pcreposix).  All existing code
+   using the pcreposix wrapper will still compile but it may
+   behave unexpectedly if it's relying on the non-POSIX semantics
+   of the previous version of the pcrePOSIX wrapper.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ doc/pcreposix.3       | 48 ++++++++++++++++++++++++++++++------------------
+ pcre.h.generic        |  1 +
+ pcre.h.in             |  1 +
+ pcre_compile.c        | 27 +++++++++++++++++++++++++++
+ pcre_internal.h       |  4 +++-
+ pcreposix.c           |  6 +++++-
+ pcreposix.h           |  3 ++-
+ testdata/testinput14  | 28 ++++++++++++++++++++++++++--
+ testdata/testoutput14 | 50 +++++++++++++++++++++++++++++++++++++++++++++-----
+ 9 files changed, 140 insertions(+), 28 deletions(-)
+
+diff --git a/doc/pcreposix.3 b/doc/pcreposix.3
+index 77890f36..78ed0729 100644
+--- a/doc/pcreposix.3
++++ b/doc/pcreposix.3
+@@ -88,9 +88,11 @@ compilation to the native function.
+ .sp
+   REG_NEWLINE
+ .sp
+-The PCRE_MULTILINE option is set when the regular expression is passed for
+-compilation to the native function. Note that this does \fInot\fP mimic the
+-defined POSIX behaviour for REG_NEWLINE (see the following section).
++When this option is \fInot\fP set both PCRE_DOTALL and PCRE_DOLLAR_ENDONLY
++are always passed to the native function.  When this option \fIis\fP set
++PCRE_MULTILINE and PCRE_NOT_EXCLUDES_NL are always passed to the native
++function. Note that this \fIdoes\fP mimic the defined POSIX behaviour for
++REG_NEWLINE (see the following section).
+ .sp
+   REG_NOSUB
+ .sp
+@@ -119,14 +121,23 @@ The PCRE_UTF8 option is set when the regular expression is passed for
+ compilation to the native function. This causes the pattern itself and all data
+ strings used for matching it to be treated as UTF-8 strings. Note that REG_UTF8
+ is not part of the POSIX standard.
++.sp
++  REG_MULTILINE
++.sp
++The PCRE_MULTILINE option is set when the regular expression is passed for
++compilation to the native function. Note that this does \fInot\fP mimic the
++defined POSIX behaviour for REG_NEWLINE (see the following section).
+ .P
+-In the absence of these flags, no options are passed to the native function.
+-This means the the regex is compiled with PCRE default semantics. In
+-particular, the way it handles newline characters in the subject string is the
+-Perl way, not the POSIX way. Note that setting PCRE_MULTILINE has only
+-\fIsome\fP of the effects specified for REG_NEWLINE. It does not affect the way
+-newlines are matched by . (they are not) or by a negative class such as [^a]
+-(they are).
++In the absence of these flags, PCRE_DOTALL and PCRE_DOLLAR_ENDONLY are passed
++to the native function. This means the regex is compiled with POSIX default
++semantics. In particular, the way it handles newline characters in the subject
++string is the POSIX way, not the Perl way. Note that setting REG_MULTILINE has
++only \fIsome\fP of the effects specified for REG_NEWLINE. It does not affect
++the way newlines are matched by . (they are not) or by a negative class such as
++[^a] (they are).  However, setting REG_NEWLINE suppresses automatically passing
++PCRE_DOTALL (but REG_DOTALL can be used to set it) and PCRE_DOLLAR_ENDONLY and
++instead causes PCRE_MULTILINE (same as REG_MULTILINE) and PCRE_NOT_EXCLUDES_NL
++to be passed to the native function which mimics POSIX REG_NEWLINE behaviour.
+ .P
+ The yield of \fBregcomp()\fP is zero on success, and non-zero otherwise. The
+ \fIpreg\fP structure is filled in on success, and one member of the structure
+@@ -142,15 +153,15 @@ use the contents of the \fIpreg\fP structure. If, for example, you pass it to
+ .rs
+ .sp
+ This area is not simple, because POSIX and Perl take different views of things.
+-It is not possible to get PCRE to obey POSIX semantics, but then PCRE was never
+-intended to be a POSIX engine. The following table lists the different
++It is possible to get PCRE to mostly obey POSIX semantics and that is what
++pcreposix attempts to do. The following table lists the different
+ possibilities for matching newline characters in PCRE:
+ .sp
+                           Default   Change with
+ .sp
+   . matches newline          no     PCRE_DOTALL
+-  newline matches [^a]       yes    not changeable
+-  $ matches \en at end        yes    PCRE_DOLLARENDONLY
++  newline matches [^a]       yes    PCRE_NOT_EXCLUDES_NL
++  $ matches \en at end        yes    PCRE_DOLLAR_ENDONLY
+   $ matches \en in middle     no     PCRE_MULTILINE
+   ^ matches \en in middle     no     PCRE_MULTILINE
+ .sp
+@@ -165,12 +176,13 @@ This is the equivalent table for POSIX:
+   ^ matches \en in middle     no     REG_NEWLINE
+ .sp
+ PCRE's behaviour is the same as Perl's, except that there is no equivalent for
+-PCRE_DOLLAR_ENDONLY in Perl. In both PCRE and Perl, there is no way to stop
+-newline from matching [^a].
++PCRE_DOLLAR_ENDONLY in Perl. In Perl there is no way to stop newline from
++matching [^a] like PCRE's PCRE_NOT_EXCLUDES_NL option does.
+ .P
+ The default POSIX newline handling can be obtained by setting PCRE_DOTALL and
+-PCRE_DOLLAR_ENDONLY, but there is no way to make PCRE behave exactly as for the
+-REG_NEWLINE action.
++PCRE_DOLLAR_ENDONLY which is what happens when REG_NEWLINE is NOT set. When
++REG_NEWLINE IS set PCRE_NOT_EXCLUDES_NL and PCRE_MULTILINE are set instead to
++mimic the POSIX behavior exactly in that case.
+ .
+ .
+ .SH "MATCHING A PATTERN"
+diff --git a/pcre.h.generic b/pcre.h.generic
+index 206f314b..2b32445b 100644
+--- a/pcre.h.generic
++++ b/pcre.h.generic
+@@ -169,6 +169,7 @@ with J. */
+ #define PCRE_PARTIAL_HARD       0x08000000  /*    E D J */
+ #define PCRE_NOTEMPTY_ATSTART   0x10000000  /*    E D J */
+ #define PCRE_UCP                0x20000000  /* C3       */
++#define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre.h.in b/pcre.h.in
+index 667a45ed..04450558 100644
+--- a/pcre.h.in
++++ b/pcre.h.in
+@@ -169,6 +169,7 @@ with J. */
+ #define PCRE_PARTIAL_HARD       0x08000000  /*    E D J */
+ #define PCRE_NOTEMPTY_ATSTART   0x10000000  /*    E D J */
+ #define PCRE_UCP                0x20000000  /* C3       */
++#define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre_compile.c b/pcre_compile.c
+index 5976985a..4b69fced 100644
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -279,6 +279,12 @@ static const pcre_uchar sub_end_of_word[] = {
+   CHAR_RIGHT_PARENTHESIS, '\0' };
+ 
+ 
++/* Substitute for implicit newline. */
++
++static const pcre_uchar sub_implicit_rsb_newline[] = {
++  CHAR_RIGHT_SQUARE_BRACKET, CHAR_BACKSLASH, CHAR_n, '\0' };
++
++
+ /* Tables of names of POSIX character classes and their lengths. The names are
+ now all in a single string, to reduce the number of relocations when a shared
+ library is dynamically loaded. The list of lengths is terminated by a zero
+@@ -4955,6 +4961,27 @@ for (;; ptr++)
+ 
+     memset(classbits, 0, 32 * sizeof(pcre_uint8));
+ 
++    /* If the PCRE_NOT_EXCLUDES_NL option is set AND the class started with '^',
++    stuff an ESC_n into the character class then resume.  However, [^] means
++    match any character in JS but not in Perl/PCRE so for JS [^] still becomes
++    [^\n] but [^]] in Perl/PCRE must become [^]\n] instead. */
++
++    if (negate_class && nestptr == NULL && (cd->extended_options & PCRE_NOT_EXCLUDES_NL_BIT) != 0)
++      {
++      if (c != CHAR_RIGHT_SQUARE_BRACKET ||
++          (cd->external_options & PCRE_JAVASCRIPT_COMPAT) != 0)
++        {
++        nestptr = ptr - 1;
++        ptr = sub_implicit_rsb_newline + 1;
++        }
++      else
++        {
++        nestptr = ptr;
++        ptr = sub_implicit_rsb_newline;
++        }
++      c = *ptr;
++      }
++
+     /* Process characters until ] is reached. By writing this as a "do" it
+     means that an initial ] is taken as a data character. At the start of the
+     loop, c contains the first byte of the character. */
+diff --git a/pcre_internal.h b/pcre_internal.h
+index adb94067..6054867c 100644
+--- a/pcre_internal.h
++++ b/pcre_internal.h
+@@ -1124,8 +1124,10 @@ bits are present -- at least one reused non-public API bit must also be set. */
+ 
+ #define PCRE_XC1OPTIONS    0x40000000  /* extended compile-only public api */
+ 
++#define PCRE_NOT_EXCLUDES_NL_BIT  (PCRE_NOT_EXCLUDES_NL & ~PCRE_XC1OPTIONS)
++
+ #define PUBLIC_EXTENDED_COMPILE_OPTIONS \
+-   (0)
++   (PCRE_NOT_EXCLUDES_NL)
+ 
+ #if (PUBLIC_COMPILE_OPTIONS & PUBLIC_EXTENDED_COMPILE_OPTIONS) != 0
+ #error PUBLIC_EXTENDED_COMPILE_OPTIONS conflicts with PUBLIC_COMPILE_OPTIONS
+diff --git a/pcreposix.c b/pcreposix.c
+index cf75588c..026f525b 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -275,13 +275,17 @@ int options = 0;
+ int re_nsub = 0;
+ 
+ if ((cflags & REG_ICASE) != 0)    options |= PCRE_CASELESS;
+-if ((cflags & REG_NEWLINE) != 0)  options |= PCRE_MULTILINE;
++#define REG_XXXLINE (REG_MULTILINE|REG_NEWLINE)
++if ((cflags & REG_XXXLINE) != 0)  options |= PCRE_MULTILINE;
+ if ((cflags & REG_DOTALL) != 0)   options |= PCRE_DOTALL;
+ if ((cflags & REG_NOSUB) != 0)    options |= PCRE_NO_AUTO_CAPTURE;
+ if ((cflags & REG_UTF8) != 0)     options |= PCRE_UTF8;
+ if ((cflags & REG_UCP) != 0)      options |= PCRE_UCP;
+ if ((cflags & REG_UNGREEDY) != 0) options |= PCRE_UNGREEDY;
+ 
++if ((cflags & REG_NEWLINE) == 0)  options |= PCRE_DOTALL | PCRE_DOLLAR_ENDONLY;
++if ((cflags & REG_NEWLINE) != 0)  options |= PCRE_NOT_EXCLUDES_NL;
++
+ preg->re_pcre = pcre_compile2(pattern, options, &errorcode, &errorptr,
+   &erroffset, NULL);
+ preg->re_erroffset = erroffset;
+diff --git a/pcreposix.h b/pcreposix.h
+index c77c0b05..e2cc94b8 100644
+--- a/pcreposix.h
++++ b/pcreposix.h
+@@ -53,7 +53,7 @@ extern "C" {
+ /* Options, mostly defined by POSIX, but with some extras. */
+ 
+ #define REG_ICASE     0x0001   /* Maps to PCRE_CASELESS */
+-#define REG_NEWLINE   0x0002   /* Maps to PCRE_MULTILINE */
++#define REG_NEWLINE   0x0002   /* Affects four different PCRE options */
+ #define REG_NOTBOL    0x0004   /* Maps to PCRE_NOTBOL */
+ #define REG_NOTEOL    0x0008   /* Maps to PCRE_NOTEOL */
+ #define REG_DOTALL    0x0010   /* NOT defined by POSIX; maps to PCRE_DOTALL */
+@@ -63,6 +63,7 @@ extern "C" {
+ #define REG_NOTEMPTY  0x0100   /* NOT defined by POSIX; maps to PCRE_NOTEMPTY */
+ #define REG_UNGREEDY  0x0200   /* NOT defined by POSIX; maps to PCRE_UNGREEDY */
+ #define REG_UCP       0x0400   /* NOT defined by POSIX; maps to PCRE_UCP */
++#define REG_MULTILINE 0x0800   /* NOT defined by POSIX; maps to PCRE_MULTILINE */
+ 
+ /* This is not used by PCRE, but by defining it we make it easier
+ to slot PCRE into existing programs that make POSIX calls. */
+diff --git a/testdata/testinput14 b/testdata/testinput14
+index 192b8d64..f3ce5687 100644
+--- a/testdata/testinput14
++++ b/testdata/testinput14
+@@ -27,11 +27,12 @@
+     The Quick Brown Fox
+ 
+ /abc.def/P
+-    *** Failers
+     abc\ndef
++    *** Failers
+ 
+ /abc$/P
+     abc
++    *** Failers
+     abc\n
+ 
+ /(abc)\2/P
+@@ -51,8 +52,8 @@
+ /ab.cd/P
+     ab-cd
+     ab=cd
+-    ** Failers
+     ab\ncd
++    ** Failers
+ 
+ /ab.cd/Ps
+     ab-cd
+@@ -81,6 +82,29 @@
+ 
+ /abc/\P
+ 
++/x[^a]y.z$/P
++    x\ny\nz
++    x_y_z
++    ** Failers
++    x_y_z\n
++
++/x[^a]y/Pm
++    ** Failers
++    x\ny
++
++/x.y$/Pm
++    x_y\n
++    ** Failers
++    x\ny
++
++/x[^a]y.z$/Pm
++    x_y_z
++    x_y_z\n
++    ** Failers
++    x\ny_z
++    x_y\nz
++    x\ny\nz
++
+ /-- End of POSIX tests --/ 
+ 
+ /a\Cb/
+diff --git a/testdata/testoutput14 b/testdata/testoutput14
+index 020f51e3..b9a8fde6 100644
+--- a/testdata/testoutput14
++++ b/testdata/testoutput14
+@@ -42,16 +42,18 @@ No match: POSIX code 17: match failed
+  0: The Quick Brown Fox
+ 
+ /abc.def/P
+-    *** Failers
+-No match: POSIX code 17: match failed
+     abc\ndef
++ 0: abc\x0adef
++    *** Failers
+ No match: POSIX code 17: match failed
+ 
+ /abc$/P
+     abc
+  0: abc
++    *** Failers
++No match: POSIX code 17: match failed
+     abc\n
+- 0: abc
++No match: POSIX code 17: match failed
+ 
+ /(abc)\2/P
+ Failed: POSIX code 15: bad back reference at offset 7     
+@@ -92,9 +94,9 @@ No match: POSIX code 17: match failed
+  0: ab-cd
+     ab=cd
+  0: ab=cd
+-    ** Failers
+-No match: POSIX code 17: match failed
+     ab\ncd
++ 0: ab\x0acd
++    ** Failers
+ No match: POSIX code 17: match failed
+ 
+ /ab.cd/Ps
+@@ -137,6 +139,44 @@ No match: POSIX code 17: match failed
+ /abc/\P
+ Failed: POSIX code 9: bad escape sequence at offset 4     
+ 
++/x[^a]y.z$/P
++    x\ny\nz
++ 0: x\x0ay\x0az
++    x_y_z
++ 0: x_y_z
++    ** Failers
++No match: POSIX code 17: match failed
++    x_y_z\n
++No match: POSIX code 17: match failed
++
++/x[^a]y/Pm
++    ** Failers
++No match: POSIX code 17: match failed
++    x\ny
++No match: POSIX code 17: match failed
++
++/x.y$/Pm
++    x_y\n
++ 0: x_y
++    ** Failers
++No match: POSIX code 17: match failed
++    x\ny
++No match: POSIX code 17: match failed
++
++/x[^a]y.z$/Pm
++    x_y_z
++ 0: x_y_z
++    x_y_z\n
++ 0: x_y_z
++    ** Failers
++No match: POSIX code 17: match failed
++    x\ny_z
++No match: POSIX code 17: match failed
++    x_y\nz
++No match: POSIX code 17: match failed
++    x\ny\nz
++No match: POSIX code 17: match failed
++
+ /-- End of POSIX tests --/ 
+ 
+ /a\Cb/
+
+-- 
+tg: (0272abc4..) t/posix-reg-newline (depends on: t/pcre-extended-options)

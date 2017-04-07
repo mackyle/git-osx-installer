@@ -1,0 +1,47 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] pcreposix.c: emulate REG_STARTEND correctly
+
+When using the BSD REG_STARTEND emulation option, the location
+of the string to match against is passed in as a starting and
+ending offset relative to a subject string.
+
+However, the returned matches, if any, still have offsets that
+are relative to the same original suject string, NOT the starting
+offset that was passed in.
+
+In other words, if the pattern is "d$" and the REG_STARTEND option
+is used to match against "abcde" using a starting offset of 2 and
+an ending offset of 4 it should match and the match result should
+have a starting offset of 3 and an ending offset of 4 NOT a starting
+offset of 1 and an ending offset of 2.
+
+Fix this so that it works properly by adding the starting offset
+back to any successful matches as they're returned.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcreposix.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/pcreposix.c b/pcreposix.c
+index c2834f37..6d0a279f 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -491,6 +491,11 @@ if (rc >= 0)
+       {
+       pmatch[i].rm_so = (regoff_t)ovector[i*2];
+       pmatch[i].rm_eo = (regoff_t)ovector[i*2+1];
++      if (pmatch[i].rm_so >= 0 && pmatch[i].rm_eo >= 0)
++        {
++        pmatch[i].rm_so += (regoff_t)so;
++        pmatch[i].rm_eo += (regoff_t)so;
++        }
+       }
+     if (allocated_ovector) free(ovector);
+     for (; i < nmatch; i++) pmatch[i].rm_so = pmatch[i].rm_eo = -1;
+
+-- 
+tg: (12746e31..) t/compat-reg-startend (depends on: t/posix-regoff-type)

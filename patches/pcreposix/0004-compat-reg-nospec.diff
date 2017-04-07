@@ -1,0 +1,200 @@
+From: Kyle J. McKay <mackyle@gmail.com>
+Subject: [PATCH] pcreposix: add REG_NOSPEC support
+
+The REG_NOSPEC regcomp() option causes the pattern string
+to be treated as a literal.
+
+This is a BSDism, but since it's relatively easy to implement
+and it improves regex.h compatibility go ahead and add it.
+
+To implement this the following changes are effected:
+
+1. A new PCRE_VERBATIM option is provided.
+
+   This implicitly prefixes the pattern with \Q and then
+   disables recognition of \E thereby causing even \E to
+   be taken literally.
+
+2. A new REG_NOSPEC option is provided that maps to PCRE_VERBATIM.
+
+   Although it's "new" to pcreposix, it provides the same
+   behavior as the BSD REG_NOSPEC option.
+
+Note: This patch is licensed under the same terms as PCRE itself.
+
+Signed-off-by: Kyle J. McKay <mackyle@gmail.com>
+
+---
+ pcre.h.generic        |  1 +
+ pcre.h.in             |  1 +
+ pcre_compile.c        |  7 ++++---
+ pcre_internal.h       |  3 ++-
+ pcreposix.c           |  1 +
+ pcreposix.h           |  1 +
+ pcretest.c            |  1 +
+ testdata/testinput14  | 13 ++++++++++++-
+ testdata/testoutput14 | 16 +++++++++++++++-
+ 9 files changed, 38 insertions(+), 6 deletions(-)
+
+diff --git a/pcre.h.generic b/pcre.h.generic
+index e54eb5f2..cbbf34de 100644
+--- a/pcre.h.generic
++++ b/pcre.h.generic
+@@ -171,6 +171,7 @@ with J. */
+ #define PCRE_UCP                0x20000000  /* C3       */
+ #define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
+ #define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
++#define PCRE_VERBATIM           0x40000400  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre.h.in b/pcre.h.in
+index fc54c00c..1aac471e 100644
+--- a/pcre.h.in
++++ b/pcre.h.in
+@@ -171,6 +171,7 @@ with J. */
+ #define PCRE_UCP                0x20000000  /* C3       */
+ #define PCRE_NOT_EXCLUDES_NL    0x40000080  /* C1        ) Extended */
+ #define PCRE_POSIX_BASIC_ESC    0x40000100  /* C1        ) Extended */
++#define PCRE_VERBATIM           0x40000400  /* C1        ) Extended */
+ 
+ /* Exec-time and get/set-time error codes */
+ 
+diff --git a/pcre_compile.c b/pcre_compile.c
+index 2c6e9693..85a7da33 100644
+--- a/pcre_compile.c
++++ b/pcre_compile.c
+@@ -4488,7 +4488,7 @@ register pcre_uchar *code = *codeptr;
+ pcre_uchar *last_code = code;
+ pcre_uchar *orig_code = code;
+ pcre_uchar *tempcode;
+-BOOL inescq = FALSE;
++BOOL inescq = (cd->extended_options & PCRE_VERBATIM_BIT) != 0;
+ BOOL basicre = (cd->extended_options & PCRE_POSIX_BASIC_ESC_BIT) != 0;
+ BOOL groupsetfirstchar = FALSE;
+ const pcre_uchar *ptr = *ptrptr;
+@@ -4694,7 +4694,8 @@ for (;; ptr++)
+ 
+   if (c != CHAR_NULL)
+     {
+-    if (c == CHAR_BACKSLASH && ptr[1] == CHAR_E)
++    if (c == CHAR_BACKSLASH && ptr[1] == CHAR_E &&
++        (cd->extended_options & PCRE_VERBATIM_BIT) == 0)
+       {
+       inescq = FALSE;
+       ptr++;
+@@ -9197,7 +9198,7 @@ cd->external_flags = 0;   /* Initialize here for LIMIT_MATCH/RECURSION */
+ 
+ while (ptr[skipatstart] == CHAR_LEFT_PARENTHESIS &&
+        ptr[skipatstart+1] == CHAR_ASTERISK &&
+-       !(options2 & PCRE_POSIX_BASIC_ESC_BIT))
++       !(options2 & (PCRE_POSIX_BASIC_ESC_BIT|PCRE_VERBATIM_BIT)))
+   {
+   int newnl = 0;
+   int newbsr = 0;
+diff --git a/pcre_internal.h b/pcre_internal.h
+index 9a40f046..52122e1a 100644
+--- a/pcre_internal.h
++++ b/pcre_internal.h
+@@ -1126,9 +1126,10 @@ bits are present -- at least one reused non-public API bit must also be set. */
+ 
+ #define PCRE_NOT_EXCLUDES_NL_BIT  (PCRE_NOT_EXCLUDES_NL & ~PCRE_XC1OPTIONS)
+ #define PCRE_POSIX_BASIC_ESC_BIT  (PCRE_POSIX_BASIC_ESC & ~PCRE_XC1OPTIONS)
++#define PCRE_VERBATIM_BIT         (PCRE_VERBATIM        & ~PCRE_XC1OPTIONS)
+ 
+ #define PUBLIC_EXTENDED_COMPILE_OPTIONS \
+-   (PCRE_NOT_EXCLUDES_NL|PCRE_POSIX_BASIC_ESC)
++   (PCRE_NOT_EXCLUDES_NL|PCRE_POSIX_BASIC_ESC|PCRE_VERBATIM)
+ 
+ #if (PUBLIC_COMPILE_OPTIONS & PUBLIC_EXTENDED_COMPILE_OPTIONS) != 0
+ #error PUBLIC_EXTENDED_COMPILE_OPTIONS conflicts with PUBLIC_COMPILE_OPTIONS
+diff --git a/pcreposix.c b/pcreposix.c
+index 4d576d09..29f60a77 100644
+--- a/pcreposix.c
++++ b/pcreposix.c
+@@ -284,6 +284,7 @@ if ((cflags & REG_NOSUB) != 0)    options |= PCRE_NO_AUTO_CAPTURE;
+ if ((cflags & REG_UTF8) != 0)     options |= PCRE_UTF8;
+ if ((cflags & REG_UCP) != 0)      options |= PCRE_UCP;
+ if ((cflags & REG_UNGREEDY) != 0) options |= PCRE_UNGREEDY;
++if ((cflags & REG_NOSPEC) != 0)   options |= PCRE_VERBATIM;
+ 
+ if ((cflags & REG_NEWLINE) == 0)  options |= PCRE_DOTALL | PCRE_DOLLAR_ENDONLY;
+ if ((cflags & REG_NEWLINE) != 0)  options |= PCRE_NOT_EXCLUDES_NL;
+diff --git a/pcreposix.h b/pcreposix.h
+index 44911231..853d3326 100644
+--- a/pcreposix.h
++++ b/pcreposix.h
+@@ -64,6 +64,7 @@ extern "C" {
+ #define REG_UNGREEDY  0x0200   /* NOT defined by POSIX; maps to PCRE_UNGREEDY */
+ #define REG_UCP       0x0400   /* NOT defined by POSIX; maps to PCRE_UCP */
+ #define REG_MULTILINE 0x0800   /* NOT defined by POSIX; maps to PCRE_MULTILINE */
++#define REG_NOSPEC    0x2000   /* BSD feature: treat pattern as literal string */
+ 
+ #define REG_BASIC     0        /* BSD define */
+ #define REG_EXTENDED  0x1000   /* Maps to !PCRE_POSIX_BASIC_ESC */
+diff --git a/pcretest.c b/pcretest.c
+index 090c6de7..8b6c2c64 100644
+--- a/pcretest.c
++++ b/pcretest.c
+@@ -3788,6 +3788,7 @@ while (!done)
+       case 'I': do_showinfo = 1; break;
+       case 'J': options |= PCRE_DUPNAMES; break;
+       case 'K': do_mark = 1; break;
++      case 'V': options |= PCRE_VERBATIM; break;
+       case 'M': log_store = 1; break;
+       case 'N': options |= PCRE_NO_AUTO_CAPTURE; break;
+       case 'O': options |= PCRE_NO_AUTO_POSSESS; break;
+diff --git a/testdata/testinput14 b/testdata/testinput14
+index f4836df9..6f633431 100644
+--- a/testdata/testinput14
++++ b/testdata/testinput14
+@@ -123,7 +123,18 @@
+ /X?Y+|Z/PP
+     X?Y+|Z
+ 
+-/-- End of POSIX tests --/ 
++/-- End of POSIX tests --/
++
++/(*UTF)\(?:\)\\Q[X]\\E[\Q\E]\{3,3\}|\\E+./V
++    (*UTF)\\(?:\\)\\\\Q[X]\\\\E[\\Q\\E]\\{3,3\\}|\\\\E+.
++
++/^\(\^\)\{1,1\}\1\\\.\*\[\]\]\$$/V
++    ^\\(\\^\\)\\{1,1\\}\\1\\\\\\.\\*\\[\\]\\]\\$$
++
++/X\?Y\+\|Z/V
++    X\\?Y\\+\\|Z
++
++/-- End of Verbatim literal tests --/
+ 
+ /a\Cb/
+     aXb
+diff --git a/testdata/testoutput14 b/testdata/testoutput14
+index 5b7f6067..f29a9ec3 100644
+--- a/testdata/testoutput14
++++ b/testdata/testoutput14
+@@ -206,7 +206,21 @@ No match: POSIX code 17: match failed
+     X?Y+|Z
+  0: X?Y+|Z
+ 
+-/-- End of POSIX tests --/ 
++/-- End of POSIX tests --/
++
++/(*UTF)\(?:\)\\Q[X]\\E[\Q\E]\{3,3\}|\\E+./V
++    (*UTF)\\(?:\\)\\\\Q[X]\\\\E[\\Q\\E]\\{3,3\\}|\\\\E+.
++ 0: (*UTF)\(?:\)\\Q[X]\\E[\Q\E]\{3,3\}|\\E+.
++
++/^\(\^\)\{1,1\}\1\\\.\*\[\]\]\$$/V
++    ^\\(\\^\\)\\{1,1\\}\\1\\\\\\.\\*\\[\\]\\]\\$$
++ 0: ^\(\^\)\{1,1\}\1\\\.\*\[\]\]\$$
++
++/X\?Y\+\|Z/V
++    X\\?Y\\+\\|Z
++ 0: X\?Y\+\|Z
++
++/-- End of Verbatim literal tests --/
+ 
+ /a\Cb/
+     aXb
+
+-- 
+tg: (3e063cf9..) t/compat-reg-nospec (depends on: t/posix-reg-basic)
